@@ -271,4 +271,9 @@ on every PR and push to `main`.
 To run the infrastructure tests locally, start Docker and run `uv run pytest -m integration`.
 The model evaluation gate is planned in Phase 5; these tests make no live model calls.
 
+Database migrations run with a separate owner connection in `INVOICEOPS_MIGRATION_DSN`:
+`uv run alembic upgrade head`. See [schema and migration commands](docs/schema.md) for the URL format,
+table contracts, and reversible migration behavior. Runtime-role grants and audit immutability are
+the following step, 0.7.
+
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
