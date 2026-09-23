@@ -1,6 +1,6 @@
 """Offline decision boundaries, missing evidence, and Decimal-context independence."""
 
-from decimal import ROUND_DOWN, Decimal, Inexact, Rounded, localcontext
+from decimal import ROUND_DOWN, Decimal, DefaultContext, Inexact, Rounded, localcontext
 
 import pytest
 from pydantic import ValidationError
@@ -217,6 +217,17 @@ def test_bounded_extraction_extremes_do_not_overflow_arithmetic() -> None:
     result = validate_invoice(document)
     assert result.issues[0].code == "LINE_MATH_MISMATCH"
     assert result.issues[0].expected == Decimal("99999999999999999800000000.00")
+
+
+def test_mutable_default_context_cannot_change_arithmetic(monkeypatch: pytest.MonkeyPatch) -> None:
+    document = invoice(line_items=[line(unit_price="10.0025")])
+    expected = validate_invoice(document)
+    monkeypatch.setattr(DefaultContext, "Emax", 1)
+    monkeypatch.setattr(DefaultContext, "Emin", -1)
+    monkeypatch.setattr(DefaultContext, "clamp", 1)
+    monkeypatch.setitem(DefaultContext.traps, Rounded, True)
+    monkeypatch.setitem(DefaultContext.traps, Inexact, True)
+    assert validate_invoice(document).model_dump_json() == expected.model_dump_json()
 
 
 def test_aggregation_uses_every_line_without_ambient_precision_loss() -> None:
