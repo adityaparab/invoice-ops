@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-23 (Phase 0 in progress; CI brought forward)
+> **Last updated:** 2026-09-23 (Phase 0 in progress)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Layer         | Choice                                                                                                                                                                                            | Notes                                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Python        | **3.12**                                                                                                                                                                                          | Package metadata requires 3.12+; interpreter pin remains step 0.2                                                                            |
+| Python        | **3.12**                                                                                                                                                                                          | `.python-version`, package metadata, Ruff, and mypy aligned to Python 3.12                                                                   |
 | Orchestration | **LangGraph** + Postgres checkpointer                                                                                                                                                             | Google ADK variant in Phase 6 (ADR 0002)                                                                                                      |
 | API           | **FastAPI** (async, uvicorn), Pydantic v2                                                                                                                                                         | RFC 7807 errors, idempotency-key header                                                                                                       |
 | DB            | **PostgreSQL + pgvector**, raw docs in **MinIO**                                                                                                                                                  | ERP sim + ledger + checkpoints                                                                                                                |
@@ -55,7 +55,7 @@
 
 - [x] 0.1 Restructure to `src/` layout per README §9; remove `hello.py`; pin dev tooling (ruff, mypy strict, pytest, pytest-asyncio) as uv dev-dependencies
   - Merged in PR #1; no `hello.py` existed.
-- [ ] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
+- [x] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
 - [ ] 0.3 Docker Compose stack: `api`, `postgres` (pgvector), `minio`, `litellm`; one-shot `seed` service placeholder; `langfuse` + `grafana`/`prometheus` deferred to Phase 4
 - [ ] 0.4 `deploy/litellm/config.yaml` with virtual aliases (`extract-vision`, `triage-reasoner`) mapped to dev (Ollama) / prod (OpenAI) models; API key handling via env
 - [ ] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
@@ -184,7 +184,7 @@ checkbox here.
 
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| P0 — Platform skeleton         | In progress | —            | Scaffold merged; CI brought forward to unblock later PRs   |
+| P0 — Platform skeleton         | In progress | —            | Package scaffold, Python 3.12 pin, and CI implemented      |
 | P1 — Extraction & validation   | Not started | —            |                                                           |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
@@ -202,3 +202,4 @@ checkbox here.
 | --- | --- |
 | 2026-09-23 | Step 0.1: package scaffold and pinned tooling prepared; local checks and isolated wheel smoke tests pass. PR merge remains pending CI. |
 | 2026-09-23 | PR #1 merged. Step 0.9 brought forward: GitHub Actions runs lint, strict typing, offline unit tests, isolated pgvector/MinIO integration tests, and package builds. |
+| 2026-09-23 | Step 0.2 pins the developer interpreter to Python 3.12. PR #3 establishes CI before subsequent PR merges. |
