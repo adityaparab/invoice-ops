@@ -255,13 +255,15 @@ transitive dependencies recorded in `uv.lock`; use `uv sync --locked` to verify 
 updating it. `uv` installs a compatible Python 3.12 interpreter automatically when needed.
 
 The installed namespace is `invoiceops_agent`; its component packages follow the architecture
-boundaries in `AGENTS.md`. The packages currently contain no application behavior. Package smoke
-tests verify that the architectural entry points and typing marker are available after installation.
+boundaries in `AGENTS.md`. The API shell exposes `/healthz`, dependency readiness at `/readyz`,
+RFC 7807 errors, and validated request context. Run it with
+`uv run uvicorn invoiceops_agent.api.app:create_app --factory`; see [API shell setup](docs/API_SHELL.md)
+for configuration and contracts. Package smoke tests verify the installed entry points and typing marker.
 Pytest uses strict configuration and markers, with function-scoped asyncio loops. Future tests
 must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@pytest.mark.asyncio`.
 
-Compose, the FastAPI endpoints, the graph demo, and invoice ingestion are planned work in steps
-0.3, 0.5, 0.8, and 1.1 respectively. Their services and example fixtures are not available yet.
+Compose, the graph demo, and invoice ingestion are planned work in steps 0.3, 0.8, and 1.1
+respectively. Their services and example fixtures are not available yet.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
 MinIO tests through disposable Testcontainers, and a package build on every PR and push to `main`.
 To run the infrastructure tests locally, start Docker and run `uv run pytest -m integration`.

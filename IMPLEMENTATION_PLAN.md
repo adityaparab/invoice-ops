@@ -58,7 +58,8 @@
 - [x] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
 - [ ] 0.3 Docker Compose stack: `api`, `postgres` (pgvector), `minio`, `litellm`; one-shot `seed` service placeholder; `langfuse` + `grafana`/`prometheus` deferred to Phase 4
 - [ ] 0.4 `deploy/litellm/config.yaml` with virtual aliases (`extract-vision`, `triage-reasoner`) mapped to dev (Ollama) / prod (OpenAI) models; API key handling via env
-- [ ] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
+- [x] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
+  - Implemented before 0.3 so Compose can run a real health-checked API. Idempotency context validation is ready; durable replay accompanies future mutation transactions.
 - [ ] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
 - [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
 - [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
@@ -203,3 +204,4 @@ checkbox here.
 | 2026-09-23 | Step 0.1: package scaffold and pinned tooling prepared; local checks and isolated wheel smoke tests pass. PR merge remains pending CI. |
 | 2026-09-23 | PR #1 merged. Step 0.9 brought forward: GitHub Actions runs lint, strict typing, offline unit tests, isolated pgvector/MinIO integration tests, and package builds. |
 | 2026-09-23 | Step 0.2 pins the developer interpreter to Python 3.12. PR #3 establishes CI before subsequent PR merges. |
+| 2026-09-23 | Step 0.5 adds the async API shell, bounded dependency probes, typed HTTP/Zod contracts, sanitized error responses, trace logs, and mutation-key validation. |
