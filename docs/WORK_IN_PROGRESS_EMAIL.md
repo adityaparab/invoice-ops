@@ -1,7 +1,7 @@
 # Email webhook — saved work in progress
 
-Step 1.2 is incomplete and is intentionally saved locally on `p1/02-email-webhook` in
-`/tmp/invoiceops-email`. It is not ready to publish or merge. Work stopped at the user's requested
+Step 1.2 is incomplete and is intentionally saved on `p1/02-email-webhook` in
+`/tmp/invoiceops-email`, with a remote backup on `origin`. It is not ready for a PR or merge. Work stopped at the user's requested
 boundary on 2026-09-23; the plan checkbox remains open. The base is `770b570` (dataset step 1.8).
 The dedupe prerequisite has since merged into `main` at `151deef` and still needs integration here.
 
@@ -70,5 +70,5 @@ UV_CACHE_DIR=/tmp/invoiceops-uv-cache uv run mypy --strict
 UV_CACHE_DIR=/tmp/invoiceops-uv-cache uv run pytest tests/unit --disable-socket --allow-unix-socket
 ```
 
-Resume only after the user authorizes continued implementation. Parent owns publication; no PR
-or push is requested for this saved WIP.
+Resume only after the user authorizes continued implementation. The saved branch is backed up remotely; open its PR only after the remaining implementation and
+validation are complete.
