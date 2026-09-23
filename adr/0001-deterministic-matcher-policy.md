@@ -17,7 +17,7 @@ reconstruction expensive.
 ## Decision
 
 Matching and policy are implemented as **deterministic, pure code** in
-`src/tools/`: same inputs + same versioned config (tolerance bands, rule tables) ⇒ same
+`src/invoiceops_agent/tools/`: same inputs + same versioned config (tolerance bands, rule tables) ⇒ same
 outputs, always. The LLM's role is confined to what it is genuinely needed for —
 extraction from unstructured documents, exception classification/triage reasoning, and
 evidence summarization — behind the boundaries defined in `AGENTS.md`.
