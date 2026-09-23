@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-04 (Phase 1 in progress)
+> **Last updated:** 2026-09-23 (Phase 0 in progress; step 0.1 prepared for review)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Layer         | Choice                                                                                                                                                                                            | Notes                                                                                                                                         |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Python        | **3.12**                                                                                                                                                                                          | Align `.python-version` + `pyproject.toml` (currently 3.11)                                                                                   |
+| Python        | **3.12**                                                                                                                                                                                          | Package metadata requires 3.12+; interpreter pin remains step 0.2                                                                            |
 | Orchestration | **LangGraph** + Postgres checkpointer                                                                                                                                                             | Google ADK variant in Phase 6 (ADR 0002)                                                                                                      |
 | API           | **FastAPI** (async, uvicorn), Pydantic v2                                                                                                                                                         | RFC 7807 errors, idempotency-key header                                                                                                       |
 | DB            | **PostgreSQL + pgvector**, raw docs in **MinIO**                                                                                                                                                  | ERP sim + ledger + checkpoints                                                                                                                |
@@ -54,6 +54,7 @@
 **Exit criteria:** FastAPI + Postgres + LangGraph hello-path in Docker Compose; CI green.
 
 - [ ] 0.1 Restructure to `src/` layout per README §9; remove `hello.py`; pin dev tooling (ruff, mypy strict, pytest, pytest-asyncio) as uv dev-dependencies
+  - Package scaffold and locked tooling prepared; no `hello.py` existed. Pending PR merge; CI is not configured until step 0.9.
 - [ ] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
 - [ ] 0.3 Docker Compose stack: `api`, `postgres` (pgvector), `minio`, `litellm`; one-shot `seed` service placeholder; `langfuse` + `grafana`/`prometheus` deferred to Phase 4
 - [ ] 0.4 `deploy/litellm/config.yaml` with virtual aliases (`extract-vision`, `triage-reasoner`) mapped to dev (Ollama) / prod (OpenAI) models; API key handling via env
@@ -170,7 +171,9 @@
 
 ### GitHub issue tracker (step → issue)
 
-All steps are tracked as GitHub issues in `adityaparab/invoice-ops`, one milestone per phase, with labels, acceptance criteria, and cross-issue dependencies. When starting a step, reference its issue; when its PR merges, close the issue and tick the checkbox here.
+The GitHub issue tracker in `adityaparab/invoice-ops` is currently empty. Reference plan step numbers
+in PRs until issue mappings exist. When a step's PR merges, close its issue if present and tick the
+checkbox here.
 
 
 | Step | Issue | Step | Issue | Step    | Issue   |
@@ -178,12 +181,9 @@ All steps are tracked as GitHub issues in `adityaparab/invoice-ops`, one milesto
 
 
 
-(Note: 3.12 is issue #35, not #39 — created first among the remaining Phase 3 issues to satisfy 3.8/3.9's dependency on it.)
-
-
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| P0 — Platform skeleton         | Not started | -            |                                                           |
+| P0 — Platform skeleton         | In progress | —            | Step 0.1 prepared for review; merge pending CI              |
 | P1 — Extraction & validation   | Not started | —            |                                                           |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
@@ -197,5 +197,6 @@ All steps are tracked as GitHub issues in `adityaparab/invoice-ops`, one milesto
 
 ## Change Log
 
-
-| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+| Date | Change |
+| --- | --- |
+| 2026-09-23 | Step 0.1: package scaffold and pinned tooling prepared; local checks and isolated wheel smoke tests pass. PR merge remains pending CI. |
