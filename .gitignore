@@ -15,6 +15,9 @@ dist/
 htmlcov/
 coverage.xml
 
+# Downloaded and normalized synthetic evaluation artifacts
+eval/data/
+
 # Local configuration and OS metadata
 .env
 .env.*

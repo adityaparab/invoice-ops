@@ -43,10 +43,11 @@ strict = true
 plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 mypy_path = ["src"]
-files = ["src", "tests", "deploy", "migrations"]
+files = ["src", "tests", "deploy", "migrations", "eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = ["--strict-config", "--strict-markers", "--import-mode=importlib"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
@@ -62,6 +63,7 @@ markers = [
 dev = [
     "minio==7.2.20",
     "mypy==2.3.1",
+    "pillow==12.3.0",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-socket==0.8.1",
