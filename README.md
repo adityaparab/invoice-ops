@@ -8,7 +8,8 @@ The working foundation includes a health-checked FastAPI shell, Postgres/pgvecto
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
 database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
 Python package, real database/object-store integrations, and Compose startup. Phase 1 adds authenticated
-invoice uploads with raw storage and durable request replay. Extraction remains planned; the hello
+invoice uploads with raw storage, durable request replay, and audited exact-content duplicate
+rejection. Extraction remains planned; the hello
 graph uses stub nodes and makes no model calls.
 Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
 ingestion and later provenance endpoints. The upload endpoint uses this writer in its transaction.

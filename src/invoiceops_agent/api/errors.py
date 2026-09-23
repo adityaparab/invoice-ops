@@ -15,7 +15,6 @@ from invoiceops_agent.api.schemas.health import DependencyStatuses
 from invoiceops_agent.api.schemas.problem import ProblemDetails
 from invoiceops_agent.tools.ingestion_errors import (
     DocumentTooLarge,
-    DuplicateContent,
     IdempotencyConflict,
     IngestionError,
     IngestionUnavailable,
@@ -95,7 +94,6 @@ async def _ingestion_error(request: Request, error: Exception) -> JSONResponse:
         UnsupportedDocument: 415,
         DocumentTooLarge: 413,
         IdempotencyConflict: 409,
-        DuplicateContent: 409,
         IngestionUnavailable: 503,
     }
     status = statuses.get(type(error), 500)

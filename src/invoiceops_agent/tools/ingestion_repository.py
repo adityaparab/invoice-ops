@@ -10,8 +10,13 @@ from psycopg.rows import DictRow, dict_row
 from psycopg.types.json import Jsonb
 
 from invoiceops_agent.ledger.connection import LedgerConnection
-from invoiceops_agent.tools.ingestion_errors import IdempotencyConflict
-from invoiceops_agent.tools.ingestion_schemas import IngestionResult, RawDocument
+from invoiceops_agent.tools.ingestion_errors import IdempotencyConflict, IngestionUnavailable
+from invoiceops_agent.tools.ingestion_schemas import (
+    IngestionOutcome,
+    IngestionResult,
+    OriginalIngestion,
+    RawDocument,
+)
 
 
 class IngestionRepository:
@@ -32,9 +37,9 @@ class IngestionRepository:
     @staticmethod
     async def replay(
         connection: LedgerConnection, key: str, request_hash: str
-    ) -> IngestionResult | None:
+    ) -> IngestionOutcome | None:
         cursor = await connection.execute(
-            "SELECT request_hash, response_body FROM public.ingestion_requests "
+            "SELECT request_hash, response_status, response_body FROM public.ingestion_requests "
             "WHERE idempotency_key = %s",
             (key,),
         )
@@ -43,7 +48,9 @@ class IngestionRepository:
             return None
         if row["request_hash"] != request_hash:
             raise IdempotencyConflict("Idempotency key was already used for a different request.")
-        return IngestionResult.model_validate(row["response_body"])
+        return IngestionOutcome.model_validate(
+            {"response_status": row["response_status"], "body": row["response_body"]}
+        )
 
     @staticmethod
     async def lock_key(connection: LedgerConnection, key: str) -> None:
@@ -60,37 +67,67 @@ class IngestionRepository:
         graph_version: str,
         trace_id: str,
         created_at: datetime,
-    ) -> None:
-        await connection.execute(
+    ) -> bool:
+        cursor = await connection.execute(
             "INSERT INTO public.invoices "
             "(id, content_hash, raw_ref, content_type, source, status, created_at) "
-            "VALUES (%s, %s, %s, %s, 'UPLOAD', 'QUEUED', %s)",
-            (result.invoice_id, document.content_hash, raw_ref, document.content_type, created_at),
+            "VALUES (%s, %s, %s, %s, %s, 'QUEUED', %s) "
+            "ON CONFLICT (content_hash) DO NOTHING RETURNING id",
+            (
+                result.invoice_id,
+                document.content_hash,
+                raw_ref,
+                document.content_type,
+                document.source,
+                created_at,
+            ),
         )
+        if await cursor.fetchone() is None:
+            return False
         await connection.execute(
             "INSERT INTO public.runs "
             "(id, invoice_id, status, graph_version, trace_id, created_at) "
             "VALUES (%s, %s, 'QUEUED', %s, %s, %s)",
             (result.run_id, result.invoice_id, graph_version, trace_id, created_at),
         )
+        return True
+
+    @staticmethod
+    async def original(connection: LedgerConnection, content_hash: str) -> OriginalIngestion:
+        # The conflicting insert waits for the creator's atomic transaction. A new READ COMMITTED
+        # statement then sees its committed invoice, initial run, and original 201 response.
+        cursor = await connection.execute(
+            "SELECT request.response_body, runs.graph_version, invoices.raw_ref "
+            "FROM public.invoices JOIN public.runs ON runs.invoice_id = invoices.id "
+            "JOIN public.ingestion_requests request "
+            "ON request.run_id = runs.id AND request.invoice_id = invoices.id "
+            "WHERE invoices.content_hash = %s AND request.response_status = 201 "
+            "ORDER BY request.created_at, request.idempotency_key LIMIT 1 FOR UPDATE OF invoices",
+            (content_hash,),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            raise IngestionUnavailable("The original ingestion identity is unavailable.")
+        return OriginalIngestion.model_validate(row)
 
     @staticmethod
     async def remember(
         connection: LedgerConnection,
         key: str,
         document: RawDocument,
-        result: IngestionResult,
+        outcome: IngestionOutcome,
         created_at: datetime,
     ) -> None:
         await connection.execute(
             "INSERT INTO public.ingestion_requests (idempotency_key, request_hash, invoice_id, "
-            "run_id, response_status, response_body, created_at) VALUES (%s,%s,%s,%s,201,%s,%s)",
+            "run_id, response_status, response_body, created_at) VALUES (%s,%s,%s,%s,%s,%s,%s)",
             (
                 key,
                 document.request_hash,
-                result.invoice_id,
-                result.run_id,
-                Jsonb(result.model_dump(mode="json")),
+                outcome.body.invoice_id,
+                outcome.body.run_id,
+                outcome.response_status,
+                Jsonb(outcome.body.model_dump(mode="json")),
                 created_at,
             ),
         )
