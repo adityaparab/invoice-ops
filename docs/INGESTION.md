@@ -47,7 +47,7 @@ prompt, and policy. If the original successful ingestion cannot be resolved, the
 Raw objects live at `s3://<bucket>/sha256/<first-two-hash-characters>/<content-hash>`. Conditional
 S3 puts preserve an existing object. Upload happens before acquiring database locks. The transaction
 then takes a bounded idempotency-key advisory lock, rechecks replay, and atomically inserts the invoice,
-queued run, `ingest.accepted` SYSTEM event, and original response. The event pins `ingestion-v1` and
+queued run, `ingest.accepted` SYSTEM event, and original response. New runs pin `invoice-v1` and
 explicit `not-applicable@v1` model, prompt, and policy versions. It records references, size, source,
 and type, never raw bytes, filenames, tokens, or storage credentials. A conflicting content-hash
 insert waits for the creator's transaction; the duplicate path then locks the original invoice row

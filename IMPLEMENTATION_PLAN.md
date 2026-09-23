@@ -100,7 +100,7 @@
 - [x] 2.3 Exception taxonomy: DUP_EXACT, DUP_NEAR, PRICE_MM, QTY_MM, MISSING_PO, BANK_CHANGE, CCY_MM, TAX_ERR, MATH_ERR, STALE_PO
 - [x] 2.4 Near-duplicate detection via pgvector embeddings
 - [x] 2.5 Policy engine: spend limits, approval matrix, stale/closed-PO checks — deterministic, independent of LLM (ADR 0001)
-- [ ] 2.6 Full LangGraph state machine wiring: Ingest → Extract → Validate → Match3Way → Policy → Gate → (AutoApprove | ExceptionTriage) → HumanReview → Archive (+ Reject), checkpoint after every node
+- [x] 2.6 Full LangGraph state machine wiring: Ingest → Extract → Validate → Match3Way → Policy → Gate → (AutoApprove | ExceptionTriage) → HumanReview → Archive (+ Reject), checkpoint after every node
 - [ ] 2.7 Composite confidence gate: `w1·min(field_conf) + w2·(1−norm_match_delta) + w3·policy_severity_term` (ARCHITECTURE §3.5); τ configurable
 - [ ] 2.8 Retries/backoff for infra errors; business failures never retried; DLQ design implemented
 
@@ -232,3 +232,4 @@ checkbox here.
 | 2026-09-24 | Step 2.3 adds the ten-code deterministic exception taxonomy with source and line references, input fingerprints, explicit unresolved evidence, and an audited classification node. Bank values stay out of classification output; near-duplicate and date-staleness signals are supplied by later steps. |
 | 2026-09-24 | Step 2.4 adds 384-dimensional LiteLLM embedding intake, model-isolated pgvector cosine search at a versioned threshold, and atomic embedding-plus-ledger decisions. Fixed-vector tests cover near matches, model isolation, invalid responses, and audit rollback; the full graph connection follows in step 2.6. |
 | 2026-09-24 | Step 2.5 adds a pure, versioned per-currency spend matrix and approval tiers, exact-duplicate/cancelled-PO blocks, and stale/closed/future-PO review controls. Coherent evidence fingerprints and an injected evaluation date make decisions reproducible; the standalone node commits POLICY evidence before routing in step 2.6. |
+| 2026-09-24 | Step 2.6 wires the invoice-v1 LangGraph worker through extraction, validation, ERP matching, similarity, taxonomy, policy, an interim conservative gate, and audited review/approval/archive transitions. Synchronous Postgres checkpoints, run locks, source fingerprints, and ledger-backed replay recover committed node work; an offline fake gateway and real restricted-role database test the full auto path. The worker reads only LiteLLM URL/key/model-name variables; composite scoring and the review API remain their own plan steps. |

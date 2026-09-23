@@ -17,6 +17,10 @@ class PolicyNode:
         self._audit = audit
         self._config = config if config is not None else PolicyConfig()
 
+    @property
+    def config(self) -> PolicyConfig:
+        return self._config
+
     async def run(self, request: PolicyRequest) -> PolicyResult:
         started = perf_counter()
         result = evaluate_policy(request, self._config)

@@ -1,8 +1,10 @@
 """Pure, versioned invoice approval and purchase-order controls."""
 
+from datetime import date
 from decimal import Decimal
 
 from invoiceops_agent.schemas.common import model_digest
+from invoiceops_agent.schemas.matching import ERPSnapshot
 from invoiceops_agent.schemas.policy import (
     ApprovalTier,
     PolicyConfig,
@@ -12,6 +14,13 @@ from invoiceops_agent.schemas.policy import (
     PolicyStatus,
     SpendBand,
 )
+
+
+def po_age_exceeded(snapshot: ERPSnapshot | None, as_of: date, max_age_days: int) -> bool:
+    """Keep the age signal identical in policy and exception classification."""
+    if snapshot is None:
+        return False
+    return (as_of - snapshot.purchase_order.issued_on).days > max_age_days
 
 
 def approval_tier(amount: Decimal | None, band: SpendBand | None) -> ApprovalTier:
@@ -45,7 +54,7 @@ def evaluate_policy(request: PolicyRequest, config: PolicyConfig | None = None) 
         age_days = (request.as_of - order.issued_on).days
         if age_days < 0:
             findings.append(PolicyFinding(reason="FUTURE_PO", field="issued_on"))
-        elif age_days > rules.max_po_age_days:
+        elif po_age_exceeded(snapshot, request.as_of, rules.max_po_age_days):
             findings.append(PolicyFinding(reason="STALE_PO", field="issued_on"))
 
     amount = request.extraction.total_amount.value

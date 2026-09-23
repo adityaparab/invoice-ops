@@ -16,6 +16,10 @@ class RunConflict(GraphError):
     """A persisted run belongs to a different invoice."""
 
 
+class RunNotFound(GraphError):
+    """The requested invoice run is absent from the operational database."""
+
+
 class RunInProgress(GraphError):
     """Another process currently owns the run's advisory lock."""
 
