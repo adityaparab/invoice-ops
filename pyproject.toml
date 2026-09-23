@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "Agentic invoice processing with deterministic controls and auditable decisions"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi==0.141.1",
+    "httpx==0.28.1",
+    "psycopg[binary]==3.3.6",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "uvicorn==0.53.0",
+]
 
 [build-system]
 requires = ["uv_build==0.11.25"]
@@ -21,6 +28,8 @@ select = ["E", "F", "I", "UP", "B", "ASYNC"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+explicit_package_bases = true
+mypy_path = ["src"]
 files = ["src", "tests"]
 
 [tool.pytest.ini_options]
@@ -38,10 +47,14 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "minio==7.2.20",
     "mypy==2.3.1",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
+    "pytest-socket==0.8.1",
     "pyyaml==6.0.3",
     "ruff==0.16.8",
+    "testcontainers==4.15.0",
     "types-pyyaml==6.0.12.20260906",
+    "urllib3==2.8.0",
 ]
