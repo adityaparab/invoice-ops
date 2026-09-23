@@ -82,7 +82,7 @@
   - Brought forward so invoice ingestion can commit its initial audit entry with business data and its idempotency response.
 - [ ] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
 - [ ] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
-- [ ] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
+- [x] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
 - [ ] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
 - [ ] 1.9 Baseline extraction field F1 report (per-field, per-tier) — no targets yet
 
@@ -217,3 +217,4 @@ checkbox here.
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
 | 2026-09-23 | Step 1.4 adds transactional append-only ledger writes, explicit version pins, and bounded run/invoice history reads. Real restricted-role tests verify atomic rollback, concurrent sequencing, immutable corrections, and pagination; all 157 offline units and 40 integrations pass. |
 | 2026-09-23 | Step 1.1 adds authenticated bounded multipart uploads, PDF/PNG/JPEG signature checks, content-addressed MinIO storage, and atomic invoice/run/SYSTEM-ledger/idempotency writes. All 194 offline units and 48 real integrations pass; isolated Compose validates auth and exact replay through the restricted API role. New-key duplicate `409` is explicitly staged until step 1.3; extraction remains queued work. |
+| 2026-09-23 | Step 1.7 adds pure required-field, regular-invoice sign, net-line, subtotal, per-line tax, and gross-total validation. Explicit currency rules, inclusive Decimal tolerances, isolated arithmetic context, and immutable configuration make decisions reproducible. Both PASS and FAIL commit POLICY audit evidence before returning; 51 focused offline cases and three restricted-role integrations cover boundaries, cancellation, and atomic audit rollback. Full workflow routing remains Phase 2 work. |
