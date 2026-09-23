@@ -1,0 +1,33 @@
+# Values include the provider prefix and an actual installed Ollama model identifier.
+model_list:
+  - model_name: extract-vision
+    litellm_params:
+      model: os.environ/OLLAMA_EXTRACT_MODEL
+      api_base: os.environ/OLLAMA_BASE_URL
+    model_info:
+      mode: chat
+  - model_name: triage-reasoner
+    litellm_params:
+      model: os.environ/OLLAMA_TRIAGE_MODEL
+      api_base: os.environ/OLLAMA_BASE_URL
+    model_info:
+      mode: chat
+  - model_name: eval-judge
+    litellm_params:
+      model: os.environ/OLLAMA_JUDGE_MODEL
+      api_base: os.environ/OLLAMA_BASE_URL
+    model_info:
+      mode: chat
+  - model_name: embed
+    litellm_params:
+      model: os.environ/OLLAMA_EMBED_MODEL
+      api_base: os.environ/OLLAMA_BASE_URL
+    model_info:
+      mode: embedding
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  background_health_checks: false
+
+router_settings:
+  num_retries: 0
