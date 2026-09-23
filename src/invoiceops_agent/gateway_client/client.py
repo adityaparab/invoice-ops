@@ -172,7 +172,7 @@ class GatewayClient:
 
             async def operation(request_timeout: float) -> _Response[T]:
                 raw = await self._sdk.chat.completions.with_raw_response.create(
-                    model=request.alias,
+                    model=policy.model_name or request.alias,
                     messages=guarded.messages,
                     max_tokens=guarded.output_tokens,
                     response_format=response_format,
@@ -217,7 +217,7 @@ class GatewayClient:
             async def operation(request_timeout: float) -> _Response[EmbeddingValue]:
                 raw = await self._sdk.embeddings.with_raw_response.create(
                     input=inputs,
-                    model="embed",
+                    model=policy.model_name or request.alias,
                     encoding_format="float",
                     extra_headers=_headers(request),
                     timeout=request_timeout,

@@ -1,0 +1,367 @@
+{
+  "dataset": {
+    "manifest_sha256": "441613ddd7f1fbf127520e47a305e6698c8bad59373cccd1b8fe946e95fbba73",
+    "metadata_sha256": "79cb36846bf28f41636d795d2f85fd8b7ef99a8e9807f6ddc8e6f0d7c883ae7d",
+    "pipeline_version": "voxel51-preparation-v1",
+    "repository": "Voxel51/high-quality-invoice-images-for-ocr",
+    "revision": "d21f03cfeea2b330e15a229883c66d7ebece8e69",
+    "sample_count": 32
+  },
+  "escalations": {
+    "MALFORMED_MODEL_OUTPUT": 1
+  },
+  "measured_at": "2026-09-23T21:23:07.527834+00:00",
+  "model_versions": [
+    "gemini25flash"
+  ],
+  "prompt_versions": [
+    "extract@v1",
+    "extract@v1+repair@v1"
+  ],
+  "report_version": "extraction-baseline@v1",
+  "samples": [
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe14c",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdfbd",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe20a",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdec5",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdfad",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fde79",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe067",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.escalated",
+      "model_calls": 2,
+      "reason": "MALFORMED_MODEL_OUTPUT",
+      "sample_id": "6984bad10f763d83586fe042",
+      "status": "ESCALATED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe0cd",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 2,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe1d4",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe13b",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe05e",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe273",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdf43",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe0d1",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe0e2",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe108",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe154",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdfa9",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe25c",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdf3b",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe2a8",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe1a2",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe1eb",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe089",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe0e7",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe143",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 2,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdd78",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 2,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fe06a",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fde18",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fdf96",
+      "status": "EXTRACTED",
+      "tier": "A"
+    },
+    {
+      "audit_event": "extraction.completed",
+      "model_calls": 1,
+      "reason": null,
+      "sample_id": "6984bad10f763d83586fde1a",
+      "status": "EXTRACTED",
+      "tier": "A"
+    }
+  ],
+  "scoring_version": "voxel51-field-f1@v1",
+  "tier_metrics": {
+    "A": {
+      "fields": {
+        "invoice_date": {
+          "eligible": 32,
+          "f1": "0.7302",
+          "fn": 9,
+          "fp": 8,
+          "precision": "0.7419",
+          "recall": "0.7188",
+          "tp": 23
+        },
+        "invoice_number": {
+          "eligible": 32,
+          "f1": "0.9841",
+          "fn": 1,
+          "fp": 0,
+          "precision": "1.0000",
+          "recall": "0.9688",
+          "tp": 31
+        },
+        "line_description": {
+          "eligible": 128,
+          "f1": "0.9360",
+          "fn": 11,
+          "fp": 5,
+          "precision": "0.9590",
+          "recall": "0.9141",
+          "tp": 117
+        },
+        "line_quantity": {
+          "eligible": 128,
+          "f1": "0.9760",
+          "fn": 6,
+          "fp": 0,
+          "precision": "1.0000",
+          "recall": "0.9531",
+          "tp": 122
+        },
+        "line_total": {
+          "eligible": 128,
+          "f1": "0.0560",
+          "fn": 121,
+          "fp": 115,
+          "precision": "0.0574",
+          "recall": "0.0547",
+          "tp": 7
+        },
+        "tax_amount": {
+          "eligible": 32,
+          "f1": "0.9841",
+          "fn": 1,
+          "fp": 0,
+          "precision": "1.0000",
+          "recall": "0.9688",
+          "tp": 31
+        },
+        "vendor_name": {
+          "eligible": 32,
+          "f1": "0.9841",
+          "fn": 1,
+          "fp": 0,
+          "precision": "1.0000",
+          "recall": "0.9688",
+          "tp": 31
+        }
+      },
+      "overall": {
+        "eligible": 512,
+        "f1": "0.7226",
+        "fn": 150,
+        "fp": 128,
+        "precision": "0.7388",
+        "recall": "0.7070",
+        "tp": 362
+      },
+      "sample_count": 32
+    },
+    "B": null,
+    "C": null
+  },
+  "usage": {
+    "cost_usd": null,
+    "input_tokens": 129765,
+    "output_tokens": 32573
+  }
+}

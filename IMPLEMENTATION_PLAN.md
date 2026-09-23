@@ -86,7 +86,8 @@
 - [x] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
 - [x] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
 - [x] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
-- [ ] 1.9 Baseline extraction field F1 report (per-field, per-tier) — no targets yet
+- [x] 1.9 Baseline extraction field F1 report (per-field, per-tier) — no targets yet
+  - The 32-image development baseline has tier A micro F1 0.7226 over seven annotated fields; tier B/C are unavailable. One model output escalated, and line-total F1 is 0.0560. No quality gate was added.
 
 
 
@@ -191,7 +192,7 @@ checkbox here.
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
 | P0 — Platform skeleton         | Complete    | 2026-09-23   | Compose API, storage, restricted runtime, audit enforcement, durable hello graph, CI, and ADRs implemented |
-| P1 — Extraction & validation   | In progress | —            | Transactional ledger and typed gateway with offline cassettes implemented |
+| P1 — Extraction & validation   | Complete    | 2026-09-23   | Ingestion, extraction, validation, and measured 32-image development baseline |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
 | P4 — Observability + gateway   | Not started | —            |                                                           |
@@ -201,14 +202,6 @@ checkbox here.
 
 
 
-
-## ToDo
-
-- [ ] **Deferred live baseline (step 1.9):** Configure `OPENAI_API_KEY` as a GitHub Actions
-  repository secret and run the extraction baseline in CI. Deferred at the user's request on
-  2026-09-23. Continue offline implementation and cassette tests; keep live quality metrics marked
-  as unmeasured until the evaluation actually runs. A reminder is scheduled for 2026-09-24 at
-  09:00 Europe/Warsaw. Never store the key in the repository or a chat message.
 
 ## Change Log
 
@@ -233,3 +226,4 @@ checkbox here.
 | 2026-09-23 | Step 1.6 adds bounded immutable-document reads and PNG/JPEG/PDF preflight, packaged extraction prompts, typed per-field observations, one technical schema-repair pass, and committed AGENT outcomes with model/prompt/source provenance. Offline synthetic SDK cassettes and real MinIO/Postgres integrations verify behavior; live model evaluation remains deferred. |
 | 2026-09-23 | Step 1.7 adds pure required-field, regular-invoice sign, net-line, subtotal, per-line tax, and gross-total validation. Explicit currency rules, inclusive Decimal tolerances, isolated arithmetic context, and immutable configuration make decisions reproducible. Both PASS and FAIL commit POLICY audit evidence before returning; 401 offline units and 60 restricted-role integrations pass against merged extraction. Full workflow routing remains Phase 2 work. |
 | 2026-09-23 | Step 1.2 adds a signed synthetic email webhook with bounded raw JSON and canonical attachment decoding. HMAC freshness and nonce replay controls run before ingestion; each successful nonce claim commits with the original or duplicate response. Full checks pass: 436 offline units, 65 real integrations, strict Python and TypeScript typing, and isolated Compose accept/replay/nonce/duplicate smoke. Real provider delivery remains outside this stub. |
+| 2026-09-23 | Step 1.9 measures the pinned 32-image synthetic development subset through the configured LiteLLM endpoint using `gemini25flash` for vision. Tier A micro F1 is 0.7226 across 512 eligible values; 31 extracted and one malformed-output escalation. Per-field F1 ranges from 0.0560 for line totals to 0.9841 for vendor, invoice number, and tax. B/C have no selected samples, so their metrics remain unavailable. This completes Phase 1 without adding an evaluation threshold. |

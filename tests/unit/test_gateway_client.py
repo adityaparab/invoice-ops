@@ -141,6 +141,28 @@ async def test_sdk_success_has_typed_value_metadata_and_sanitized_telemetry() ->
 
 
 @pytest.mark.asyncio
+async def test_alias_policy_can_route_to_a_named_litellm_model() -> None:
+    seen: list[httpx2.Request] = []
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        seen.append(call)
+        return fixture_response()
+
+    configured = settings(
+        aliases={
+            "extract-vision": {
+                "model_version": "synthetic-vision@fixture-v1",
+                "model_name": "synthetic-vision-route",
+            }
+        }
+    )
+    async with GatewayClient(configured, transport=httpx2.MockTransport(handle)) as client:
+        result = await client.complete(request(), SyntheticExtraction)
+    assert json.loads(seen[0].content)["model"] == "synthetic-vision-route"
+    assert result.provenance.model_version == "synthetic-vision@fixture-v1"
+
+
+@pytest.mark.asyncio
 async def test_redacts_before_transport_and_never_logs_input_or_key(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

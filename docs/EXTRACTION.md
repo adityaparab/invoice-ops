@@ -22,7 +22,8 @@ calendar dates in ISO format, not wall-clock timestamps.
 
 `subtotal`, `unit_price`, and `line_total` are **net, excluding tax**; `total_amount` is **gross,
 including tax**. `tax_rate` is a fraction: `0.20` means 20%. These are extraction contracts, not
-assumptions about dataset annotation labels. A future baseline must map source labels explicitly.
+assumptions about dataset annotation labels. The [development baseline](../eval/baseline/README.md)
+maps source labels explicitly and records its semantic limits.
 Unknown net/gross semantics must produce null, not an inferred amount.
 
 Negative values, inconsistent totals, unknown PO numbers, and invalid business relationships can

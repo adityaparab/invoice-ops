@@ -11,6 +11,7 @@ from invoiceops_agent.gateway_client.schemas import Contract, ModelAlias, Versio
 
 class AliasPolicy(Contract):
     model_version: Version
+    model_name: Version | None = None
     input_token_limit: int = Field(default=32_768, gt=0)
     output_token_limit: int = Field(default=4096, gt=0)
     total_token_limit: int = Field(default=36_864, gt=0)
