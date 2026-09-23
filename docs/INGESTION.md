@@ -1,4 +1,4 @@
-# Invoice upload (step 1.1)
+# Invoice upload and exact duplicates (steps 1.1 and 1.3)
 
 `POST /v1/invoices` accepts one multipart file named `file`, authenticated by
 `Authorization: Bearer <INVOICEOPS_SERVICE_TOKEN>`. An `Idempotency-Key` is required. Authentication
@@ -26,19 +26,33 @@ Multipart headers per part are limited to 8 KiB. Starlette spools uploads to tem
 
 The request fingerprint includes source `UPLOAD`, declared document media type, and SHA-256 content
 hash. Filenames and multipart boundary changes do not change request identity. A repeated key with
-the same fingerprint returns the original `201` body without a second invoice, run, or ledger event;
+the same fingerprint returns the stored `201` or `200` body and status without another invoice,
+run, or ledger event;
 different content under that key returns `409`. Only successful requests reserve a key.
 
-**Staged duplicate behavior:** identical content under a new key currently returns `409`, enforced
-by the unique invoice content hash. Step 1.3 will add the planned `200`, original invoice/run IDs,
-`duplicate: true`, and audited Reject route. Email ingestion is separate step 1.2 work.
+Identical content under a new key returns `200`, the original invoice/run IDs, and `duplicate: true`.
+It appends one `ingest.duplicate_rejected` SYSTEM event with node `Reject`, `route: "REJECT"`, and
+`reason: "DUP_EXACT"`. The event and that key's replay response commit in the same transaction.
+Replaying the duplicate key returns its original `200` without another event. Different new keys
+represent distinct duplicate attempts and each records one event. Email ingestion remains separate
+step 1.2 work; the shared document contract carries source independently of content identity.
+
+The duplicate response refers to the original successful `201` ingestion, even if later runs exist.
+Its `status: "QUEUED"` describes that original acceptance, not a current processing-status query.
+Duplicate rejection never changes the original invoice/run status or creates another invoice/run.
+The event uses the original run's graph-version pin and explicit `not-applicable@v1` pins for model,
+prompt, and policy. If the original successful ingestion cannot be resolved, the request fails with
+`503` and does not invent an identity or reserve a key.
 
 Raw objects live at `s3://<bucket>/sha256/<first-two-hash-characters>/<content-hash>`. Conditional
 S3 puts preserve an existing object. Upload happens before acquiring database locks. The transaction
 then takes a bounded idempotency-key advisory lock, rechecks replay, and atomically inserts the invoice,
 queued run, `ingest.accepted` SYSTEM event, and original response. The event pins `ingestion-v1` and
 explicit `not-applicable@v1` model, prompt, and policy versions. It records references, size, source,
-and type, never raw bytes, filenames, tokens, or storage credentials.
+and type, never raw bytes, filenames, tokens, or storage credentials. A conflicting content-hash
+insert waits for the creator's transaction; the duplicate path then locks the original invoice row
+before appending its Reject event and saving the `200` response. Database uniqueness and these locks
+make simultaneous new keys safe without retries or a second run.
 
 Ledger or database failure rolls back all rows. An upload followed by a failed transaction may leave
 an unreferenced content-addressed object; request cleanup never deletes shared objects. A retry reuses
@@ -46,7 +60,7 @@ that object. Database connect, statement, lock, and transaction deadlines are bo
 have a configurable 10-second deadline (`INVOICEOPS_STORAGE_TIMEOUT_SECONDS`) and no hidden retries.
 
 Expected failures are `application/problem+json`: `400` empty/malformed multipart, `401` bad token,
-`408` receive timeout, `409` key/content conflict, `413` byte limit, `415` unsupported/mismatched type,
+`408` receive timeout, `409` key reuse with different content, `413` byte limit, `415` unsupported/mismatched type,
 and `503` unavailable or unconfigured infrastructure. Traces identify requests; successful commits
 also log invoice/run IDs. Responses and application logs omit credentials and underlying service errors.
 

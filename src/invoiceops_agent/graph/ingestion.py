@@ -13,12 +13,12 @@ from pydantic import ValidationError
 
 from invoiceops_agent.ledger.connection import LedgerConnection
 from invoiceops_agent.ledger.errors import LedgerError
-from invoiceops_agent.ledger.schemas import AppendEvent, LedgerEvent
+from invoiceops_agent.ledger.schemas import AppendEvent, LedgerEvent, VersionOverrides
 from invoiceops_agent.ledger.settings import LedgerSettings
 from invoiceops_agent.ledger.writer import LedgerWriter
-from invoiceops_agent.tools.ingestion_errors import DuplicateContent, IngestionUnavailable
+from invoiceops_agent.tools.ingestion_errors import IngestionUnavailable
 from invoiceops_agent.tools.ingestion_repository import IngestionRepository
-from invoiceops_agent.tools.ingestion_schemas import IngestionResult, RawDocument
+from invoiceops_agent.tools.ingestion_schemas import IngestionOutcome, IngestionResult, RawDocument
 from invoiceops_agent.tools.raw_storage import RawStorage
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ class AuditWriter(Protocol):
 class UploadService(Protocol):
     async def ingest(
         self, document: RawDocument, *, key: str, trace_id: str
-    ) -> IngestionResult: ...
+    ) -> IngestionOutcome: ...
 
 
 class IngestionService:
@@ -70,14 +70,14 @@ class IngestionService:
         self.clock = clock
         self.new_id = new_id
 
-    async def ingest(self, document: RawDocument, *, key: str, trace_id: str) -> IngestionResult:
+    async def ingest(self, document: RawDocument, *, key: str, trace_id: str) -> IngestionOutcome:
         started = perf_counter()
         run_id: UUID | None = None
         try:
             async with asyncio.timeout(10), self.repository.connection() as connection:
                 replay = await self.repository.replay(connection, key, document.request_hash)
             if replay is not None:
-                logger.info("ingest_replayed run_id=%s trace_id=%s", replay.run_id, trace_id)
+                logger.info("ingest_replayed run_id=%s trace_id=%s", replay.body.run_id, trace_id)
                 return replay
             raw_ref = await self.storage.put(document, trace_id=trace_id)
             result = IngestionResult(invoice_id=self.new_id(), run_id=self.new_id())
@@ -91,7 +91,7 @@ class IngestionService:
                     replay = await self.repository.replay(connection, key, document.request_hash)
                     if replay is not None:
                         return replay
-                    await self.repository.create(
+                    created = await self.repository.create(
                         connection,
                         result,
                         document,
@@ -100,30 +100,47 @@ class IngestionService:
                         trace_id=trace_id,
                         created_at=created_at,
                     )
+                    versions: VersionOverrides | None = None
+                    if not created:
+                        original = await self.repository.original(connection, document.content_hash)
+                        result = original.response_body.model_copy(update={"duplicate": True})
+                        run_id = result.run_id
+                        raw_ref = original.raw_ref
+                        versions = VersionOverrides(
+                            graph_version=original.graph_version,
+                            model_version="not-applicable@v1",
+                            prompt_version="not-applicable@v1",
+                            policy_version="not-applicable@v1",
+                        )
+                    outcome = IngestionOutcome(response_status=201 if created else 200, body=result)
                     await self.ledger.append(
                         connection,
                         AppendEvent(
                             run_id=result.run_id,
                             invoice_id=result.invoice_id,
-                            event_type="ingest.accepted",
-                            node="Ingest",
+                            event_type="ingest.accepted"
+                            if created
+                            else "ingest.duplicate_rejected",
+                            node="Ingest" if created else "Reject",
                             actor_type="SYSTEM",
                             actor_id="invoiceops-ingestion",
                             payload={
                                 "content_hash": document.content_hash,
                                 "raw_ref": raw_ref,
-                                "source": "UPLOAD",
+                                "source": document.source,
                                 "content_type": document.content_type,
                                 "size_bytes": len(document.body),
+                                **(
+                                    {"route": "REJECT", "reason": "DUP_EXACT"}
+                                    if not created
+                                    else {}
+                                ),
                             },
+                            versions=versions,
                         ),
                         trace_id=trace_id,
                     )
-                    await self.repository.remember(connection, key, document, result, created_at)
-        except psycopg.errors.UniqueViolation as error:
-            if error.diag.constraint_name == "uq_invoices_content_hash":
-                raise DuplicateContent("This document has already been ingested.") from error
-            raise IngestionUnavailable("Invoice persistence is unavailable.") from error
+                    await self.repository.remember(connection, key, document, outcome, created_at)
         except (psycopg.Error, LedgerError, ValidationError, TimeoutError) as error:
             logger.error(
                 "ingest_failed run_id=%s trace_id=%s error_type=%s",
@@ -139,4 +156,4 @@ class IngestionService:
             trace_id,
             (perf_counter() - started) * 1000,
         )
-        return result
+        return outcome

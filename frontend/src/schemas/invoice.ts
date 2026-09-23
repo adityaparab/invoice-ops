@@ -5,7 +5,7 @@ export const invoiceUploadResponseSchema = z
     invoice_id: z.string().uuid(),
     run_id: z.string().uuid(),
     status: z.literal("QUEUED"),
-    duplicate: z.literal(false),
+    duplicate: z.boolean(),
   })
   .strict();
 
