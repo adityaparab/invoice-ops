@@ -110,6 +110,46 @@ jobs:
               assert duplicate.json() == {**accepted.json(), "duplicate": True}
           PY
 
+      - name: Accept and replay a signed synthetic email webhook
+        timeout-minutes: 1
+        run: |
+          docker compose exec -T api python - <<'PY'
+          import base64
+          import hashlib
+          import hmac
+          import json
+          import time
+
+          import httpx
+          from invoiceops_agent.api.settings import ApiSettings
+
+          settings = ApiSettings()
+          assert settings.webhook_secret is not None
+          raw = json.dumps({"attachment": {
+              "content_type": "application/pdf",
+              "content_base64": base64.b64encode(b"%PDF-1.7\nsynthetic CI email\n%%EOF").decode(),
+          }}, separators=(",", ":")).encode()
+          timestamp = str(int(time.time()))
+
+          def headers(nonce):
+              signature = hmac.new(
+                  settings.webhook_secret.get_secret_value().encode(),
+                  timestamp.encode() + b"." + nonce.encode() + b"." + raw,
+                  hashlib.sha256,
+              ).hexdigest()
+              return {"Content-Type": "application/json", "Idempotency-Key": "ci-email-1",
+                      "X-Webhook-Timestamp": timestamp, "X-Webhook-Nonce": nonce,
+                      "X-Webhook-Signature": signature}
+
+          with httpx.Client(base_url="http://127.0.0.1:8000", timeout=10) as client:
+              accepted = client.post("/v1/invoices/email-webhook", headers=headers("ci-email-nonce-0001"), content=raw)
+              replay = client.post("/v1/invoices/email-webhook", headers=headers("ci-email-nonce-0002"), content=raw)
+              reused = client.post("/v1/invoices/email-webhook", headers=headers("ci-email-nonce-0001"), content=raw)
+              assert accepted.status_code == replay.status_code == 201
+              assert accepted.json() == replay.json()
+              assert reused.status_code == 409
+          PY
+
       - name: Persist and replay the Compose hello graph
         timeout-minutes: 2
         run: |

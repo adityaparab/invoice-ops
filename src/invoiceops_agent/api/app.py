@@ -1,7 +1,8 @@
 """FastAPI shell with injected infrastructure and explicit resource ownership."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -26,6 +27,7 @@ from invoiceops_agent.api.ingestion_dependencies import (
     default_upload_factory,
 )
 from invoiceops_agent.api.middleware import RequestContextMiddleware
+from invoiceops_agent.api.schemas.email import email_request_schema
 from invoiceops_agent.api.schemas.health import (
     DependencyStatuses,
     LivenessResponse,
@@ -35,6 +37,8 @@ from invoiceops_agent.api.schemas.invoice import InvoiceUploadResponse
 from invoiceops_agent.api.schemas.problem import ProblemDetails
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
+from invoiceops_agent.api.webhooks import decode_email_document, read_signed_email
+from invoiceops_agent.graph.ingestion import utc_now
 from invoiceops_agent.obs.logging import configure_logging
 
 
@@ -43,6 +47,7 @@ def create_app(
     *,
     dependency_factory: DependencyFactory | None = None,
     upload_factory: UploadFactory | None = None,
+    webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
     configure_logging()
@@ -124,6 +129,64 @@ def create_app(
             raise HTTPException(400, "An Idempotency-Key is required.")
         outcome = await uploads.service.ingest(
             document, key=context.idempotency_key, trace_id=context.trace_id
+        )
+        response.status_code = outcome.response_status
+        return InvoiceUploadResponse.model_validate(outcome.body.model_dump())
+
+    @app.post(
+        "/v1/invoices/email-webhook",
+        response_model=InvoiceUploadResponse,
+        status_code=201,
+        tags=["invoices"],
+        responses={
+            **{status: {"model": ProblemDetails} for status in (400, 401, 408, 409, 413, 415, 503)},
+            200: {
+                "model": InvoiceUploadResponse,
+                "description": "Existing content rejected as duplicate",
+            },
+        },
+        openapi_extra={
+            "parameters": [
+                {
+                    "name": "Idempotency-Key",
+                    "in": "header",
+                    "required": True,
+                    "description": "Stable replay key, validated before body reading.",
+                    "schema": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "pattern": IDEMPOTENCY_KEY_PATTERN,
+                    },
+                },
+                *[
+                    {"name": name, "in": "header", "required": True, "schema": {"type": "string"}}
+                    for name in (
+                        "X-Webhook-Timestamp",
+                        "X-Webhook-Nonce",
+                        "X-Webhook-Signature",
+                    )
+                ],
+            ],
+            "requestBody": {
+                "required": True,
+                "content": {"application/json": {"schema": email_request_schema()}},
+            },
+        },
+    )
+    async def email_webhook(
+        request: Request,
+        response: Response,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+    ) -> InvoiceUploadResponse:
+        if context.idempotency_key is None:
+            raise HTTPException(400, "An Idempotency-Key is required.")
+        envelope, nonce = await read_signed_email(request, configuration, clock=webhook_clock)
+        if uploads.service is None:
+            raise HTTPException(503, "Invoice ingestion is not configured.")
+        document = await decode_email_document(envelope, max_bytes=configuration.document_max_bytes)
+        outcome = await uploads.service.ingest(
+            document, key=context.idempotency_key, trace_id=context.trace_id, nonce=nonce
         )
         response.status_code = outcome.response_status
         return InvoiceUploadResponse.model_validate(outcome.body.model_dump())

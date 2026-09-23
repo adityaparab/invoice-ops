@@ -5,11 +5,16 @@ from collections.abc import Iterator
 import psycopg
 import pytest
 from minio import Minio
-from sqlalchemy.engine import URL
+from pydantic import HttpUrl, SecretStr
+from sqlalchemy.engine import URL, make_url
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.wait_strategies import ExecWaitStrategy, HttpWaitStrategy
 from tests.integration.support import migrate
 from urllib3 import PoolManager, Timeout
+
+from invoiceops_agent.api.settings import ApiSettings
+from invoiceops_agent.db.runtime_role import provision_runtime_login
+from invoiceops_agent.db.settings import ProvisioningSettings
 
 POSTGRES_IMAGE = (
     "pgvector/pgvector:0.8.6-pg16"
@@ -104,3 +109,30 @@ def migrated_database(
 ) -> psycopg.Connection[tuple[object, ...]]:
     migrate("upgrade", "head")
     return postgres_connection
+
+
+@pytest.fixture
+def upload_settings(
+    migrated_database: psycopg.Connection[tuple[object, ...]],
+    migration_dsn: str,
+    minio_endpoint: str,
+    minio_client: Minio,
+) -> ApiSettings:
+    provision_runtime_login(
+        ProvisioningSettings(
+            migration_dsn=SecretStr(migration_dsn), app_password=SecretStr(TEST_PASSWORD)
+        )
+    )
+    dsn = (
+        make_url(migration_dsn)
+        .set(drivername="postgresql", username="invoiceops_app", password=TEST_PASSWORD)
+        .render_as_string(hide_password=False)
+    )
+    minio_client.make_bucket("invoiceops-raw")
+    return ApiSettings(
+        postgres_dsn=SecretStr(dsn),
+        minio_url=HttpUrl(minio_endpoint),
+        minio_access_key=SecretStr(TEST_USER),
+        minio_secret_key=SecretStr(TEST_PASSWORD),
+        service_token=SecretStr("synthetic-upload-token"),
+    )

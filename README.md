@@ -8,9 +8,9 @@ The working foundation includes a health-checked FastAPI shell, Postgres/pgvecto
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
 database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
 Python package, real database/object-store integrations, and Compose startup. Phase 1 adds authenticated
-invoice uploads with raw storage, durable request replay, and audited exact-content duplicate
-rejection. Extraction remains planned; the hello
-graph uses stub nodes and makes no model calls.
+invoice uploads and a signed synthetic email webhook with raw storage, durable request replay,
+nonce claims, and audited exact-content duplicate rejection. The extraction library and standalone
+deterministic validation node are implemented; the hello graph still uses stub nodes.
 Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
 ingestion and later provenance endpoints. The upload endpoint uses this writer in its transaction.
 The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
@@ -279,8 +279,8 @@ Start the local API, Postgres, and MinIO with `docker compose up -d --build --wa
 See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed placeholder,
 and the optional Compose LiteLLM proxy. Run `docker compose run --rm graph-demo` for the durable
 LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. See
-[invoice upload instructions](docs/INGESTION.md) for the authenticated multipart endpoint, limits,
-and durable replay. Accepted invoices remain queued; extraction and processing are later steps.
+[invoice ingestion instructions](docs/INGESTION.md) for multipart uploads, the signed webhook,
+limits, and durable replay. Accepted invoices remain queued until full graph wiring in Phase 2.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
 MinIO tests through disposable Testcontainers, a package build, and a Compose startup/health smoke
 on every PR and push to `main`.

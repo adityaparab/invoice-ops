@@ -11,17 +11,13 @@ from uuid import UUID
 import psycopg
 import pytest
 from minio import Minio
-from pydantic import HttpUrl, SecretStr
-from sqlalchemy.engine import make_url
 from tests.integration.conftest import TEST_PASSWORD, TEST_USER
 from tests.unit.test_api import assert_problem, client_for
-from tests.unit.test_upload import HEADERS, PDF, TOKEN
+from tests.unit.test_upload import HEADERS, PDF
 
 from invoiceops_agent.api.app import create_app
 from invoiceops_agent.api.ingestion_dependencies import UploadFactory
 from invoiceops_agent.api.settings import ApiSettings
-from invoiceops_agent.db.runtime_role import provision_runtime_login
-from invoiceops_agent.db.settings import ProvisioningSettings
 from invoiceops_agent.graph.ingestion import INGESTION_VERSION, IngestionService, UploadService
 from invoiceops_agent.ledger.connection import LedgerConnection
 from invoiceops_agent.ledger.errors import LedgerStorageError
@@ -35,33 +31,6 @@ from invoiceops_agent.tools.storage_bootstrap import provision_bucket
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 FIXED_TIME = datetime(2026, 1, 2, tzinfo=UTC)
-
-
-@pytest.fixture
-def upload_settings(
-    migrated_database: psycopg.Connection[tuple[object, ...]],
-    migration_dsn: str,
-    minio_endpoint: str,
-    minio_client: Minio,
-) -> ApiSettings:
-    provision_runtime_login(
-        ProvisioningSettings(
-            migration_dsn=SecretStr(migration_dsn), app_password=SecretStr(TEST_PASSWORD)
-        )
-    )
-    dsn = (
-        make_url(migration_dsn)
-        .set(drivername="postgresql", username="invoiceops_app", password=TEST_PASSWORD)
-        .render_as_string(hide_password=False)
-    )
-    minio_client.make_bucket("invoiceops-raw")
-    return ApiSettings(
-        postgres_dsn=SecretStr(dsn),
-        minio_url=HttpUrl(minio_endpoint),
-        minio_access_key=SecretStr(TEST_USER),
-        minio_secret_key=SecretStr(TEST_PASSWORD),
-        service_token=SecretStr(TOKEN),
-    )
 
 
 def row_counts(connection: psycopg.Connection[tuple[object, ...]]) -> tuple[object, ...] | None:

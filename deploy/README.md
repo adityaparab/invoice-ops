@@ -77,8 +77,11 @@ with `docker compose logs migrate api postgres minio`.
 ## Upload storage and credentials
 
 The API waits for both owner migrations and the `storage-init` bucket provisioning service.
-`INVOICEOPS_SERVICE_TOKEN` authenticates multipart invoice uploads; the checked-in example is
-synthetic local-only configuration. `INVOICEOPS_RAW_BUCKET` selects the raw-object bucket.
+`INVOICEOPS_SERVICE_TOKEN` authenticates multipart invoice uploads. The separate
+`INVOICEOPS_WEBHOOK_SECRET` authenticates the signed synthetic email stub; rotate both outside local
+development. The checked-in examples are synthetic local-only configuration.
+`INVOICEOPS_RAW_BUCKET` selects the raw-object bucket. See `docs/INGESTION.md` for webhook signing,
+nonce, and retry semantics.
 Compose passes MinIO credentials only to the API and bucket initializer, separately from database
 owner credentials. See [the upload contract](../docs/INGESTION.md) for a curl example, limits,
 idempotency, and audited new-key duplicate rejection (`200` with the original IDs).

@@ -76,7 +76,8 @@
 
 - [x] 1.1 `POST /v1/invoices` upload endpoint (service token auth), raw doc stored in MinIO
   - Bounded multipart parsing, signature checks, content-addressed raw storage, atomic invoice/run/ledger/replay writes. Step 1.3 implements original-ID `200` responses and audited Reject routing for new-key content duplicates.
-- [ ] 1.2 `POST /v1/invoices/email-webhook` with HMAC verification (stub email source)
+- [x] 1.2 `POST /v1/invoices/email-webhook` with HMAC verification (stub email source)
+  - Bounded signed JSON, canonical base64 document handling, transactional nonce claims, shared cross-source replay, and audited duplicate routing; no provider integration.
 - [x] 1.3 Content-hash dedupe on ingest → route to `Reject`
   - New keys return `200` with original IDs and `duplicate=true`; one SYSTEM Reject event and successful replay response commit atomically. Same-key replay preserves status/body without another event.
 - [x] 1.4 Ledger writer/reader: append entries with actor_type (SYSTEM/AGENT/HUMAN/POLICY) and model/prompt/policy version pins
@@ -203,11 +204,6 @@ checkbox here.
 
 ## ToDo
 
-- [ ] **Resume saved email webhook implementation:** Step 1.2 is backed up on
-  `p1/02-email-webhook`; its
-  [handoff notes](https://github.com/adityaparab/invoice-ops/blob/p1/02-email-webhook/docs/WORK_IN_PROGRESS_EMAIL.md)
-  list the remaining endpoint, nonce transaction, and malformed-JSON work.
-
 - [ ] **Deferred live baseline (step 1.9):** Configure `OPENAI_API_KEY` as a GitHub Actions
   repository secret and run the extraction baseline in CI. Deferred at the user's request on
   2026-09-23. Continue offline implementation and cassette tests; keep live quality metrics marked
@@ -236,3 +232,4 @@ checkbox here.
 | 2026-09-23 | Step 1.3 replaces the interim duplicate conflict with original-ID `200` responses, atomic SYSTEM Reject events, and exact status/body replay. Synchronized races, duplicate replay, rollback, and preservation of original run/state are covered. The combined branch passes 273 offline units and 55 real integrations, plus the Compose upload/duplicate/replay smoke. No live model calls run. |
 | 2026-09-23 | Step 1.6 adds bounded immutable-document reads and PNG/JPEG/PDF preflight, packaged extraction prompts, typed per-field observations, one technical schema-repair pass, and committed AGENT outcomes with model/prompt/source provenance. Offline synthetic SDK cassettes and real MinIO/Postgres integrations verify behavior; live model evaluation remains deferred. |
 | 2026-09-23 | Step 1.7 adds pure required-field, regular-invoice sign, net-line, subtotal, per-line tax, and gross-total validation. Explicit currency rules, inclusive Decimal tolerances, isolated arithmetic context, and immutable configuration make decisions reproducible. Both PASS and FAIL commit POLICY audit evidence before returning; 401 offline units and 60 restricted-role integrations pass against merged extraction. Full workflow routing remains Phase 2 work. |
+| 2026-09-23 | Step 1.2 adds a signed synthetic email webhook with bounded raw JSON and canonical attachment decoding. HMAC freshness and nonce replay controls run before ingestion; each successful nonce claim commits with the original or duplicate response. Full checks pass: 436 offline units, 65 real integrations, strict Python and TypeScript typing, and isolated Compose accept/replay/nonce/duplicate smoke. Real provider delivery remains outside this stub. |

@@ -20,6 +20,7 @@ from invoiceops_agent.tools.ingestion_errors import IngestionUnavailable
 from invoiceops_agent.tools.ingestion_repository import IngestionRepository
 from invoiceops_agent.tools.ingestion_schemas import IngestionOutcome, IngestionResult, RawDocument
 from invoiceops_agent.tools.raw_storage import RawStorage
+from invoiceops_agent.tools.webhook_auth import WebhookNonce
 
 logger = logging.getLogger(__name__)
 INGESTION_VERSION = "ingestion-v1"
@@ -31,7 +32,12 @@ def utc_now() -> datetime:
 
 class UploadService(Protocol):
     async def ingest(
-        self, document: RawDocument, *, key: str, trace_id: str
+        self,
+        document: RawDocument,
+        *,
+        key: str,
+        trace_id: str,
+        nonce: WebhookNonce | None = None,
     ) -> IngestionOutcome: ...
 
 
@@ -64,15 +70,27 @@ class IngestionService:
         self.clock = clock
         self.new_id = new_id
 
-    async def ingest(self, document: RawDocument, *, key: str, trace_id: str) -> IngestionOutcome:
+    async def ingest(
+        self,
+        document: RawDocument,
+        *,
+        key: str,
+        trace_id: str,
+        nonce: WebhookNonce | None = None,
+    ) -> IngestionOutcome:
+        if (document.source == "EMAIL") != (nonce is not None):
+            raise ValueError("Email ingestion requires a nonce; upload ingestion forbids one")
         started = perf_counter()
         run_id: UUID | None = None
         try:
-            async with asyncio.timeout(10), self.repository.connection() as connection:
-                replay = await self.repository.replay(connection, key, document.request_hash)
-            if replay is not None:
-                logger.info("ingest_replayed run_id=%s trace_id=%s", replay.body.run_id, trace_id)
-                return replay
+            if nonce is None:
+                async with asyncio.timeout(10), self.repository.connection() as connection:
+                    replay = await self.repository.replay(connection, key, document.request_hash)
+                if replay is not None:
+                    logger.info(
+                        "ingest_replayed run_id=%s trace_id=%s", replay.body.run_id, trace_id
+                    )
+                    return replay
             raw_ref = await self.storage.put(document, trace_id=trace_id)
             result = IngestionResult(invoice_id=self.new_id(), run_id=self.new_id())
             run_id = result.run_id
@@ -82,8 +100,13 @@ class IngestionService:
             async with asyncio.timeout(10), self.repository.connection() as connection:
                 async with connection.transaction():
                     await self.repository.lock_key(connection, key)
+                    if nonce is not None:
+                        await self.repository.claim_nonce(connection, nonce, created_at=created_at)
                     replay = await self.repository.replay(connection, key, document.request_hash)
                     if replay is not None:
+                        logger.info(
+                            "ingest_replayed run_id=%s trace_id=%s", replay.body.run_id, trace_id
+                        )
                         return replay
                     created = await self.repository.create(
                         connection,

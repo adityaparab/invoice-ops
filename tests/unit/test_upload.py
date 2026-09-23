@@ -21,6 +21,7 @@ from invoiceops_agent.graph.ingestion import UploadService
 from invoiceops_agent.tools.documents import read_document
 from invoiceops_agent.tools.ingestion_errors import IngestionUnavailable
 from invoiceops_agent.tools.ingestion_schemas import IngestionOutcome, IngestionResult, RawDocument
+from invoiceops_agent.tools.webhook_auth import WebhookNonce
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 TOKEN = "synthetic-upload-token"
@@ -31,11 +32,20 @@ PDF = b"%PDF-1.7\nsynthetic-document\n%%EOF"
 @dataclass
 class CaptureUploads:
     documents: list[RawDocument] = field(default_factory=list)
+    nonces: list[WebhookNonce | None] = field(default_factory=list)
     failure: Exception | None = None
     duplicate: bool = False
 
-    async def ingest(self, document: RawDocument, *, key: str, trace_id: str) -> IngestionOutcome:
+    async def ingest(
+        self,
+        document: RawDocument,
+        *,
+        key: str,
+        trace_id: str,
+        nonce: WebhookNonce | None = None,
+    ) -> IngestionOutcome:
         self.documents.append(document)
+        self.nonces.append(nonce)
         if self.failure is not None:
             raise self.failure
         return IngestionOutcome(
