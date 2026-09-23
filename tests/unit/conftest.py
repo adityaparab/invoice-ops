@@ -2,8 +2,10 @@
 
 import pytest
 
+from invoiceops_agent.api.settings import ApiSettings
+
 
 @pytest.fixture(autouse=True)
 def clear_api_config_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("POSTGRES_DSN", "MINIO_URL", "READINESS_TIMEOUT_SECONDS"):
-        monkeypatch.delenv(f"INVOICEOPS_{name}", raising=False)
+    for name in ApiSettings.model_fields:
+        monkeypatch.delenv(f"INVOICEOPS_{name.upper()}", raising=False)

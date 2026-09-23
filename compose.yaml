@@ -10,12 +10,22 @@ services:
     environment:
       INVOICEOPS_POSTGRES_DSN: ${INVOICEOPS_POSTGRES_DSN:-postgresql://invoiceops_app:${INVOICEOPS_APP_PASSWORD:-invoiceops-app-local-only-password}@postgres:5432/${POSTGRES_DB:-invoiceops}}
       INVOICEOPS_MINIO_URL: http://minio:9000
+      INVOICEOPS_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-invoiceops-local}
+      INVOICEOPS_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-invoiceops-local-only-password}
+      INVOICEOPS_RAW_BUCKET: ${INVOICEOPS_RAW_BUCKET:-invoiceops-raw}
+      INVOICEOPS_SERVICE_TOKEN: ${INVOICEOPS_SERVICE_TOKEN:-invoiceops-local-upload-token}
+      INVOICEOPS_DOCUMENT_MAX_BYTES: ${INVOICEOPS_DOCUMENT_MAX_BYTES:-10485760}
+      INVOICEOPS_UPLOAD_MAX_BYTES: ${INVOICEOPS_UPLOAD_MAX_BYTES:-11534336}
+      INVOICEOPS_UPLOAD_TIMEOUT_SECONDS: ${INVOICEOPS_UPLOAD_TIMEOUT_SECONDS:-30}
+      INVOICEOPS_STORAGE_TIMEOUT_SECONDS: ${INVOICEOPS_STORAGE_TIMEOUT_SECONDS:-10}
       INVOICEOPS_READINESS_TIMEOUT_SECONDS: "2"
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
+      storage-init:
+        condition: service_completed_successfully
       migrate:
         condition: service_completed_successfully
       postgres:
@@ -42,6 +52,24 @@ services:
       INVOICEOPS_APP_PASSWORD: ${INVOICEOPS_APP_PASSWORD:-invoiceops-app-local-only-password}
     depends_on:
       postgres:
+        condition: service_healthy
+    restart: "no"
+
+  storage-init:
+    image: invoiceops-api:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    init: true
+    command: ["python", "-m", "invoiceops_agent.tools.storage_bootstrap"]
+    environment:
+      INVOICEOPS_MINIO_URL: http://minio:9000
+      INVOICEOPS_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-invoiceops-local}
+      INVOICEOPS_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-invoiceops-local-only-password}
+      INVOICEOPS_RAW_BUCKET: ${INVOICEOPS_RAW_BUCKET:-invoiceops-raw}
+      INVOICEOPS_STORAGE_TIMEOUT_SECONDS: ${INVOICEOPS_STORAGE_TIMEOUT_SECONDS:-10}
+    depends_on:
+      minio:
         condition: service_healthy
     restart: "no"
 
