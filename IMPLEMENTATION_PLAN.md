@@ -82,7 +82,7 @@
 - [x] 1.4 Ledger writer/reader: append entries with actor_type (SYSTEM/AGENT/HUMAN/POLICY) and model/prompt/policy version pins
   - Brought forward so invoice ingestion can commit its initial audit entry with business data and its idempotency response.
 - [x] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
-- [ ] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
+- [x] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
 - [ ] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
 - [x] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
 - [ ] 1.9 Baseline extraction field F1 report (per-field, per-tier) — no targets yet
@@ -229,3 +229,4 @@ checkbox here.
 | 2026-09-23 | Step 1.5 implements the async pinned-SDK gateway client with alias policies, text guards, bounded multimodal requests, typed schema validation and provenance, deadline-aware retries, sanitized telemetry, and immutable offline cassettes. |
 | 2026-09-23 | Step 1.1 adds authenticated bounded multipart uploads, PDF/PNG/JPEG signature checks, content-addressed MinIO storage, and atomic invoice/run/SYSTEM-ledger/idempotency writes. All 194 offline units and 48 real integrations pass; isolated Compose validates auth and exact replay through the restricted API role. New-key duplicate `409` is explicitly staged until step 1.3; extraction remains queued work. |
 | 2026-09-23 | Step 1.3 replaces the interim duplicate conflict with original-ID `200` responses, atomic SYSTEM Reject events, and exact status/body replay. Synchronized races, duplicate replay, rollback, and preservation of original run/state are covered. The combined branch passes 273 offline units and 55 real integrations, plus the Compose upload/duplicate/replay smoke. No live model calls run. |
+| 2026-09-23 | Step 1.6 adds bounded immutable-document reads and PNG/JPEG/PDF preflight, packaged extraction prompts, typed per-field observations, one technical schema-repair pass, and committed AGENT outcomes with model/prompt/source provenance. Offline synthetic SDK cassettes and real MinIO/Postgres integrations verify behavior; live model evaluation remains deferred. |

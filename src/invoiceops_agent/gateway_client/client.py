@@ -28,6 +28,7 @@ from invoiceops_agent.gateway_client.errors import (
     GatewayRequestRejected,
     GatewayUnavailable,
     InvalidGatewayResponse,
+    InvalidStructuredOutput,
     TokenBudgetExceeded,
 )
 from invoiceops_agent.gateway_client.guards import RequestGuards
@@ -120,6 +121,13 @@ class GatewayClient:
             ),
         )
 
+    def configured_policy(self, alias: ModelAlias, context: RequestContext) -> AliasPolicy:
+        """Expose the immutable configured policy so audit pins also cover failed calls."""
+        policy = self._settings.aliases.get(alias)
+        if policy is None:
+            raise GatewayConfigurationError(context)
+        return policy
+
     async def _check_request_body(self, request: httpx2.Request) -> None:
         if len(request.content) > self._settings.max_request_bytes:
             raise _RequestBodyTooLarge
@@ -183,7 +191,10 @@ class GatewayClient:
                     or not choice.message.content
                 ):
                     raise InvalidGatewayResponse(request)
-                value = response_model.model_validate_json(choice.message.content, strict=True)
+                try:
+                    value = response_model.model_validate_json(choice.message.content, strict=True)
+                except ValidationError:
+                    raise InvalidStructuredOutput(request) from None
                 usage = TokenUsage(
                     input_tokens=completion.usage.prompt_tokens,
                     output_tokens=completion.usage.completion_tokens,
@@ -241,9 +252,7 @@ class GatewayClient:
         alias: ModelAlias,
         prepare: Callable[[AliasPolicy], Callable[[float], Awaitable[_Response[T]]]],
     ) -> GatewayResult[T]:
-        policy = self._settings.aliases.get(alias)
-        if policy is None:
-            raise GatewayConfigurationError(context)
+        policy = self.configured_policy(alias, context)
         started = self._clock()
         deadline = started + self._settings.total_timeout_seconds
         attempts = 0

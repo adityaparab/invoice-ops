@@ -6,7 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-DocumentType = Literal["application/pdf", "image/png", "image/jpeg"]
+from invoiceops_agent.schemas.documents import DocumentType as DocumentType
+
 IngestionSource = Literal["UPLOAD", "EMAIL"]
 
 

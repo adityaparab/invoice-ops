@@ -20,3 +20,9 @@ def test_architecture_component_is_importable(component: str) -> None:
 
 def test_installed_package_declares_inline_types() -> None:
     assert files("invoiceops_agent").joinpath("py.typed").is_file()
+
+
+@pytest.mark.parametrize("name", ["extract_v1.md", "extract_repair_v1.md"])
+def test_extraction_prompt_resources_are_packaged(name: str) -> None:
+    prompt = files("invoiceops_agent.prompts").joinpath(name).read_text(encoding="utf-8")
+    assert "JSON" in prompt and "confidence" in prompt
