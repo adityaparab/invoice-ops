@@ -290,4 +290,9 @@ runtime credentials. Audit tables reject updates, deletes, and truncation, inclu
 corrections append a superseding entry. See [schema and migration commands](docs/schema.md) for
 table contracts, credential provisioning, and reversible migration behavior.
 
+The [gateway client](docs/GATEWAY_CLIENT.md) provides typed async chat and embedding calls through
+LiteLLM aliases, with text guards, schema validation, token allowances, bounded retries, and offline
+cassette replay. Configure its endpoint, key, and model-version policies explicitly; binary inputs
+require a compatible route and trusted document preprocessing.
+
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).

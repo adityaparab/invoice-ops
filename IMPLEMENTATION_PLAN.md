@@ -80,7 +80,7 @@
 - [ ] 1.3 Content-hash dedupe on ingest → route to `Reject`
 - [x] 1.4 Ledger writer/reader: append entries with actor_type (SYSTEM/AGENT/HUMAN/POLICY) and model/prompt/policy version pins
   - Brought forward so invoice ingestion can commit its initial audit entry with business data and its idempotency response.
-- [ ] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
+- [x] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
 - [ ] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
 - [ ] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
 - [ ] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
@@ -189,7 +189,7 @@ checkbox here.
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
 | P0 — Platform skeleton         | Complete    | 2026-09-23   | Compose API, storage, restricted runtime, audit enforcement, durable hello graph, CI, and ADRs implemented |
-| P1 — Extraction & validation   | In progress | —            | Transactional ledger library ready for audited ingestion   |
+| P1 — Extraction & validation   | In progress | —            | Transactional ledger and typed gateway with offline cassettes implemented |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
 | P4 — Observability + gateway   | Not started | —            |                                                           |
@@ -199,6 +199,14 @@ checkbox here.
 
 
 
+
+## ToDo
+
+- [ ] **Deferred live baseline (step 1.9):** Configure `OPENAI_API_KEY` as a GitHub Actions
+  repository secret and run the extraction baseline in CI. Deferred at the user's request on
+  2026-09-23. Continue offline implementation and cassette tests; keep live quality metrics marked
+  as unmeasured until the evaluation actually runs. A reminder is scheduled for 2026-09-24 at
+  09:00 Europe/Warsaw. Never store the key in the repository or a chat message.
 
 ## Change Log
 
@@ -216,4 +224,5 @@ checkbox here.
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
 | 2026-09-23 | Step 1.4 adds transactional append-only ledger writes, explicit version pins, and bounded run/invoice history reads. Real restricted-role tests verify atomic rollback, concurrent sequencing, immutable corrections, and pagination; all 157 offline units and 40 integrations pass. |
+| 2026-09-23 | Step 1.5 implements the async pinned-SDK gateway client with alias policies, text guards, bounded multimodal requests, typed schema validation and provenance, deadline-aware retries, sanitized telemetry, and immutable offline cassettes. |
 | 2026-09-23 | Step 1.1 adds authenticated bounded multipart uploads, PDF/PNG/JPEG signature checks, content-addressed MinIO storage, and atomic invoice/run/SYSTEM-ledger/idempotency writes. All 194 offline units and 48 real integrations pass; isolated Compose validates auth and exact replay through the restricted API role. New-key duplicate `409` is explicitly staged until step 1.3; extraction remains queued work. |
