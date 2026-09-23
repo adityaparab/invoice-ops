@@ -97,25 +97,13 @@ class RequestGuards:
         output = request.max_output_tokens or policy.output_token_limit
         if output > policy.output_token_limit:
             raise TokenBudgetExceeded(request)
-        request_bytes = (
-            len(
-                json.dumps(
-                    {
-                        "messages": messages,
-                        "schema": schema,
-                        "max_tokens": output,
-                    }
-                ).encode("utf-8")
-            )
-            + 1024
-        )
-        self._budget(tokens, output, request_bytes, request, policy)
+        self._budget(tokens, output, request, policy)
         return GuardedChat(messages=messages, output_tokens=output, schema=schema)
 
     def embeddings(self, request: EmbeddingRequest, policy: AliasPolicy) -> list[str]:
         inputs = [self.text(text, request) for text in request.inputs]
         size = sum(len(text.encode("utf-8")) for text in inputs)
-        self._budget(size + 16 * len(inputs), 0, size, request, policy)
+        self._budget(size + 16 * len(inputs), 0, request, policy)
         return inputs
 
     def _binary(
@@ -131,11 +119,7 @@ class RequestGuards:
             raise TokenBudgetExceeded(context)
 
     def _budget(
-        self, tokens: int, output: int, size: int, context: RequestContext, policy: AliasPolicy
+        self, tokens: int, output: int, context: RequestContext, policy: AliasPolicy
     ) -> None:
-        if (
-            tokens > policy.input_token_limit
-            or tokens + output > policy.total_token_limit
-            or size > self._settings.max_request_bytes
-        ):
+        if tokens > policy.input_token_limit or tokens + output > policy.total_token_limit:
             raise TokenBudgetExceeded(context)

@@ -6,6 +6,7 @@ import json
 import logging
 import math
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -18,7 +19,7 @@ from openai import APIConnectionError, APIResponseValidationError, APIStatusErro
 from openai.types.chat.completion_create_params import ResponseFormat
 from pydantic import BaseModel, ValidationError
 
-from invoiceops_agent.gateway_client.cassettes import CassetteMismatch
+from invoiceops_agent.gateway_client.cassettes import CassetteMismatch, CassetteTransport
 from invoiceops_agent.gateway_client.errors import (
     GatewayCassetteMismatch,
     GatewayConfigurationError,
@@ -80,6 +81,10 @@ def _headers(context: RequestContext) -> dict[str, str]:
     }
 
 
+class _RequestBodyTooLarge(Exception):
+    """The SDK-serialized body exceeded its pre-transport byte limit."""
+
+
 class GatewayClient:
     def __init__(
         self,
@@ -92,6 +97,7 @@ class GatewayClient:
         telemetry: GatewayTelemetry | None = None,
     ) -> None:
         self._settings = settings
+        self._cassettes = transport if isinstance(transport, CassetteTransport) else None
         self._guards = RequestGuards(settings)
         self._clock = clock
         self._utcnow = utcnow
@@ -107,11 +113,16 @@ class GatewayClient:
             _strict_response_validation=True,
             http_client=httpx2.AsyncClient(
                 transport=transport,
+                event_hooks={"request": [self._check_request_body]},
                 follow_redirects=False,
                 trust_env=False,
                 timeout=settings.request_timeout_seconds,
             ),
         )
+
+    async def _check_request_body(self, request: httpx2.Request) -> None:
+        if len(request.content) > self._settings.max_request_bytes:
+            raise _RequestBodyTooLarge
 
     async def __aenter__(self) -> Self:
         return self
@@ -240,7 +251,10 @@ class GatewayClient:
         status: Literal["succeeded", "failed", "cancelled"] = "failed"
         error_code: str | None = None
         try:
-            async with asyncio.timeout(self._settings.total_timeout_seconds):
+            async with (
+                asyncio.timeout(self._settings.total_timeout_seconds),
+                self._cassettes.invocation() if self._cassettes else nullcontext(),
+            ):
                 operation = prepare(policy)
                 while True:
                     remaining = deadline - self._clock()
@@ -299,8 +313,15 @@ class GatewayClient:
                     latency_ms=max(0, self._clock() - started) * 1000,
                     cost_usd=response.cost,
                 )
-                status = "succeeded"
-                return result
+            status = "succeeded"
+            return result
+        except _RequestBodyTooLarge:
+            error_code = TokenBudgetExceeded.code
+            raise TokenBudgetExceeded(context, attempts=attempts) from None
+        except CassetteMismatch:
+            status = "failed"
+            error_code = GatewayCassetteMismatch.code
+            raise GatewayCassetteMismatch(context, attempts=attempts) from None
         except TimeoutError:
             error_code = GatewayDeadlineExceeded.code
             raise GatewayDeadlineExceeded(context, attempts=attempts) from None

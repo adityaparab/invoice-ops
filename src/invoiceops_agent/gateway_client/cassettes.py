@@ -1,14 +1,20 @@
-"""Explicit HTTP record/replay transport; replay never has a network fallback."""
+"""Immutable logical-call HTTP sequences; replay never has a network fallback."""
 
 import asyncio
 import hashlib
 import json
+import os
 import re
+import tempfile
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 import httpx2
-from pydantic import Field, JsonValue
+from pydantic import Field, JsonValue, TypeAdapter
 
 from invoiceops_agent.gateway_client.schemas import Contract, ModelAlias
 
@@ -17,28 +23,45 @@ class CassetteMismatch(Exception):
     """A missing or different immutable scenario; deliberately contains no request data."""
 
 
-class Cassette(Contract):
+class CassetteIdentity(Contract):
     alias: ModelAlias
     scenario: str
     prompt_version: str
     request_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class Cassette(CassetteIdentity):
+    """Legacy single-response fixture; committed files remain unchanged."""
+
     status_code: int = Field(ge=100, le=599)
     headers: dict[str, str]
     response: JsonValue
 
 
-def _identity(request: httpx2.Request) -> tuple[str, str, str, str]:
+class RecordedResponse(Contract):
+    kind: Literal["response"] = "response"
+    status_code: int = Field(ge=100, le=599)
+    headers: dict[str, str]
+    response: JsonValue
+
+
+class RecordedFailure(Contract):
+    kind: Literal["connection_error", "timeout"]
+
+
+Outcome = Annotated[RecordedResponse | RecordedFailure, Field(discriminator="kind")]
+
+
+class CassetteSequence(CassetteIdentity):
+    format_version: Literal[2] = 2
+    outcomes: tuple[Outcome, ...] = Field(min_length=1, max_length=6)
+
+
+def _identity(request: httpx2.Request) -> CassetteIdentity:
     try:
         body = json.loads(request.content)
-        alias = body["model"]
         scenario = request.headers["X-InvoiceOps-Scenario"]
-        version = request.headers["X-InvoiceOps-Prompt-Version"]
-        if alias not in {
-            "extract-vision",
-            "triage-reasoner",
-            "eval-judge",
-            "embed",
-        } or not re.fullmatch(r"[a-zA-Z0-9_\-]{1,80}", scenario):
+        if not re.fullmatch(r"[a-zA-Z0-9_\-]{1,80}", scenario):
             raise ValueError("Invalid cassette identity")
         payload = {
             "method": request.method,
@@ -51,9 +74,40 @@ def _identity(request: httpx2.Request) -> tuple[str, str, str, str]:
                 "utf-8"
             )
         ).hexdigest()
-        return alias, scenario, version, digest
+        return CassetteIdentity.model_validate(
+            {
+                "alias": body["model"],
+                "scenario": scenario,
+                "prompt_version": request.headers["X-InvoiceOps-Prompt-Version"],
+                "request_sha256": digest,
+            }
+        )
     except (KeyError, ValueError, TypeError):
         raise CassetteMismatch("Invalid cassette identity") from None
+
+
+async def _disk[T](operation: Callable[[], T]) -> T:
+    # Keep reservations until an in-flight local disk operation has actually settled.
+    task = asyncio.create_task(asyncio.to_thread(operation))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        try:
+            await task
+        except (OSError, CassetteMismatch):
+            pass
+        raise
+
+
+@dataclass
+class _Invocation:
+    identity: CassetteIdentity | None = None
+    path: Path | None = None
+    reserved: bool = False
+    recordable: bool = True
+    outcomes: list[RecordedResponse | RecordedFailure] = field(default_factory=list)
+    replay: tuple[Outcome, ...] = ()
+    index: int = 0
 
 
 class CassetteTransport(httpx2.AsyncBaseTransport):
@@ -71,71 +125,199 @@ class CassetteTransport(httpx2.AsyncBaseTransport):
         self._directory = directory
         self._mode = mode
         self._upstream = upstream
+        self._current: ContextVar[_Invocation | None] = ContextVar(
+            "cassette_invocation", default=None
+        )
+        self._active = 0
+        self._closed = False
+
+    @asynccontextmanager
+    async def invocation(self) -> AsyncIterator[None]:
+        """Scope one gateway call, including all attempts and terminal validation."""
+        if self._closed:
+            raise CassetteMismatch("Cassette transport is closed")
+        invocation = _Invocation()
+        token = self._current.set(invocation)
+        self._active += 1
+        try:
+            try:
+                yield
+            except (asyncio.CancelledError, TimeoutError):
+                raise
+            except Exception:
+                await self._finish(invocation)
+                raise
+            else:
+                await self._finish(invocation)
+        finally:
+            self._current.reset(token)
+            self._active -= 1
+            if invocation.reserved and invocation.path is not None:
+                path = invocation.path
+                try:
+                    await _disk(lambda: path.with_suffix(".recording").unlink())
+                except OSError:
+                    raise CassetteMismatch("Cassette reservation could not be released") from None
 
     async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
-        alias, scenario, version, digest = _identity(request)
-        version_hash = hashlib.sha256(version.encode("utf-8")).hexdigest()[:16]
-        path = self._directory / f"{alias}__{scenario}__{version_hash}.json"
-        if self._mode == "replay":
-            cassette = await asyncio.to_thread(self._read, path)
-            if (
-                cassette.alias,
-                cassette.scenario,
-                cassette.prompt_version,
-                cassette.request_sha256,
-            ) != (alias, scenario, version, digest):
-                raise CassetteMismatch("Cassette request or schema changed")
-            return httpx2.Response(
-                cassette.status_code,
-                headers=cassette.headers,
-                json=cassette.response,
-                request=request,
-            )
-        if await asyncio.to_thread(path.exists):
-            raise CassetteMismatch("An existing cassette cannot be overwritten")
-        assert self._upstream is not None
-        response = await self._upstream.handle_async_request(request)
-        await response.aread()
+        invocation = self._current.get()
+        if invocation is None:
+            raise CassetteMismatch("Cassette transport requires a gateway invocation")
         try:
-            cassette = Cassette.model_validate(
-                {
-                    "alias": alias,
-                    "scenario": scenario,
-                    "prompt_version": version,
-                    "request_sha256": digest,
-                    "status_code": response.status_code,
-                    "headers": {
-                        key: value
-                        for key, value in response.headers.items()
-                        if key.lower()
-                        in {
-                            "content-type",
-                            "retry-after",
-                            "x-litellm-response-cost",
-                        }
-                    },
-                    "response": response.json(),
-                }
-            )
-            await asyncio.to_thread(self._write, path, cassette)
-        except (ValueError, OSError):
-            await response.aclose()
-            raise CassetteMismatch("Cassette could not be recorded") from None
-        return response
+            identity = _identity(request)
+            if invocation.identity is None:
+                await self._begin(invocation, identity)
+            elif invocation.identity != identity:
+                raise CassetteMismatch("Cassette request or schema changed during retries")
+            if self._mode == "replay":
+                return self._replay(invocation, request)
+            return await self._record(invocation, request)
+        except (CassetteMismatch, asyncio.CancelledError):
+            invocation.recordable = False
+            raise
+
+    async def _begin(self, invocation: _Invocation, identity: CassetteIdentity) -> None:
+        version_hash = hashlib.sha256(identity.prompt_version.encode("utf-8")).hexdigest()[:16]
+        path = self._directory / f"{identity.alias}__{identity.scenario}__{version_hash}.json"
+        invocation.identity = identity
+        invocation.path = path
+        if self._mode == "record":
+
+            def reserve() -> None:
+                self._reserve(path)
+                invocation.reserved = True
+
+            await _disk(reserve)
+        else:
+            cassette = await _disk(lambda: self._read(path))
+            if (
+                CassetteIdentity.model_validate(
+                    cassette.model_dump(
+                        include={"alias", "scenario", "prompt_version", "request_sha256"}
+                    )
+                )
+                != identity
+            ):
+                raise CassetteMismatch("Cassette request or schema changed")
+            invocation.replay = cassette.outcomes
 
     @staticmethod
-    def _read(path: Path) -> Cassette:
+    def _replay(invocation: _Invocation, request: httpx2.Request) -> httpx2.Response:
+        if invocation.index >= len(invocation.replay):
+            raise CassetteMismatch("Cassette retry sequence is exhausted")
+        outcome = invocation.replay[invocation.index]
+        invocation.index += 1
+        if isinstance(outcome, RecordedFailure):
+            if outcome.kind == "timeout":
+                raise httpx2.ReadTimeout("Recorded timeout", request=request)
+            raise httpx2.ConnectError("Recorded connection failure", request=request)
+        return httpx2.Response(
+            outcome.status_code, headers=outcome.headers, json=outcome.response, request=request
+        )
+
+    async def _record(self, invocation: _Invocation, request: httpx2.Request) -> httpx2.Response:
+        assert self._upstream is not None
         try:
-            return Cassette.model_validate_json(path.read_text(encoding="utf-8"))
+            response = await self._upstream.handle_async_request(request)
+            try:
+                await response.aread()
+                outcome = RecordedResponse.model_validate(
+                    {
+                        "status_code": response.status_code,
+                        "headers": {
+                            key: value
+                            for key, value in response.headers.items()
+                            if key.lower()
+                            in {"content-type", "retry-after", "x-litellm-response-cost"}
+                        },
+                        "response": response.json(),
+                    }
+                )
+            finally:
+                await response.aclose()
+        except httpx2.TimeoutException:
+            invocation.outcomes.append(RecordedFailure(kind="timeout"))
+            raise
+        except httpx2.TransportError:
+            invocation.outcomes.append(RecordedFailure(kind="connection_error"))
+            raise
+        except ValueError:
+            raise CassetteMismatch("Cassette response is not valid JSON") from None
+        invocation.outcomes.append(outcome)
+        return response
+
+    async def _finish(self, invocation: _Invocation) -> None:
+        if not invocation.recordable or invocation.identity is None:
+            return
+        if self._mode == "replay":
+            if invocation.index != len(invocation.replay):
+                raise CassetteMismatch("Cassette retry sequence was not fully consumed")
+            return
+        if not invocation.outcomes:
+            return
+        assert invocation.path is not None
+        path = invocation.path
+        try:
+            sequence = CassetteSequence.model_validate(
+                {**invocation.identity.model_dump(), "outcomes": invocation.outcomes}
+            )
+            await _disk(lambda: self._write(path, sequence))
+        except (ValueError, OSError):
+            raise CassetteMismatch("Cassette could not be recorded") from None
+
+    @staticmethod
+    def _reserve(path: Path) -> None:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.exists():
+                raise CassetteMismatch("An existing cassette cannot be overwritten")
+            reservation = path.with_suffix(".recording")
+            with reservation.open("x"):
+                pass
+            if path.exists():
+                reservation.unlink()
+                raise CassetteMismatch("An existing cassette cannot be overwritten")
+        except OSError:
+            raise CassetteMismatch("Cassette is already recording or unavailable") from None
+
+    @staticmethod
+    def _read(path: Path) -> CassetteSequence:
+        try:
+            cassette: CassetteSequence | Cassette = TypeAdapter(
+                CassetteSequence | Cassette
+            ).validate_json(path.read_text(encoding="utf-8"))
+            if isinstance(cassette, CassetteSequence):
+                return cassette
+            return CassetteSequence.model_validate(
+                {
+                    **cassette.model_dump(exclude={"status_code", "headers", "response"}),
+                    "outcomes": [
+                        {
+                            "kind": "response",
+                            "status_code": cassette.status_code,
+                            "headers": cassette.headers,
+                            "response": cassette.response,
+                        }
+                    ],
+                }
+            )
         except (OSError, ValueError):
             raise CassetteMismatch("Cassette is missing or invalid") from None
 
     @staticmethod
-    def _write(path: Path, cassette: Cassette) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("x", encoding="utf-8") as stream:
+    def _write(path: Path, cassette: CassetteSequence) -> None:
+        # Link a complete temporary file atomically; existing fixtures can never be replaced.
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent) as stream:
             stream.write(cassette.model_dump_json(indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+            os.link(stream.name, path)
 
     async def aclose(self) -> None:
+        if self._active:
+            raise CassetteMismatch("Cannot close a cassette transport with active calls")
+        if self._closed:
+            return
+        self._closed = True
         if self._upstream is not None:
             await self._upstream.aclose()

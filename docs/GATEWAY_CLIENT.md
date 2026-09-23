@@ -80,7 +80,10 @@ PII detection system. A redacted value is not automatically reconstructed in mod
 `ImagePart` supports PNG/JPEG/WebP/GIF base64 data URLs; `FilePart` supports PDF data URLs and fixes
 the transport filename to `invoice.pdf`. Remote URLs and arbitrary filenames are rejected.
 Both binary formats are opt-in per alias. The client checks base64 syntax, per-asset byte limits,
-per-request asset count, and aggregate request size. It does not decode images, parse PDF pages,
+per-request asset count, and aggregate request size. For both chat and embeddings,
+`max_request_bytes` bounds the exact SDK-serialized HTTP body, including JSON escaping and the
+request envelope. The check runs before the transport can contact the gateway. It does not decode
+images, parse PDF pages,
 inspect binary PII, or detect instructions inside documents. Trusted preprocessing must validate
 content signatures, dimensions/page counts, and any required binary redaction before enabling
 binary traffic. A data URL's declared MIME type is not proof of its content.
@@ -121,9 +124,27 @@ alias + scenario + prompt version. A SHA-256 hash binds the guarded serialized r
 schema; run/trace IDs and authorization headers are excluded. Prompt or schema drift fails with
 `GatewayCassetteMismatch`. Missing files never trigger recording automatically.
 
-Recording requires explicit `mode="record"` and an explicitly supplied upstream transport. It
-uses create-only writes, refuses existing scenario files before calling upstream, and stores only
-the request hash plus response JSON and a small metadata-header allowlist. **Response bodies may
+Recording requires explicit `mode="record"` and an explicitly supplied upstream transport.
+`GatewayClient` scopes each logical call, so a format-version-2 cassette stores its ordered outcomes
+across retries, including recovered calls and exhausted retry budgets. Outcomes contain response
+JSON and a small metadata-header allowlist, or a sanitized connection/timeout failure category.
+A replay starts at the first outcome for every logical call, even when calls share a client or run
+concurrently. Extra or unconsumed outcomes reject retry-policy drift. Legacy single-response
+fixtures still replay unchanged. Retry delays are recomputed using the caller's retry settings;
+freeze the injected UTC clock when testing absolute-date `Retry-After` headers.
+
+A recorder reserves the scenario before upstream I/O. Concurrent recorders of the same scenario
+fail before spending; different scenarios remain independent. At logical-call completion, it
+atomically publishes one complete sequence with a create-only filesystem link. Existing fixtures
+are never overwritten, including files created concurrently. Closing a transport with active
+calls is rejected. Cancellation or deadline interruption discards an incomplete recording and
+releases its reservation. Cancellation waits for any already-started local filesystem operation
+to settle; an atomic publication already in progress may leave a complete fixture. HTTPX timeout
+errors can be replayed; an attempt cancelled by the wrapper's timer discards the recording because
+the cassette does not reproduce elapsed network time. A process crash can leave a `.recording`
+reservation; remove it only after verifying no recorder is active.
+
+Only the guarded request hash is stored, never request contents or authentication. **Response bodies may
 contain sensitive data:** record only approved synthetic fixtures. Production responses must not
 be committed. New prompt versions require new cassettes; do not overwrite a cassette to make a
 test pass. The initial fixture is an authored synthetic HTTP response recorded through a mock

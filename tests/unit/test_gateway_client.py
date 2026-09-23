@@ -7,6 +7,7 @@ import logging
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
+from threading import Event
 from typing import Literal
 from uuid import UUID
 
@@ -33,7 +34,7 @@ from invoiceops_agent.gateway_client import (
     TextPart,
     TokenBudgetExceeded,
 )
-from invoiceops_agent.gateway_client.cassettes import Cassette, CassetteTransport
+from invoiceops_agent.gateway_client.cassettes import Cassette, CassetteMismatch, CassetteTransport
 from invoiceops_agent.gateway_client.telemetry import GatewayEvent
 
 pytestmark = pytest.mark.unit
@@ -103,6 +104,10 @@ def response_with(**updates: object) -> httpx2.Response:
     data = fixture_response().json()
     data.update(updates)
     return httpx2.Response(200, json=data)
+
+
+async def files_in(directory: Path, pattern: str = "*") -> list[Path]:
+    return await asyncio.to_thread(lambda: list(directory.glob(pattern)))
 
 
 @pytest.mark.asyncio
@@ -663,3 +668,299 @@ def test_guard_configuration_is_validated_without_exposing_key() -> None:
         settings(api_key="")
     with pytest.raises(ValidationError):
         settings(aliases={"provider-name": {"model_version": "fixture@v1"}})
+
+
+@pytest.mark.parametrize("operation", ["chat", "embedding"])
+@pytest.mark.asyncio
+async def test_serialized_request_body_limit_is_exact_before_transport(operation: str) -> None:
+    bodies: list[bytes] = []
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        bodies.append(call.content)
+        if operation == "chat":
+            return fixture_response()
+        return httpx2.Response(
+            200,
+            json={
+                "object": "list",
+                "model": "synthetic-embed-revision-1",
+                "data": [{"object": "embedding", "index": 0, "embedding": [0.1]}],
+                "usage": {"prompt_tokens": 8, "total_tokens": 8},
+            },
+        )
+
+    async def invoke(client: GatewayClient) -> None:
+        text = '"\\\n\x00é' * 20
+        if operation == "chat":
+            await client.complete(request(text), SyntheticExtraction)
+        else:
+            context = request()
+            await client.embed(
+                EmbeddingRequest(
+                    run_id=context.run_id,
+                    trace_id=context.trace_id,
+                    prompt_version="embed@v1",
+                    inputs=(text,),
+                )
+            )
+
+    async with GatewayClient(settings(), transport=httpx2.MockTransport(handle)) as client:
+        await invoke(client)
+    body_bytes = len(bodies[0])
+    async with GatewayClient(
+        settings(max_request_bytes=body_bytes), transport=httpx2.MockTransport(handle)
+    ) as client:
+        await invoke(client)
+    assert len(bodies) == 2
+    async with GatewayClient(
+        settings(max_request_bytes=body_bytes - 1), transport=httpx2.MockTransport(handle)
+    ) as client:
+        with pytest.raises(TokenBudgetExceeded):
+            await invoke(client)
+    assert len(bodies) == 2
+
+
+@pytest.mark.parametrize("recovered", [True, False])
+@pytest.mark.parametrize("failure_kind", ["http", "connection", "timeout"])
+@pytest.mark.asyncio
+async def test_cassette_records_and_replays_one_logical_retry_sequence(
+    tmp_path: Path, recovered: bool, failure_kind: str
+) -> None:
+    upstream_calls = 0
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        nonlocal upstream_calls
+        upstream_calls += 1
+        if recovered and upstream_calls == 2:
+            return fixture_response()
+        if failure_kind == "connection":
+            raise httpx2.ConnectError("synthetic-private-host", request=call)
+        if failure_kind == "timeout":
+            raise httpx2.ReadTimeout("synthetic-private-host", request=call)
+        return httpx2.Response(
+            503, headers={"Retry-After": "0.25"}, json={"error": {"code": "transient"}}
+        )
+
+    async def invoke(client: GatewayClient) -> int:
+        if recovered:
+            return (await client.complete(request(), SyntheticExtraction)).attempts
+        with pytest.raises(GatewayUnavailable) as caught:
+            await client.complete(request(), SyntheticExtraction)
+        return caught.value.attempts
+
+    record_clock = FakeClock()
+    async with GatewayClient(
+        settings(),
+        transport=CassetteTransport(tmp_path, mode="record", upstream=httpx2.MockTransport(handle)),
+        clock=record_clock,
+        sleep=record_clock.sleep,
+    ) as client:
+        recorded_attempts = await invoke(client)
+        with pytest.raises(GatewayCassetteMismatch):
+            await invoke(client)
+    assert upstream_calls == recorded_attempts == (2 if recovered else 3)
+    content = await asyncio.to_thread(lambda: next(tmp_path.glob("*.json")).read_text())
+    assert len(json.loads(content)["outcomes"]) == recorded_attempts
+    assert "synthetic-private-host" not in content
+    replay_clock = FakeClock()
+    async with GatewayClient(
+        settings(),
+        transport=CassetteTransport(tmp_path),
+        clock=replay_clock,
+        sleep=replay_clock.sleep,
+    ) as client:
+        assert await invoke(client) == recorded_attempts
+        assert await invoke(client) == recorded_attempts
+    assert replay_clock.delays == record_clock.delays * 2
+    assert upstream_calls == recorded_attempts
+
+
+@pytest.mark.asyncio
+async def test_cassette_parallel_replays_keep_separate_attempt_positions(tmp_path: Path) -> None:
+    calls: dict[str, int] = {}
+    both_entered = asyncio.Event()
+
+    async def handle(call: httpx2.Request) -> httpx2.Response:
+        scenario = call.headers["X-InvoiceOps-Scenario"]
+        calls[scenario] = calls.get(scenario, 0) + 1
+        if len(calls) == 2:
+            both_entered.set()
+        await both_entered.wait()
+        if calls[scenario] == 1:
+            return httpx2.Response(503, json={"error": {"code": "transient"}})
+        return fixture_response()
+
+    requests = [request().model_copy(update={"scenario": scenario}) for scenario in ("one", "two")]
+    async with GatewayClient(
+        settings(backoff_seconds=0),
+        transport=CassetteTransport(tmp_path, mode="record", upstream=httpx2.MockTransport(handle)),
+    ) as client:
+        recorded = await asyncio.gather(
+            *(client.complete(item, SyntheticExtraction) for item in requests)
+        )
+    assert calls == {"one": 2, "two": 2}
+    assert all(result.attempts == 2 for result in recorded)
+    async with GatewayClient(
+        settings(backoff_seconds=0), transport=CassetteTransport(tmp_path)
+    ) as client:
+        replayed = await asyncio.gather(
+            *(client.complete(item, SyntheticExtraction) for item in requests * 2)
+        )
+    assert all(result.attempts == 2 for result in replayed)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_recorders_reserve_before_upstream_and_close_after_calls(
+    tmp_path: Path,
+) -> None:
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def handle(call: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        entered.set()
+        await release.wait()
+        return fixture_response()
+
+    owner_transport = CassetteTransport(
+        tmp_path, mode="record", upstream=httpx2.MockTransport(handle)
+    )
+    async with GatewayClient(settings(), transport=owner_transport) as owner:
+        pending = asyncio.create_task(owner.complete(request(), SyntheticExtraction))
+        await entered.wait()
+        try:
+            with pytest.raises(CassetteMismatch):
+                await owner_transport.aclose()
+            async with GatewayClient(
+                settings(),
+                transport=CassetteTransport(
+                    tmp_path, mode="record", upstream=httpx2.MockTransport(handle)
+                ),
+            ) as other:
+                with pytest.raises(GatewayCassetteMismatch):
+                    await other.complete(request(), SyntheticExtraction)
+            assert calls == 1
+        finally:
+            release.set()
+            assert (await pending).attempts == 1
+    assert not await files_in(tmp_path, "*.recording")
+    assert len(await files_in(tmp_path, "*.json")) == 1
+
+
+@pytest.mark.asyncio
+async def test_cancelled_recording_discards_partial_sequence_and_releases_reservation(
+    tmp_path: Path,
+) -> None:
+    sleeping = asyncio.Event()
+    calls = 0
+
+    async def sleep(delay: float) -> None:
+        sleeping.set()
+        await asyncio.Event().wait()
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx2.Response(503, json={"error": {"code": "transient"}})
+        return fixture_response()
+
+    async with GatewayClient(
+        settings(),
+        sleep=sleep,
+        transport=CassetteTransport(tmp_path, mode="record", upstream=httpx2.MockTransport(handle)),
+    ) as client:
+        pending = asyncio.create_task(client.complete(request(), SyntheticExtraction))
+        await sleeping.wait()
+        pending.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await pending
+        assert not await files_in(tmp_path)
+        assert (await client.complete(request(), SyntheticExtraction)).attempts == 1
+    async with GatewayClient(settings(), transport=CassetteTransport(tmp_path)) as client:
+        assert (await client.complete(request(), SyntheticExtraction)).attempts == 1
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_record_commit_never_replaces_a_file_created_during_the_call(tmp_path: Path) -> None:
+    original = b"existing-fixture-must-survive"
+
+    async def handle(call: httpx2.Request) -> httpx2.Response:
+        def create_conflict() -> None:
+            next(tmp_path.glob("*.recording")).with_suffix(".json").write_bytes(original)
+
+        await asyncio.to_thread(create_conflict)
+        return fixture_response()
+
+    telemetry = Telemetry()
+    async with GatewayClient(
+        settings(),
+        telemetry=telemetry,
+        transport=CassetteTransport(tmp_path, mode="record", upstream=httpx2.MockTransport(handle)),
+    ) as client:
+        with pytest.raises(GatewayCassetteMismatch):
+            await client.complete(request(), SyntheticExtraction)
+    fixture = (await files_in(tmp_path, "*.json"))[0]
+    assert await asyncio.to_thread(fixture.read_bytes) == original
+    assert not await files_in(tmp_path, "*.recording")
+    assert len(await files_in(tmp_path)) == 1
+    assert telemetry.events[0].status == "failed"
+
+
+@pytest.mark.parametrize("max_attempts", [1, 4])
+@pytest.mark.asyncio
+async def test_replay_rejects_retry_policy_drift(tmp_path: Path, max_attempts: int) -> None:
+    async with GatewayClient(
+        settings(backoff_seconds=0),
+        transport=CassetteTransport(
+            tmp_path,
+            mode="record",
+            upstream=httpx2.MockTransport(
+                lambda _: httpx2.Response(503, json={"error": {"code": "transient"}})
+            ),
+        ),
+    ) as client:
+        with pytest.raises(GatewayUnavailable):
+            await client.complete(request(), SyntheticExtraction)
+    async with GatewayClient(
+        settings(max_attempts=max_attempts, backoff_seconds=0),
+        transport=CassetteTransport(tmp_path),
+    ) as client:
+        with pytest.raises(GatewayCassetteMismatch):
+            await client.complete(request(), SyntheticExtraction)
+
+
+@pytest.mark.asyncio
+async def test_cancelling_reservation_waits_for_disk_then_releases_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    entered = asyncio.Event()
+    release = Event()
+    loop = asyncio.get_running_loop()
+    reserve = CassetteTransport._reserve
+
+    def blocked_reserve(path: Path) -> None:
+        reserve(path)
+        loop.call_soon_threadsafe(entered.set)
+        release.wait()
+
+    def unexpected(call: httpx2.Request) -> httpx2.Response:
+        raise AssertionError("Cancelled reservation must not contact upstream")
+
+    monkeypatch.setattr(CassetteTransport, "_reserve", staticmethod(blocked_reserve))
+    async with GatewayClient(
+        settings(),
+        transport=CassetteTransport(
+            tmp_path, mode="record", upstream=httpx2.MockTransport(unexpected)
+        ),
+    ) as client:
+        pending = asyncio.create_task(client.complete(request(), SyntheticExtraction))
+        await entered.wait()
+        pending.cancel()
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await pending
+    assert not await files_in(tmp_path)
