@@ -38,8 +38,13 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "minio==7.2.20",
     "mypy==2.3.1",
+    "psycopg[binary]==3.3.6",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
+    "pytest-socket==0.8.1",
     "ruff==0.16.8",
+    "testcontainers==4.15.0",
+    "urllib3==2.8.0",
 ]

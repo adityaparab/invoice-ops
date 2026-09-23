@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-23 (Phase 0 in progress; step 0.1 prepared for review)
+> **Last updated:** 2026-09-23 (Phase 0 in progress; CI brought forward)
 
 ---
 
@@ -53,8 +53,8 @@
 
 **Exit criteria:** FastAPI + Postgres + LangGraph hello-path in Docker Compose; CI green.
 
-- [ ] 0.1 Restructure to `src/` layout per README §9; remove `hello.py`; pin dev tooling (ruff, mypy strict, pytest, pytest-asyncio) as uv dev-dependencies
-  - Package scaffold and locked tooling prepared; no `hello.py` existed. Pending PR merge; CI is not configured until step 0.9.
+- [x] 0.1 Restructure to `src/` layout per README §9; remove `hello.py`; pin dev tooling (ruff, mypy strict, pytest, pytest-asyncio) as uv dev-dependencies
+  - Merged in PR #1; no `hello.py` existed.
 - [ ] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
 - [ ] 0.3 Docker Compose stack: `api`, `postgres` (pgvector), `minio`, `litellm`; one-shot `seed` service placeholder; `langfuse` + `grafana`/`prometheus` deferred to Phase 4
 - [ ] 0.4 `deploy/litellm/config.yaml` with virtual aliases (`extract-vision`, `triage-reasoner`) mapped to dev (Ollama) / prod (OpenAI) models; API key handling via env
@@ -62,7 +62,8 @@
 - [ ] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
 - [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
 - [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
-- [ ] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
+- [x] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
+  - Brought forward so subsequent PRs can meet the passing-CI merge rule. Real pgvector and MinIO testcontainers run after offline unit tests; the model eval gate remains Phase 5 work.
 - [ ] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
 
 
@@ -183,7 +184,7 @@ checkbox here.
 
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| P0 — Platform skeleton         | In progress | —            | Step 0.1 prepared for review; merge pending CI              |
+| P0 — Platform skeleton         | In progress | —            | Scaffold merged; CI brought forward to unblock later PRs   |
 | P1 — Extraction & validation   | Not started | —            |                                                           |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
@@ -200,3 +201,4 @@ checkbox here.
 | Date | Change |
 | --- | --- |
 | 2026-09-23 | Step 0.1: package scaffold and pinned tooling prepared; local checks and isolated wheel smoke tests pass. PR merge remains pending CI. |
+| 2026-09-23 | PR #1 merged. Step 0.9 brought forward: GitHub Actions runs lint, strict typing, offline unit tests, isolated pgvector/MinIO integration tests, and package builds. |
