@@ -250,9 +250,9 @@ uv run pytest -m unit                     # offline package smoke tests
 uv build                                 # build the wheel and source distribution
 ```
 
-Use Python 3.12 and `uv`. Development dependencies have exact versions in `pyproject.toml`, with
+Python 3.12 is selected by `.python-version`. Development dependencies have exact versions in `pyproject.toml`, with
 transitive dependencies recorded in `uv.lock`; use `uv sync --locked` to verify the lockfile without
-updating it. The interpreter pin is tracked separately in step 0.2.
+updating it. `uv` installs a compatible Python 3.12 interpreter automatically when needed.
 
 The installed namespace is `invoiceops_agent`; its component packages follow the architecture
 boundaries in `AGENTS.md`. The packages currently contain no application behavior. Package smoke
