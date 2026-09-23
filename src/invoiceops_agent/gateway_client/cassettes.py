@@ -3,9 +3,7 @@
 import asyncio
 import hashlib
 import json
-import os
 import re
-import tempfile
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -16,6 +14,7 @@ from typing import Annotated, Literal
 import httpx2
 from pydantic import Field, JsonValue, TypeAdapter
 
+from invoiceops_agent.artifacts import write_new_artifact
 from invoiceops_agent.gateway_client.schemas import Contract, ModelAlias
 
 
@@ -306,12 +305,7 @@ class CassetteTransport(httpx2.AsyncBaseTransport):
 
     @staticmethod
     def _write(path: Path, cassette: CassetteSequence) -> None:
-        # Link a complete temporary file atomically; existing fixtures can never be replaced.
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent) as stream:
-            stream.write(cassette.model_dump_json(indent=2) + "\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-            os.link(stream.name, path)
+        write_new_artifact(path, (cassette.model_dump_json(indent=2) + "\n").encode("utf-8"))
 
     async def aclose(self) -> None:
         if self._active:
