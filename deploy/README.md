@@ -1,7 +1,7 @@
 # Local platform
 
 The Compose stack uses digest-pinned, multiarchitecture images. Python runs as a non-root user;
-only production dependencies and the installed package enter the application image.
+the application image includes production dependencies, the installed package, and migration assets.
 
 From the repository root:
 
@@ -13,10 +13,18 @@ curl --fail http://localhost:8000/readyz
 docker compose run --rm seed
 ```
 
-The default stack starts the API, Postgres with pgvector available, and MinIO. Readiness checks query
-Postgres and the MinIO readiness endpoint. Database schema migrations arrive in step 0.6. The seed
-entry point currently logs `seed.placeholder` and exits without changing data; reproducible ERP
-seeding is step 2.1.
+The default stack starts Postgres and MinIO, then runs the one-shot `migrate` service once Postgres
+is healthy. It applies Alembic migrations and provisions the `invoiceops_app` login using
+`INVOICEOPS_APP_PASSWORD`. The API and seed service wait for migration success; both also require
+healthy Postgres and MinIO. API readiness checks query Postgres and the MinIO readiness endpoint.
+The seed entry point currently logs `seed.placeholder` and exits without changing data;
+reproducible ERP seeding is step 2.1.
+
+The database owner credentials (`POSTGRES_USER` and `POSTGRES_PASSWORD`) configure Postgres and
+the migration connection only. The API receives a separate runtime DSN for `invoiceops_app`, which
+can read and append audit entries and perform CRUD on operational tables. It cannot own tables,
+alter schema, or truncate tables. Audit update, delete, and truncate operations are also blocked
+by database triggers.
 
 The optional Compose LiteLLM proxy starts with:
 
@@ -40,12 +48,28 @@ to reuse the data. The API and proxy keep no persistent application data in thei
 For native Python development against the running infrastructure:
 
 ```bash
-export INVOICEOPS_POSTGRES_DSN='postgresql://invoiceops:invoiceops-local-only@localhost:5432/invoiceops'
+export INVOICEOPS_POSTGRES_DSN='postgresql://invoiceops_app:invoiceops-app-local-only-password@localhost:5432/invoiceops'
 export INVOICEOPS_MINIO_URL='http://localhost:9000'
 uv run uvicorn invoiceops_agent.api.app:create_app --factory --host 127.0.0.1 --port 8002
 ```
 
-Use the matching credentials if `.env` was changed; URL-encode credentials used in a PostgreSQL
-DSN. For Compose passwords containing URI-reserved characters, supply a complete percent-encoded
-`INVOICEOPS_POSTGRES_DSN` in `.env` with host `postgres`. Logs are available with
-`docker compose logs api postgres minio`.
+Use the matching application password if `.env` was changed; percent-encode credentials used in
+a PostgreSQL DSN. For Compose passwords containing URI-reserved characters, set the corresponding
+complete DSN in `.env` with host `postgres`: `INVOICEOPS_MIGRATION_DSN` for the owner (using
+`postgresql+psycopg://`) and `INVOICEOPS_POSTGRES_DSN` for `invoiceops_app` (using `postgresql://`).
+Keep `INVOICEOPS_APP_PASSWORD` as the raw application password so provisioning and authentication
+use the same value. Native commands use `localhost` and the configured `POSTGRES_PORT` instead.
+
+To rotate the application password, update `INVOICEOPS_APP_PASSWORD` in `.env` and any explicit
+runtime DSN override, then rerun provisioning and recreate the API with its new credentials:
+
+```bash
+docker compose run --rm migrate
+docker compose up -d --no-deps --force-recreate --wait api
+```
+
+The migration service safely reapplies migrations and updates the managed application login.
+Provisioning rejects a conflicting preexisting role instead of taking it over. Changing
+`POSTGRES_PASSWORD` in `.env` does not rotate the owner password in an existing Postgres volume;
+owner credential management is separate from application password rotation. Logs are available
+with `docker compose logs migrate api postgres minio`.
