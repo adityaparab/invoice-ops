@@ -2,15 +2,16 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 0 complete.** The platform foundation is implemented; invoice processing and the application screens below describe the target system.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 1 in progress.** The platform foundation and invoice upload are implemented; extraction, processing, and the application screens below describe the target system.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
 database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
-Python package, real database/object-store integrations, and Compose startup. Invoice ingestion
-endpoints and extraction begin in Phase 1; the hello graph uses stub nodes and makes no model calls.
+Python package, real database/object-store integrations, and Compose startup. Phase 1 adds authenticated
+invoice uploads with raw storage and durable request replay. Extraction remains planned; the hello
+graph uses stub nodes and makes no model calls.
 Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
-ingestion and later provenance endpoints.
+ingestion and later provenance endpoints. The upload endpoint uses this writer in its transaction.
 
 ---
 
@@ -273,8 +274,9 @@ must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@
 Start the local API, Postgres, and MinIO with `docker compose up -d --build --wait`.
 See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed placeholder,
 and the optional Compose LiteLLM proxy. Run `docker compose run --rm graph-demo` for the durable
-LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. Invoice
-ingestion remains step 1.1.
+LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. See
+[invoice upload instructions](docs/INGESTION.md) for the authenticated multipart endpoint, limits,
+and durable replay. Accepted invoices remain queued; extraction and processing are later steps.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
 MinIO tests through disposable Testcontainers, a package build, and a Compose startup/health smoke
 on every PR and push to `main`.

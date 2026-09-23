@@ -1,19 +1,21 @@
 """Environment-backed API configuration, loaded only when the app is created."""
 
-from pydantic import Field, HttpUrl, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Self
+
+from pydantic import Field, SecretStr, field_validator, model_validator
+
+from invoiceops_agent.tools.storage_settings import StorageSettings
 
 
-class ApiSettings(BaseSettings):
+class ApiSettings(StorageSettings):
     """Optional infrastructure configuration keeps liveness independent of availability."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="INVOICEOPS_", extra="ignore", hide_input_in_errors=True
-    )
-
     postgres_dsn: SecretStr | None = None
-    minio_url: HttpUrl | None = None
     readiness_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
+    service_token: SecretStr | None = None
+    document_max_bytes: int = Field(default=10 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
+    upload_max_bytes: int = Field(default=11 * 1024 * 1024, gt=0, le=101 * 1024 * 1024)
+    upload_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
 
     @field_validator("postgres_dsn")
     @classmethod
@@ -24,11 +26,20 @@ class ApiSettings(BaseSettings):
             raise ValueError("Postgres DSN must use the postgresql:// or postgres:// scheme")
         return value
 
-    @field_validator("minio_url")
+    @field_validator("service_token")
     @classmethod
-    def validate_minio_url(cls, value: HttpUrl | None) -> HttpUrl | None:
+    def validate_service_token(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None and (
-            value.username or value.password or value.query or value.fragment or value.path != "/"
+            len(value.get_secret_value()) < 16
+            or any(not 0x21 <= ord(character) <= 0x7E for character in value.get_secret_value())
         ):
-            raise ValueError("MinIO URL must be an HTTP origin without credentials, path, or query")
+            raise ValueError(
+                "Service token must contain at least 16 printable ASCII characters without spaces"
+            )
         return value
+
+    @model_validator(mode="after")
+    def validate_upload_limits(self) -> Self:
+        if self.upload_max_bytes <= self.document_max_bytes:
+            raise ValueError("Whole upload limit must exceed the document limit")
+        return self

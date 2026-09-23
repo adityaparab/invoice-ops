@@ -4,10 +4,15 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.security import HTTPBearer
 from starlette.responses import JSONResponse
 
-from invoiceops_agent.api.context import RequestContext, get_request_context
+from invoiceops_agent.api.context import (
+    IDEMPOTENCY_KEY_PATTERN,
+    RequestContext,
+    get_request_context,
+)
 from invoiceops_agent.api.dependencies import (
     ApiRuntime,
     DependencyFactory,
@@ -15,38 +20,107 @@ from invoiceops_agent.api.dependencies import (
     default_dependency_factory,
 )
 from invoiceops_agent.api.errors import install_error_handlers, problem_response
+from invoiceops_agent.api.ingestion_dependencies import (
+    UploadFactory,
+    UploadRuntime,
+    default_upload_factory,
+)
 from invoiceops_agent.api.middleware import RequestContextMiddleware
 from invoiceops_agent.api.schemas.health import (
     DependencyStatuses,
     LivenessResponse,
     ReadinessResponse,
 )
+from invoiceops_agent.api.schemas.invoice import InvoiceUploadResponse
 from invoiceops_agent.api.schemas.problem import ProblemDetails
 from invoiceops_agent.api.settings import ApiSettings
+from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
 from invoiceops_agent.obs.logging import configure_logging
 
 
 def create_app(
-    settings: ApiSettings | None = None, *, dependency_factory: DependencyFactory | None = None
+    settings: ApiSettings | None = None,
+    *,
+    dependency_factory: DependencyFactory | None = None,
+    upload_factory: UploadFactory | None = None,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
     configure_logging()
     configuration = settings if settings is not None else ApiSettings()
     factory = dependency_factory if dependency_factory is not None else default_dependency_factory
     runtime = ApiRuntime()
+    uploads = UploadRuntime()
+    ingestion_factory = upload_factory if upload_factory is not None else default_upload_factory
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        async with factory(configuration) as checks:
+        async with factory(configuration) as checks, ingestion_factory(configuration) as ingestion:
             runtime.checks = checks
+            uploads.service = ingestion
             try:
                 yield
             finally:
                 runtime.checks = None
+                uploads.service = None
 
     app = FastAPI(title="InvoiceOps API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
+
+    @app.post(
+        "/v1/invoices",
+        response_model=InvoiceUploadResponse,
+        status_code=201,
+        tags=["invoices"],
+        # Declare the scheme while our checker additionally rejects duplicate auth headers.
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="ServiceToken"))],
+        responses={
+            status: {"model": ProblemDetails} for status in (400, 401, 408, 409, 413, 415, 503)
+        },
+        openapi_extra={
+            "parameters": [
+                {
+                    "name": "Idempotency-Key",
+                    "in": "header",
+                    "required": True,
+                    "description": "Stable replay key, validated before body reading.",
+                    "schema": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "pattern": IDEMPOTENCY_KEY_PATTERN,
+                    },
+                }
+            ],
+            "requestBody": {
+                "required": True,
+                "content": {
+                    "multipart/form-data": {
+                        "schema": {
+                            "type": "object",
+                            "required": ["file"],
+                            "additionalProperties": False,
+                            "properties": {"file": {"type": "string", "format": "binary"}},
+                        }
+                    }
+                },
+            },
+        },
+    )
+    async def upload_invoice(
+        request: Request,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+    ) -> InvoiceUploadResponse:
+        authenticate_upload(request, configuration)
+        if uploads.service is None:
+            raise HTTPException(503, "Invoice uploads are not configured.")
+        document = await parse_upload(request, configuration)
+        if context.idempotency_key is None:
+            raise HTTPException(400, "An Idempotency-Key is required.")
+        result = await uploads.service.ingest(
+            document, key=context.idempotency_key, trace_id=context.trace_id
+        )
+        return InvoiceUploadResponse.model_validate(result.model_dump())
 
     @app.get("/healthz", response_model=LivenessResponse, tags=["health"])
     async def healthz() -> LivenessResponse:

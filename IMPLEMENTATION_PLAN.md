@@ -74,7 +74,8 @@
 
 **Exit criteria:** Voxel51 subset processed; extraction field F1 measured (baseline); ledger records every step.
 
-- [ ] 1.1 `POST /v1/invoices` upload endpoint (service token auth), raw doc stored in MinIO
+- [x] 1.1 `POST /v1/invoices` upload endpoint (service token auth), raw doc stored in MinIO
+  - Bounded multipart parsing, signature checks, content-addressed raw storage, atomic invoice/run/ledger/replay writes. New-key content duplicates return interim `409`; step 1.3 adds the original-ID `200` and audited Reject route.
 - [ ] 1.2 `POST /v1/invoices/email-webhook` with HMAC verification (stub email source)
 - [ ] 1.3 Content-hash dedupe on ingest → route to `Reject`
 - [x] 1.4 Ledger writer/reader: append entries with actor_type (SYSTEM/AGENT/HUMAN/POLICY) and model/prompt/policy version pins
@@ -215,3 +216,4 @@ checkbox here.
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
 | 2026-09-23 | Step 1.4 adds transactional append-only ledger writes, explicit version pins, and bounded run/invoice history reads. Real restricted-role tests verify atomic rollback, concurrent sequencing, immutable corrections, and pagination; all 157 offline units and 40 integrations pass. |
+| 2026-09-23 | Step 1.1 adds authenticated bounded multipart uploads, PDF/PNG/JPEG signature checks, content-addressed MinIO storage, and atomic invoice/run/SYSTEM-ledger/idempotency writes. All 194 offline units and 48 real integrations pass; isolated Compose validates auth and exact replay through the restricted API role. New-key duplicate `409` is explicitly staged until step 1.3; extraction remains queued work. |
