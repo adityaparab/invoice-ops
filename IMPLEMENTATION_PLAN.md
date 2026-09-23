@@ -65,7 +65,8 @@
 - [x] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
 - [x] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
   - Brought forward so subsequent PRs can meet the passing-CI merge rule. Real pgvector and MinIO testcontainers run after offline unit tests; the model eval gate remains Phase 5 work.
-- [ ] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
+- [x] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
+  - All seven accepted ADRs were present in the initial repository; verified their decisions and corrected package paths and tracker references.
 
 
 
@@ -209,3 +210,4 @@ checkbox here.
 | 2026-09-23 | Step 0.6 adds reversible owner-driven Alembic migrations, twelve constrained tables, Decimal-safe values, audit version pins, and the 384-dimensional vector index. |
 | 2026-09-23 | Step 0.4 configures four virtual aliases for native, Ollama, and OpenAI backends; a selected-config preflight rejects missing credentials before proxy startup. All routes were startup-tested without provider access. |
 | 2026-09-23 | Step 0.8 adds a typed hello-stub graph, isolated Postgres checkpoints, restart/resume, completed-run replay, concurrency controls, and a two-run Compose smoke. No business approval or model calls occur in the hello path. |
+| 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |

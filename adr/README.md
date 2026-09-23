@@ -18,3 +18,9 @@ Decision · Consequences.
 
 The cross-cutting decision summaries are linked from `README.md` §5 and
 `docs/ARCHITECTURE.md` §4.
+
+Verified for implementation step 0.10 on 2026-09-23: all seven accepted records were already present
+in the repository's initial commit. Their original decision dates and statuses are preserved. Package
+paths now refer to the installed `invoiceops_agent` namespace, and tracker references use plan steps
+until GitHub issues exist. The framework comparison in ADR 0002 remains Phase 6 work; accepting a
+decision does not mean every later-phase feature is implemented.
