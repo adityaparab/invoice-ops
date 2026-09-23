@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.security import HTTPBearer
 from starlette.responses import JSONResponse
 
@@ -75,7 +75,11 @@ def create_app(
         # Declare the scheme while our checker additionally rejects duplicate auth headers.
         dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="ServiceToken"))],
         responses={
-            status: {"model": ProblemDetails} for status in (400, 401, 408, 409, 413, 415, 503)
+            **{status: {"model": ProblemDetails} for status in (400, 401, 408, 409, 413, 415, 503)},
+            200: {
+                "model": InvoiceUploadResponse,
+                "description": "Existing content rejected as duplicate",
+            },
         },
         openapi_extra={
             "parameters": [
@@ -109,6 +113,7 @@ def create_app(
     )
     async def upload_invoice(
         request: Request,
+        response: Response,
         context: Annotated[RequestContext, Depends(get_request_context)],
     ) -> InvoiceUploadResponse:
         authenticate_upload(request, configuration)
@@ -117,10 +122,11 @@ def create_app(
         document = await parse_upload(request, configuration)
         if context.idempotency_key is None:
             raise HTTPException(400, "An Idempotency-Key is required.")
-        result = await uploads.service.ingest(
+        outcome = await uploads.service.ingest(
             document, key=context.idempotency_key, trace_id=context.trace_id
         )
-        return InvoiceUploadResponse.model_validate(result.model_dump())
+        response.status_code = outcome.response_status
+        return InvoiceUploadResponse.model_validate(outcome.body.model_dump())
 
     @app.get("/healthz", response_model=LivenessResponse, tags=["health"])
     async def healthz() -> LivenessResponse:

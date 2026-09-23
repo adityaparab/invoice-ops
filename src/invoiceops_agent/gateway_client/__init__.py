@@ -10,6 +10,7 @@ from invoiceops_agent.gateway_client.errors import (
     GatewayUnavailable,
     GuardrailRejected,
     InvalidGatewayResponse,
+    InvalidStructuredOutput,
     TokenBudgetExceeded,
 )
 from invoiceops_agent.gateway_client.schemas import (
@@ -46,6 +47,7 @@ __all__ = [
     "GuardrailRejected",
     "ImagePart",
     "InvalidGatewayResponse",
+    "InvalidStructuredOutput",
     "TextPart",
     "TokenBudgetExceeded",
     "TokenUsage",

@@ -44,17 +44,17 @@ RBAC are dependency-injected at the transport boundary.
 validates the declared type against the document signature, enforces a configurable byte limit,
 stores the raw document at `sha256/{prefix}/{content_hash}` in MinIO, and atomically creates the
 invoice, queued run, initial ledger event, and replay response. Reusing an idempotency key with the
-same request returns the original `201` body; reuse with different content returns `409`.
+same request returns the original body and HTTP status (`201` or `200`); reuse with different
+content returns `409`.
 
-SHA-256 is computed incrementally from the multipart spool. Step 1.1 implements this authenticated
-upload and successful-request replay contract; see [upload setup and limits](INGESTION.md).
-The following duplicate behavior is the **step 1.3 target**: identical content submitted under a new
+SHA-256 is computed incrementally from the multipart spool. Steps 1.1 and 1.3 implement this
+authenticated upload and replay contract; see [upload setup and limits](INGESTION.md).
+Identical content submitted under a new
 idempotency key returns `200` with the original invoice and run identifiers plus `duplicate=true`;
 it creates no second invoice or run. The original invoice row is locked while an
 `ingest.duplicate_rejected` SYSTEM event is appended with `route=REJECT`, making concurrent
-duplicates race-safe and auditable.
-
-Until step 1.3, a new-key content duplicate returns `409` without a duplicate ledger event.
+duplicates race-safe and auditable. The event and its `200` replay response commit atomically;
+replaying that key emits no additional event. Original processing statuses remain unchanged.
 
 The **step 1.2 target**, `POST /v1/invoices/email-webhook`, accepts a JSON stub email envelope. Authentication is
 `HMAC-SHA256(secret, "{unix_timestamp}.{nonce}." + raw_body)` in `X-Webhook-Signature`, with the
@@ -136,7 +136,11 @@ component code.
 dates, and typed line items. Every scalar field carries a Decimal confidence in `[0, 1]`, and a null
 value must have confidence zero. One malformed structured response receives a schema-level retry;
 repeated malformed output becomes a typed `MALFORMED_MODEL_OUTPUT` result rather than escaping into
-the graph. Success and escalation both append an AGENT ledger event with prompt and model pins.
+the graph. Refusals and valid business anomalies do not trigger schema repair. Success and escalation
+both commit an AGENT ledger event with prompt/model pins, source hash, preflight version, and available
+call metrics. The actor-agnostic `TransactionalAuditSink` opens a short transaction after external work
+and returns only after commit. See [the extraction contract](EXTRACTION.md) for native PDF opt-in,
+parser limits, net/gross conventions, and the deterministic validation seam.
 
 ## 9. Testing
 

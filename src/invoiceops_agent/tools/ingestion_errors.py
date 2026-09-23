@@ -21,9 +21,5 @@ class IdempotencyConflict(IngestionError):
     pass
 
 
-class DuplicateContent(IngestionError):
-    pass
-
-
 class IngestionUnavailable(IngestionError):
     pass

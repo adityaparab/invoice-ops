@@ -22,7 +22,10 @@ return JSON. Enable `json_object` or `json_schema` only for aliases that support
 strict schema mode sends the caller's schema unchanged, so it must satisfy the backend's supported
 JSON Schema subset. Every response is locally validated with `model_validate_json(..., strict=True)`
 regardless of the wire format. Refusal, truncation, tool calls, missing usage, malformed envelopes,
-and schema failures raise `InvalidGatewayResponse` without a retry.
+and schema failures raise `InvalidGatewayResponse` without a gateway retry. Malformed JSON/Pydantic
+output uses the narrow `InvalidStructuredOutput` subclass, allowing the extraction agent to apply its
+one explicit schema-repair pass without retrying refusals or other response failures.
+`configured_policy(alias, context)` exposes the immutable alias policy for preflight and audit pins.
 
 ```python
 from decimal import Decimal
