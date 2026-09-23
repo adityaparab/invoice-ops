@@ -55,7 +55,10 @@ def test_ground_truth_matches_order_and_receipt_records() -> None:
         assert truth.fully_received == (order.status == "CLOSED")
         assert all(line.sku.startswith("SYN-SKU-") for line in order.lines)
     assert all(vendor.name.startswith("Synthetic ") for vendor in fixture.vendors)
-    assert all(vendor.bank_account_iban.startswith("GB00SYNTH") for vendor in fixture.vendors)
+    assert all(
+        vendor.bank_account_iban is not None and vendor.bank_account_iban.startswith("GB00SYNTH")
+        for vendor in fixture.vendors
+    )
 
 
 def test_invalid_seed_is_rejected() -> None:

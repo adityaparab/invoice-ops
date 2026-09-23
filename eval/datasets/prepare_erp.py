@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 
 from invoiceops_agent.artifacts import write_new_artifact
+from invoiceops_agent.schemas.erp import ERPFixture
 from invoiceops_agent.tools.erp_generator import DEFAULT_SEED, fixture_sha256, generate_fixture
-from invoiceops_agent.tools.erp_schemas import ERPFixture
 
 DEFAULT_OUTPUT = Path("eval/reports/synthetic-erp-v1.json")
 

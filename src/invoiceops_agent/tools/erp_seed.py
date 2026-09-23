@@ -7,7 +7,7 @@ import psycopg
 from psycopg.rows import DictRow
 from psycopg.types.json import Jsonb
 
-from invoiceops_agent.tools.erp_schemas import ERPFixture, GoodsReceipt, PurchaseOrder, Vendor
+from invoiceops_agent.schemas.erp import ERPFixture, GoodsReceipt, PurchaseOrder, Vendor
 
 SeedOutcome = Literal["created", "unchanged"]
 _LOCK = int.from_bytes(hashlib.sha256(b"invoiceops:erp-seed@v1").digest()[:8], signed=True)

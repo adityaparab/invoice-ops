@@ -1,15 +1,8 @@
 """Pure schema, net-line arithmetic, subtotal, and per-line tax validation."""
 
-from decimal import (
-    ROUND_HALF_UP,
-    Context,
-    Decimal,
-    DivisionByZero,
-    InvalidOperation,
-    Overflow,
-    localcontext,
-)
+from decimal import Decimal, localcontext
 
+from invoiceops_agent.schemas.common import model_digest
 from invoiceops_agent.schemas.extraction import InvoiceExtraction, InvoiceLineItem
 from invoiceops_agent.schemas.validation import (
     CurrencyRule,
@@ -17,12 +10,8 @@ from invoiceops_agent.schemas.validation import (
     ValidationConfig,
     ValidationIssue,
     ValidationResult,
-    model_digest,
 )
-
-# Extraction limits every number to <=18 digits and every invoice to <=500 lines.
-# Products need <=36 digits and aggregation adds <=3; this context has ample exact headroom.
-ARITHMETIC_PRECISION = 60
+from invoiceops_agent.tools.decimal_math import exact_context
 
 
 def validate_invoice(
@@ -30,18 +19,7 @@ def validate_invoice(
 ) -> ValidationResult:
     """Return business failures as evidence; never call infrastructure or retry a decision."""
     policy = config if config is not None else ValidationConfig()
-    # Every setting is explicit: Context otherwise inherits mutable DefaultContext fields.
-    context = Context(
-        prec=ARITHMETIC_PRECISION,
-        rounding=ROUND_HALF_UP,
-        Emin=-999999,
-        Emax=999999,
-        capitals=1,
-        clamp=0,
-        flags=[],
-        traps=[InvalidOperation, DivisionByZero, Overflow],
-    )
-    with localcontext(context):
+    with localcontext(exact_context()):
         issues = _validate(extraction, policy)
     return ValidationResult(
         status="FAIL" if issues else "PASS",
