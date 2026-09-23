@@ -25,8 +25,48 @@ Downgrade to `base` deletes all application tables and their data, leaving Alemb
 table. It retains the `vector` extension because the extension can predate InvoiceOps or serve
 another schema. A subsequent upgrade recreates the application tables and indexes.
 
-This revision creates the audit structures and version constraints. Step 0.7 adds the append-only
-triggers and runtime-role grants; this revision alone does not enforce immutable history.
+Revision `0001_initial_schema` creates the audit structures and version constraints. Revision
+`0002_append_only_audit` adds the enforcement and runtime-role boundaries below.
+
+## Audit enforcement and runtime login
+
+Both `ledger` and `decisions` have `BEFORE UPDATE OR DELETE OR TRUNCATE` statement triggers. They
+reject mutation even when no rows match, and reject truncation through `CASCADE` from another table.
+The triggers use `ENABLE ALWAYS`, so replication-mode sessions still receive SQLSTATE `55000`.
+Normal table-owner writes are subject to this rule; a database administrator remains able to alter
+the schema deliberately. Corrections append a new row with `supersedes_id`.
+
+The migration creates `invoiceops_app` as a nonadministrative `NOLOGIN` role and marks it as managed
+for this database. It grants database `CONNECT`, schema `USAGE`, audit-table `SELECT`/`INSERT`, and
+explicit `SELECT`/`INSERT`/`UPDATE`/`DELETE` on the ten operational tables. It grants neither access
+to `alembic_version`, object ownership, persistent schema creation, `TRUNCATE`, nor grant options.
+Future tables require explicit grants in their migration; no blanket default privileges exist.
+
+An existing role must have the matching database marker, no administrative attributes, no object
+ownership, no inherited runtime memberships or other identities using it, and no privileges in
+other databases or on shared administrative objects. A migration owner's admin-only membership
+without `INHERIT` or `SET` access is permitted. Unsafe or unrelated roles cause failure; their
+credentials and unrelated privileges are not changed. Excess privileges inherited from `PUBLIC`
+also cause failure instead of silently weakening the runtime boundary.
+
+Set `INVOICEOPS_APP_PASSWORD` separately, then bootstrap from the repository root:
+
+```sh
+uv run python -m invoiceops_agent.db.migrate
+```
+
+This owner-only command applies `alembic upgrade head`, verifies the runtime role's restrictions,
+then enables its login using a client-generated SCRAM-SHA-256 verifier. The plaintext application
+password is read from an environment-backed `SecretStr`, never placed in SQL or logs, and never
+stored in a migration. A real runtime login verifies the supplied password. Connection, statement,
+and role-provisioning lock waits are bounded; events report role, outcome, and duration without DSNs
+or credential material. The Compose `migrate` service runs this command before API startup.
+
+Downgrading revision `0002` removes its triggers, function, and explicit grants. It preserves the
+cluster-wide role, login state, and password; it never executes `DROP ROLE` or `DROP OWNED`.
+The downgraded schema is no longer immutable for its owner, and the application loses table access.
+Reupgrade reapplies the restricted grants and triggers without rotating the retained password;
+running the bootstrap command additionally reprovisions the configured password.
 
 ## Operational contracts
 

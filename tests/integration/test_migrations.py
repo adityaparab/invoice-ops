@@ -1,100 +1,22 @@
 """Validate schema behavior and reversibility against a real pgvector database."""
 
-import subprocess
-import sys
 from datetime import UTC, datetime
 from decimal import Decimal
-from pathlib import Path
 from uuid import UUID
 
 import psycopg
 import pytest
-from sqlalchemy.engine import URL
+from tests.integration.support import (
+    EXCEPTION_ID,
+    INVOICE_ID,
+    RUN_ID,
+    insert_decision,
+    insert_ledger,
+    migrate,
+    seed_invoice_and_run,
+)
 
 pytestmark = pytest.mark.integration
-
-ROOT = Path(__file__).resolve().parents[2]
-INVOICE_ID = UUID("00000000-0000-4000-8000-000000000001")
-RUN_ID = UUID("00000000-0000-4000-8000-000000000002")
-EXCEPTION_ID = UUID("00000000-0000-4000-8000-000000000003")
-
-
-def _migrate(direction: str, target: str) -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "alembic", "-c", str(ROOT / "alembic.ini"), direction, target],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=90,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
-
-
-@pytest.fixture
-def migrated_database(
-    postgres_connection: psycopg.Connection[tuple[object, ...]],
-    monkeypatch: pytest.MonkeyPatch,
-) -> psycopg.Connection[tuple[object, ...]]:
-    info = postgres_connection.info
-    dsn = URL.create(
-        "postgresql+psycopg",
-        username=info.user,
-        password=info.password,
-        host=info.host,
-        port=info.port,
-        database=info.dbname,
-    ).render_as_string(hide_password=False)
-    monkeypatch.setenv("INVOICEOPS_MIGRATION_DSN", dsn)
-    postgres_connection.autocommit = True
-    _migrate("upgrade", "head")
-    return postgres_connection
-
-
-def _seed_invoice_and_run(connection: psycopg.Connection[tuple[object, ...]]) -> None:
-    connection.execute(
-        "INSERT INTO invoices (id, content_hash, raw_ref, content_type, source) "
-        "VALUES (%s, %s, %s, 'application/pdf', 'UPLOAD')",
-        (INVOICE_ID, "a" * 64, "sha256/aa/" + "a" * 64),
-    )
-    connection.execute(
-        "INSERT INTO runs (id, invoice_id, graph_version, trace_id) VALUES (%s, %s, %s, %s)",
-        (RUN_ID, INVOICE_ID, "graph@v1", "0" * 32),
-    )
-
-
-def _insert_ledger(
-    connection: psycopg.Connection[tuple[object, ...]],
-    *,
-    sequence: int = 1,
-    model_version: str | None = "model@v1",
-    actor_type: str = "SYSTEM",
-    invoice_id: UUID = INVOICE_ID,
-) -> None:
-    connection.execute(
-        "INSERT INTO ledger (run_id, invoice_id, sequence, event_type, actor_type, actor_id, "
-        "graph_version, model_version, prompt_version, policy_version, payload) "
-        "VALUES (%s, %s, %s, 'ingest.accepted', %s, 'synthetic-service', "
-        "'graph@v1', %s, 'prompt@v1', 'policy@v1', '{}')",
-        (RUN_ID, invoice_id, sequence, actor_type, model_version),
-    )
-
-
-def _insert_decision(
-    connection: psycopg.Connection[tuple[object, ...]],
-    *,
-    key: str = "synthetic-decision-1",
-    action: str = "APPROVE",
-    policy_version: str | None = "policy@v1",
-) -> None:
-    connection.execute(
-        "INSERT INTO decisions (run_id, invoice_id, exception_id, idempotency_key, action, "
-        "rationale, reason_code, actor_type, actor_id, graph_version, model_version, "
-        "prompt_version, policy_version) "
-        "VALUES (%s, %s, %s, %s, %s, 'Checked synthetic evidence', 'MATCH_CONFIRMED', "
-        "'HUMAN', 'synthetic-reviewer', 'graph@v1', 'model@v1', 'prompt@v1', %s)",
-        (RUN_ID, INVOICE_ID, EXCEPTION_ID, key, action, policy_version),
-    )
 
 
 def test_migration_cli_supports_upgrade_downgrade_and_reupgrade(
@@ -120,15 +42,15 @@ def test_migration_cli_supports_upgrade_downgrade_and_reupgrade(
     ).fetchall()
     assert {row[0] for row in tables} == expected_tables
 
-    _seed_invoice_and_run(migrated_database)
-    _insert_ledger(migrated_database)
-    _migrate("downgrade", "base")
+    seed_invoice_and_run(migrated_database)
+    insert_ledger(migrated_database)
+    migrate("downgrade", "base")
     assert migrated_database.execute(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
     ).fetchall() == [("alembic_version",)]
     assert migrated_database.execute("SELECT * FROM alembic_version").fetchall() == []
 
-    _migrate("upgrade", "head")
+    migrate("upgrade", "head")
     assert migrated_database.execute("SELECT count(*) FROM invoices").fetchone() == (0,)
     assert migrated_database.execute("SELECT count(*) FROM ledger").fetchone() == (0,)
 
@@ -136,7 +58,7 @@ def test_migration_cli_supports_upgrade_downgrade_and_reupgrade(
 def test_decimal_values_and_timezone_aware_instants_round_trip_without_float_loss(
     migrated_database: psycopg.Connection[tuple[object, ...]],
 ) -> None:
-    _seed_invoice_and_run(migrated_database)
+    seed_invoice_and_run(migrated_database)
     amount = Decimal("9999999999999999.99")
     quantity = Decimal("12345678901234.5678")
     rate = Decimal("0.123456")
@@ -171,7 +93,7 @@ def test_decimal_values_and_timezone_aware_instants_round_trip_without_float_los
 def test_embeddings_enforce_384_dimensions_and_use_hnsw_cosine_index(
     migrated_database: psycopg.Connection[tuple[object, ...]],
 ) -> None:
-    _seed_invoice_and_run(migrated_database)
+    seed_invoice_and_run(migrated_database)
     embedding = "[1," + ",".join("0" for _ in range(383)) + "]"
     migrated_database.execute(
         "UPDATE invoices SET embedding = %s::vector WHERE id = %s", (embedding, INVOICE_ID)
@@ -196,7 +118,7 @@ def test_embeddings_enforce_384_dimensions_and_use_hnsw_cosine_index(
 def test_uniqueness_prevents_duplicate_content_checkpoints_and_replay_claims(
     migrated_database: psycopg.Connection[tuple[object, ...]],
 ) -> None:
-    _seed_invoice_and_run(migrated_database)
+    seed_invoice_and_run(migrated_database)
     statements: list[tuple[str, tuple[object, ...]]] = [
         (
             "INSERT INTO invoices (content_hash, raw_ref, content_type, source) "
@@ -239,23 +161,23 @@ def test_uniqueness_prevents_duplicate_content_checkpoints_and_replay_claims(
 def test_audit_constraints_require_valid_actors_versions_and_related_invoice(
     migrated_database: psycopg.Connection[tuple[object, ...]],
 ) -> None:
-    _seed_invoice_and_run(migrated_database)
-    _insert_ledger(migrated_database)
+    seed_invoice_and_run(migrated_database)
+    insert_ledger(migrated_database)
     with pytest.raises(psycopg.errors.UniqueViolation):
-        _insert_ledger(migrated_database)
+        insert_ledger(migrated_database)
     with pytest.raises(psycopg.errors.NotNullViolation):
-        _insert_ledger(migrated_database, sequence=2, model_version=None)
+        insert_ledger(migrated_database, sequence=2, model_version=None)
     with pytest.raises(psycopg.errors.CheckViolation):
-        _insert_ledger(migrated_database, sequence=2, model_version="  ")
+        insert_ledger(migrated_database, sequence=2, model_version="  ")
     with pytest.raises(psycopg.errors.CheckViolation):
-        _insert_ledger(migrated_database, sequence=2, actor_type="UNKNOWN")
+        insert_ledger(migrated_database, sequence=2, actor_type="UNKNOWN")
     migrated_database.execute(
         "INSERT INTO invoices (id, content_hash, raw_ref, content_type, source) "
         "VALUES (%s, %s, 'another-fixture', 'image/png', 'EMAIL')",
         (UUID(int=99), "d" * 64),
     )
     with pytest.raises(psycopg.errors.ForeignKeyViolation):
-        _insert_ledger(migrated_database, sequence=2, invoice_id=UUID(int=99))
+        insert_ledger(migrated_database, sequence=2, invoice_id=UUID(int=99))
     with pytest.raises(psycopg.errors.ForeignKeyViolation):
         migrated_database.execute("DELETE FROM invoices WHERE id = %s", (INVOICE_ID,))
 
@@ -265,19 +187,19 @@ def test_audit_constraints_require_valid_actors_versions_and_related_invoice(
         "'2026-09-24T08:00:00Z', '{}', '{}')",
         (EXCEPTION_ID, RUN_ID, INVOICE_ID),
     )
-    _insert_decision(migrated_database)
+    insert_decision(migrated_database)
     with pytest.raises(psycopg.errors.UniqueViolation):
-        _insert_decision(migrated_database)
+        insert_decision(migrated_database)
     with pytest.raises(psycopg.errors.NotNullViolation):
-        _insert_decision(migrated_database, key="second", policy_version=None)
+        insert_decision(migrated_database, key="second", policy_version=None)
     with pytest.raises(psycopg.errors.CheckViolation):
-        _insert_decision(migrated_database, key="second", action="PAY")
+        insert_decision(migrated_database, key="second", action="PAY")
 
 
 def test_operational_constraints_reject_invalid_statuses_and_json_shapes(
     migrated_database: psycopg.Connection[tuple[object, ...]],
 ) -> None:
-    _seed_invoice_and_run(migrated_database)
+    seed_invoice_and_run(migrated_database)
     statements = [
         "UPDATE invoices SET status = 'PAID'",
         "UPDATE invoices SET currency = 'usd'",
