@@ -1,4 +1,4 @@
-# Invoice upload and exact duplicates (steps 1.1 and 1.3)
+# Invoice ingestion and exact duplicates (steps 1.1–1.3)
 
 `POST /v1/invoices` accepts one multipart file named `file`, authenticated by
 `Authorization: Bearer <INVOICEOPS_SERVICE_TOKEN>`. An `Idempotency-Key` is required. Authentication
@@ -34,8 +34,8 @@ Identical content under a new key returns `200`, the original invoice/run IDs, a
 It appends one `ingest.duplicate_rejected` SYSTEM event with node `Reject`, `route: "REJECT"`, and
 `reason: "DUP_EXACT"`. The event and that key's replay response commit in the same transaction.
 Replaying the duplicate key returns its original `200` without another event. Different new keys
-represent distinct duplicate attempts and each records one event. Email ingestion remains separate
-step 1.2 work; the shared document contract carries source independently of content identity.
+represent distinct duplicate attempts and each records one event. The shared document contract
+carries the source independently of content identity.
 
 The duplicate response refers to the original successful `201` ingestion, even if later runs exist.
 Its `status: "QUEUED"` describes that original acceptance, not a current processing-status query.
@@ -71,3 +71,32 @@ restricted runtime role, `INVOICEOPS_MINIO_URL`, `INVOICEOPS_MINIO_ACCESS_KEY`,
 `uv run python -m invoiceops_agent.tools.storage_bootstrap`; liveness stays available when uploads
 are unconfigured. Local Compose uses synthetic MinIO root credentials; use bucket-scoped credentials
 for a shared deployment. Database migrations remain on the separate owner connection.
+
+## Signed email stub
+
+`POST /v1/invoices/email-webhook` accepts one JSON object containing an `attachment` with
+`content_type` (`application/pdf`, `image/png`, or `image/jpeg`) and `content_base64`. It contains no
+sender address, mailbox metadata, or provider-specific fields. This is a synthetic webhook source;
+no email provider is connected. It uses `INVOICEOPS_WEBHOOK_SECRET`, independent of the upload Bearer
+token. The caller sends `Idempotency-Key`, `X-Webhook-Timestamp` (Unix seconds),
+`X-Webhook-Nonce` (16–128 allowed ASCII characters), and `X-Webhook-Signature` (lowercase hex
+HMAC-SHA256). Compute the HMAC over the exact bytes:
+
+```text
+<timestamp>.<nonce>.<raw JSON request body>
+```
+
+The API bounds and reads the raw JSON before parsing it, checks signature equality in constant time,
+then decodes one canonical base64 document and applies the same document-size and signature rules as
+uploads. The timestamp must be within 300 seconds of receipt by default. The raw JSON limit defaults
+to 14 MiB; the document remains limited to 10 MiB. Oversized input returns `413`, a bad or stale
+signature returns `401`, malformed JSON/base64 returns `400`, and a type/signature mismatch returns
+`415`. Both new and duplicate ingestions use the same `201`/`200` response contract as upload.
+
+Every successful signed request consumes its nonce, including a fresh-nonce replay of an existing
+idempotency key. Reusing a nonce returns `409`. A fresh nonce and the same key/body returns the stored
+status and body without an extra audit event. Keys are shared with the upload endpoint; using one
+across sources conflicts because source is part of the request fingerprint. The nonce claim, replay
+check, invoice/run/ledger event, and successful response commit atomically. Invalid input and failed
+storage or database work leave the nonce available for a valid retry. Shared content-addressed raw
+objects are never deleted after a failed database transaction.

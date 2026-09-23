@@ -24,7 +24,7 @@ async def default_upload_factory(settings: ApiSettings) -> AsyncIterator[UploadS
         or settings.minio_url is None
         or settings.minio_access_key is None
         or settings.minio_secret_key is None
-        or settings.service_token is None
+        or (settings.service_token is None and settings.webhook_secret is None)
     ):
         yield None
         return

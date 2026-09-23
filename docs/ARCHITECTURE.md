@@ -56,7 +56,7 @@ it creates no second invoice or run. The original invoice row is locked while an
 duplicates race-safe and auditable. The event and its `200` replay response commit atomically;
 replaying that key emits no additional event. Original processing statuses remain unchanged.
 
-The **step 1.2 target**, `POST /v1/invoices/email-webhook`, accepts a JSON stub email envelope. Authentication is
+Step 1.2's `POST /v1/invoices/email-webhook` accepts a JSON stub email envelope. Authentication is
 `HMAC-SHA256(secret, "{unix_timestamp}.{nonce}." + raw_body)` in `X-Webhook-Signature`, with the
 timestamp and nonce carried in their corresponding `X-Webhook-*` headers. The body is bounded
 before parsing, signatures use constant-time comparison, timestamps have a configurable five-minute
@@ -74,7 +74,7 @@ content hash.
 | `purchase_orders` | PO header plus JSONB lines | unique `po_number`; vendor/status index |
 | `goods_receipts` | Receipt header plus JSONB lines | unique receipt; PO/received index |
 | `invoices` | Invoice read model and extraction | unique `content_hash`; status/created index; 384-dimension HNSW cosine embedding index |
-| `ingestion_requests` | Durable upload idempotency claims and original responses | primary-key idempotency key; request hash |
+| `ingestion_requests` | Durable cross-source idempotency claims and original responses | primary-key idempotency key; request hash |
 | `webhook_nonces` | Consumed authenticated email webhook nonces | primary-key nonce; signed timestamp |
 | `invoice_lines` | Normalized extracted lines | unique invoice/line number; Decimal-safe numeric columns |
 | `runs` | Workflow execution | invoice/started index; graph and trace version pins |

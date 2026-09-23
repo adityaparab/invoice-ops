@@ -10,13 +10,18 @@ from psycopg.rows import DictRow, dict_row
 from psycopg.types.json import Jsonb
 
 from invoiceops_agent.ledger.connection import LedgerConnection
-from invoiceops_agent.tools.ingestion_errors import IdempotencyConflict, IngestionUnavailable
+from invoiceops_agent.tools.ingestion_errors import (
+    IdempotencyConflict,
+    IngestionUnavailable,
+    WebhookNonceReuse,
+)
 from invoiceops_agent.tools.ingestion_schemas import (
     IngestionOutcome,
     IngestionResult,
     OriginalIngestion,
     RawDocument,
 )
+from invoiceops_agent.tools.webhook_auth import WebhookNonce
 
 
 class IngestionRepository:
@@ -56,6 +61,18 @@ class IngestionRepository:
     async def lock_key(connection: LedgerConnection, key: str) -> None:
         lock = int.from_bytes(hashlib.sha256(key.encode("ascii")).digest()[:8], signed=True)
         await connection.execute("SELECT pg_advisory_xact_lock(%s)", (lock,))
+
+    @staticmethod
+    async def claim_nonce(
+        connection: LedgerConnection, nonce: WebhookNonce, *, created_at: datetime
+    ) -> None:
+        cursor = await connection.execute(
+            "INSERT INTO public.webhook_nonces (nonce, signed_at, created_at) "
+            "VALUES (%s, %s, %s) ON CONFLICT (nonce) DO NOTHING RETURNING nonce",
+            (nonce.nonce, nonce.signed_at, created_at),
+        )
+        if await cursor.fetchone() is None:
+            raise WebhookNonceReuse("This webhook nonce has already been used.")
 
     @staticmethod
     async def create(

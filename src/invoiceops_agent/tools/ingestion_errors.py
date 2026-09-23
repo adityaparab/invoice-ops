@@ -21,5 +21,9 @@ class IdempotencyConflict(IngestionError):
     pass
 
 
+class WebhookNonceReuse(IngestionError):
+    pass
+
+
 class IngestionUnavailable(IngestionError):
     pass

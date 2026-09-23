@@ -5,6 +5,8 @@ import base64
 import hashlib
 import hmac
 import json
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 import pytest
@@ -12,10 +14,14 @@ from fastapi import HTTPException
 from pydantic import SecretStr, ValidationError
 from starlette.requests import Request
 from starlette.types import Message, Scope
+from tests.unit.test_api import assert_problem, client_for
+from tests.unit.test_upload import CaptureUploads
 
+from invoiceops_agent.api.app import create_app
 from invoiceops_agent.api.schemas.email import EmailWebhookRequest, email_request_schema
 from invoiceops_agent.api.settings import ApiSettings
-from invoiceops_agent.api.webhooks import read_signed_email
+from invoiceops_agent.api.webhooks import decode_email_document, read_signed_email
+from invoiceops_agent.graph.ingestion import UploadService
 from invoiceops_agent.tools.ingestion_errors import DocumentTooLarge, InvalidDocument
 from invoiceops_agent.tools.webhook_auth import (
     WebhookAuthenticationError,
@@ -167,6 +173,8 @@ async def test_signature_failure_precedes_json_parsing() -> None:
         b"{}",
         b'{"attachment":{},"attachment":{}}',
         b'{"attachment":{"content_type":"application/pdf","content_base64":"YQ=="},"from":"private"}',
+        b'{"attachment":' + b"[" * 1100 + b"0" + b"]" * 1100 + b"}",
+        b'{"attachment":' + b"1" * 4301 + b"}",
     ],
 )
 async def test_authenticated_invalid_envelope_is_rejected(raw: bytes) -> None:
@@ -236,3 +244,67 @@ async def test_schema_and_secret_configuration() -> None:
         EmailWebhookRequest.model_validate_json(envelope()).attachment.content_type
         == "application/pdf"
     )
+
+
+@pytest.mark.parametrize(
+    "encoded,status",
+    [
+        ("not valid!", InvalidDocument),
+        ("%%%%", InvalidDocument),
+        (base64.b64encode(PDF + b"x" * 32).decode(), DocumentTooLarge),
+    ],
+)
+async def test_attachment_decoder_rejects_invalid_or_oversized_content(
+    encoded: str, status: type[Exception]
+) -> None:
+    model = EmailWebhookRequest.model_validate(
+        {"attachment": {"content_type": "application/pdf", "content_base64": encoded}}
+    )
+    with pytest.raises(status):
+        await decode_email_document(model, max_bytes=len(PDF))
+
+
+async def test_attachment_decoder_preserves_source_and_hash() -> None:
+    model = EmailWebhookRequest.model_validate_json(envelope())
+    document = await decode_email_document(model, max_bytes=len(PDF))
+    assert document.body == PDF
+    assert document.source == "EMAIL"
+    assert document.content_hash == hashlib.sha256(PDF).hexdigest()
+
+
+async def test_webhook_route_uses_signed_auth_and_email_source() -> None:
+    service = CaptureUploads()
+
+    @asynccontextmanager
+    async def factory(settings: ApiSettings) -> AsyncIterator[UploadService | None]:
+        yield service
+
+    app = create_app(
+        ApiSettings(webhook_secret=SecretStr(SECRET)),
+        upload_factory=factory,
+        webhook_clock=lambda: NOW,
+    )
+    raw = envelope()
+    async with client_for(app) as client:
+        accepted = await client.post(
+            "/v1/invoices/email-webhook", content=raw, headers=signed_headers(raw)
+        )
+        reused = await client.post(
+            "/v1/invoices/email-webhook",
+            content=raw,
+            headers={**signed_headers(raw), "X-Webhook-Signature": "0" * 64},
+        )
+        upload = await client.post(
+            "/v1/invoices",
+            headers={"Idempotency-Key": "synthetic-upload-disabled"},
+            files={"file": ("a.pdf", PDF)},
+        )
+    assert accepted.status_code == 201
+    assert_problem(reused, 401)
+    assert_problem(upload, 503)
+    assert len(service.documents) == 1
+    assert service.documents[0].source == "EMAIL"
+    assert service.nonces[0] is not None and service.nonces[0].nonce == NONCE
+    operation = app.openapi()["paths"]["/v1/invoices/email-webhook"]["post"]
+    assert operation["requestBody"]["content"]["application/json"]
+    assert len(operation["parameters"]) == 4

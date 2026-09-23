@@ -20,6 +20,7 @@ from invoiceops_agent.tools.ingestion_errors import (
     IngestionUnavailable,
     InvalidDocument,
     UnsupportedDocument,
+    WebhookNonceReuse,
 )
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,7 @@ async def _ingestion_error(request: Request, error: Exception) -> JSONResponse:
         UnsupportedDocument: 415,
         DocumentTooLarge: 413,
         IdempotencyConflict: 409,
+        WebhookNonceReuse: 409,
         IngestionUnavailable: 503,
     }
     status = statuses.get(type(error), 500)
