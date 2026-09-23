@@ -10,6 +10,7 @@ from starlette.datastructures import Headers, UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 from starlette.requests import ClientDisconnect, Request
 
+from invoiceops_agent.api.body import bounded_body_stream, validate_content_length
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.tools.documents import read_document
 from invoiceops_agent.tools.ingestion_errors import DocumentTooLarge, InvalidDocument
@@ -88,22 +89,12 @@ async def parse_upload(request: Request, settings: ApiSettings) -> RawDocument:
     boundary = params.get(b"boundary", b"")
     if not boundary or len(boundary) > 200:
         raise InvalidDocument("A valid multipart boundary is required.")
-    lengths = request.headers.getlist("Content-Length")
-    if lengths:
-        if len(lengths) != 1 or not lengths[0].isascii() or not lengths[0].isdigit():
-            raise InvalidDocument("A valid Content-Length is required when supplied.")
-        if len(lengths[0]) > 12 or int(lengths[0]) > settings.upload_max_bytes:
-            raise DocumentTooLarge("Upload exceeds the configured whole-body size limit.")
-
-    async def bounded_stream() -> AsyncGenerator[bytes, None]:
-        received = 0
-        async for chunk in request.stream():
-            received += len(chunk)
-            if received > settings.upload_max_bytes:
-                raise DocumentTooLarge("Upload exceeds the configured whole-body size limit.")
-            yield chunk
-
-    parser = BoundedMultipartParser(request.headers, bounded_stream(), settings.document_max_bytes)
+    validate_content_length(request, settings.upload_max_bytes)
+    parser = BoundedMultipartParser(
+        request.headers,
+        bounded_body_stream(request, settings.upload_max_bytes),
+        settings.document_max_bytes,
+    )
     try:
         async with asyncio.timeout(settings.upload_timeout_seconds):
             form = await parser.parse()

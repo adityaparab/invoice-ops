@@ -16,6 +16,10 @@ class ApiSettings(StorageSettings):
     document_max_bytes: int = Field(default=10 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
     upload_max_bytes: int = Field(default=11 * 1024 * 1024, gt=0, le=101 * 1024 * 1024)
     upload_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    webhook_secret: SecretStr | None = None
+    webhook_window_seconds: int = Field(default=300, ge=1, le=3600)
+    webhook_max_bytes: int = Field(default=14 * 1024 * 1024, gt=0, le=140 * 1024 * 1024)
+    webhook_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
 
     @field_validator("postgres_dsn")
     @classmethod
@@ -43,3 +47,13 @@ class ApiSettings(StorageSettings):
         if self.upload_max_bytes <= self.document_max_bytes:
             raise ValueError("Whole upload limit must exceed the document limit")
         return self
+
+    @field_validator("webhook_secret")
+    @classmethod
+    def validate_webhook_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and (
+            len(value.get_secret_value()) < 32
+            or any(not 0x21 <= ord(character) <= 0x7E for character in value.get_secret_value())
+        ):
+            raise ValueError("Webhook secret must have at least 32 printable ASCII characters")
+        return value
