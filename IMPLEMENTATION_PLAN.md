@@ -203,6 +203,15 @@ checkbox here.
 
 ## ToDo
 
+- [ ] **Resume saved implementation after the user's stop boundary:** Work paused after step 1.6
+  on 2026-09-23. Step 1.2 is backed up on `p1/02-email-webhook`; its
+  [handoff notes](https://github.com/adityaparab/invoice-ops/blob/p1/02-email-webhook/docs/WORK_IN_PROGRESS_EMAIL.md)
+  list the remaining endpoint, nonce transaction, and malformed-JSON work. Step 1.7 is backed up
+  on `p1/07-deterministic-validation`; its
+  [handoff notes](https://github.com/adityaparab/invoice-ops/blob/p1/07-deterministic-validation/docs/WORK_IN_PROGRESS_VALIDATION.md)
+  record implemented validation and the pending full checks against merged extraction. Neither
+  saved branch has an open PR; resume from those notes before publishing either step.
+
 - [ ] **Deferred live baseline (step 1.9):** Configure `OPENAI_API_KEY` as a GitHub Actions
   repository secret and run the extraction baseline in CI. Deferred at the user's request on
   2026-09-23. Continue offline implementation and cassette tests; keep live quality metrics marked
