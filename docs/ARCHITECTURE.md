@@ -132,5 +132,9 @@ permitted to contact a live model.
 
 ## 10. Deployment
 
-The root `compose.yaml` is the local production-shaped topology. The API runs `alembic upgrade head`
-before uvicorn, so a clean Compose database is migrated before it accepts traffic.
+The root `compose.yaml` starts the API, Postgres with pgvector, and MinIO. An optional `gateway`
+profile starts the Compose LiteLLM proxy when a native developer gateway is not used. The API waits
+for healthy infrastructure, runs as a non-root user, and exposes dependency readiness separately
+from process liveness. Postgres and MinIO persist in named volumes; published ports bind to localhost.
+The one-shot seed entry point remains a placeholder until step 2.1. Schema migrations are step 0.6;
+the current API command starts uvicorn directly. See [local platform setup](../deploy/README.md).

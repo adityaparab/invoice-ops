@@ -34,7 +34,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 mypy_path = ["src"]
-files = ["src", "tests", "migrations"]
+files = ["src", "tests", "deploy", "migrations"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

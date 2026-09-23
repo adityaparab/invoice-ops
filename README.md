@@ -262,10 +262,12 @@ for configuration and contracts. Package smoke tests verify the installed entry 
 Pytest uses strict configuration and markers, with function-scoped asyncio loops. Future tests
 must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@pytest.mark.asyncio`.
 
-Compose, the graph demo, and invoice ingestion are planned work in steps 0.3, 0.8, and 1.1
-respectively. Their services and example fixtures are not available yet.
+Start the local API, Postgres, and MinIO with `docker compose up -d --build --wait`.
+See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed placeholder,
+and the optional Compose LiteLLM proxy. The graph demo and invoice ingestion remain steps 0.8 and 1.1.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
-MinIO tests through disposable Testcontainers, and a package build on every PR and push to `main`.
+MinIO tests through disposable Testcontainers, a package build, and a Compose startup/health smoke
+on every PR and push to `main`.
 To run the infrastructure tests locally, start Docker and run `uv run pytest -m integration`.
 The model evaluation gate is planned in Phase 5; these tests make no live model calls.
 
