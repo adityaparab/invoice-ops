@@ -23,12 +23,14 @@ from invoiceops_agent.api.schemas.health import (
 )
 from invoiceops_agent.api.schemas.problem import ProblemDetails
 from invoiceops_agent.api.settings import ApiSettings
+from invoiceops_agent.obs.logging import configure_logging
 
 
 def create_app(
     settings: ApiSettings | None = None, *, dependency_factory: DependencyFactory | None = None
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
+    configure_logging()
     configuration = settings if settings is not None else ApiSettings()
     factory = dependency_factory if dependency_factory is not None else default_dependency_factory
     runtime = ApiRuntime()
