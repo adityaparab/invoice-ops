@@ -82,7 +82,7 @@
 - [ ] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
 - [ ] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
 - [ ] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
-- [ ] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
+- [x] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
 - [ ] 1.9 Baseline extraction field F1 report (per-field, per-tier) — no targets yet
 
 
@@ -215,3 +215,4 @@ checkbox here.
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
 | 2026-09-23 | Step 1.4 adds transactional append-only ledger writes, explicit version pins, and bounded run/invoice history reads. Real restricted-role tests verify atomic rollback, concurrent sequencing, immutable corrections, and pagination; all 157 offline units and 40 integrations pass. |
+| 2026-09-23 | Step 1.8 pins and prepares 32 annotated synthetic Voxel51 invoices with checksummed inputs, deterministic selection, metadata-free PNGs, and versioned quality proxies. All selected images are tier A; B/C coverage and extraction quality remain unmeasured. Immutable artifacts reproduce byte-for-byte with the recorded toolchain. |

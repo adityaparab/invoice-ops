@@ -11,6 +11,9 @@ Python package, real database/object-store integrations, and Compose startup. In
 endpoints and extraction begin in Phase 1; the hello graph uses stub nodes and makes no model calls.
 Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
 ingestion and later provenance endpoints.
+The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
+invoices and a checksummed preparation report. Every selected image is quality tier A under the
+versioned heuristic; extraction accuracy and tiers B/C remain unmeasured.
 
 ---
 
