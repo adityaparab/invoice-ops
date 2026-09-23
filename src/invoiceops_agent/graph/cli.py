@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from invoiceops_agent.graph.checkpoints import postgres_graph
 from invoiceops_agent.graph.errors import GraphError
 from invoiceops_agent.graph.settings import GraphSettings
+from invoiceops_agent.obs.logging import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ async def run_demo(*, run_id: UUID, invoice_id: UUID) -> int:
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    configure_logging()
     parser = argparse.ArgumentParser(description="Run persisted InvoiceOps hello stubs")
     parser.add_argument("--run-id", type=UUID, default=None)
     parser.add_argument("--invoice-id", type=UUID, default=None)
