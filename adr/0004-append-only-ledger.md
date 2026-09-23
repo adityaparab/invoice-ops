@@ -17,7 +17,7 @@ policy produced it.
 The `ledger` (and `decisions`) tables are **append-only**:
 
 - Enforcement is technical, not conventional: DB triggers reject UPDATE/DELETE, and the
-  application DB role lacks those grants (issue #7). No repository code path exists to
+  application DB role lacks those grants (implementation step 0.7). No repository code path exists to
   modify entries.
 - Every entry pins `actor_type` ∈ {SYSTEM, AGENT, HUMAN, POLICY} plus `model_version`,
   `prompt_version`, `policy_version`, and `graph_version`.
@@ -25,7 +25,7 @@ The `ledger` (and `decisions`) tables are **append-only**:
 
 ## Consequences
 
-- Provenance endpoints (#35) can reconstruct any decision from the ledger alone.
+- Provenance endpoints can reconstruct any decision from the ledger alone.
 - Storage grows monotonically (acceptable at demo scale; partitioning is the documented
   growth path).
 - Schema changes to ledger-referenced data become data-lineage events requiring review.
