@@ -65,6 +65,16 @@ jobs:
           curl --fail --silent --show-error http://localhost:8000/readyz
           docker compose run --rm seed
 
+      - name: Persist and replay the Compose hello graph
+        timeout-minutes: 2
+        run: |
+          docker compose run --rm graph-demo invoiceops-graph-demo \
+            --run-id 00000000-0000-4000-8000-000000000001 \
+            --invoice-id 00000000-0000-4000-8000-000000000002
+          docker compose run --rm graph-demo invoiceops-graph-demo \
+            --run-id 00000000-0000-4000-8000-000000000001 \
+            --invoice-id 00000000-0000-4000-8000-000000000002
+
       - name: Validate gateway startup and aliases without inference
         timeout-minutes: 5
         env:

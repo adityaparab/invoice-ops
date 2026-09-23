@@ -62,7 +62,7 @@
   - Implemented before 0.3 so Compose can run a real health-checked API. Idempotency context validation is ready; durable replay accompanies future mutation transactions.
 - [x] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
 - [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
-- [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
+- [x] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
 - [x] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
   - Brought forward so subsequent PRs can meet the passing-CI merge rule. Real pgvector and MinIO testcontainers run after offline unit tests; the model eval gate remains Phase 5 work.
 - [x] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
@@ -209,4 +209,5 @@ checkbox here.
 | 2026-09-23 | Step 0.3 adds the pinned Compose stack, non-root API image, persistent storage volumes, optional local proxy, and explicit seed placeholder; CI smoke-tests the stack. |
 | 2026-09-23 | Step 0.6 adds reversible owner-driven Alembic migrations, twelve constrained tables, Decimal-safe values, audit version pins, and the 384-dimensional vector index. |
 | 2026-09-23 | Step 0.4 configures four virtual aliases for native, Ollama, and OpenAI backends; a selected-config preflight rejects missing credentials before proxy startup. All routes were startup-tested without provider access. |
+| 2026-09-23 | Step 0.8 adds a typed hello-stub graph, isolated Postgres checkpoints, restart/resume, completed-run replay, concurrency controls, and a two-run Compose smoke. No business approval or model calls occur in the hello path. |
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
