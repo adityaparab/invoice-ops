@@ -80,6 +80,30 @@ jobs:
           PY
           docker compose run --rm seed
 
+      - name: Accept and replay an authenticated Compose upload
+        timeout-minutes: 1
+        run: |
+          docker compose exec -T api python - <<'PY'
+          import httpx
+          from invoiceops_agent.api.settings import ApiSettings
+
+          settings = ApiSettings()
+          assert settings.service_token is not None
+          headers = {
+              "Authorization": f"Bearer {settings.service_token.get_secret_value()}",
+              "Idempotency-Key": "ci-upload-1",
+          }
+          files = {"file": ("synthetic.pdf", b"%PDF-1.7\nsynthetic CI invoice\n%%EOF", "application/pdf")}
+          with httpx.Client(base_url="http://127.0.0.1:8000", timeout=10) as client:
+              rejected = client.post("/v1/invoices", headers={"Idempotency-Key": "ci-auth"})
+              assert rejected.status_code == 401
+              accepted = client.post("/v1/invoices", headers=headers, files=files)
+              replay = client.post("/v1/invoices", headers=headers, files=files)
+              assert accepted.status_code == replay.status_code == 201
+              assert accepted.json() == replay.json()
+              assert accepted.json()["status"] == "QUEUED"
+          PY
+
       - name: Persist and replay the Compose hello graph
         timeout-minutes: 2
         run: |
