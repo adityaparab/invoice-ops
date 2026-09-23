@@ -11,6 +11,7 @@ import pytest
 from psycopg.rows import DictRow, dict_row
 from pydantic import SecretStr
 from sqlalchemy.engine import URL
+from tests.integration.support import INVOICE_ID, RUN_ID, seed_invoice_and_run
 
 from invoiceops_agent.db.runtime_role import provision_runtime_login
 from invoiceops_agent.db.settings import ProvisioningSettings
@@ -19,7 +20,6 @@ from invoiceops_agent.ledger.reader import LedgerReader
 from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
 from invoiceops_agent.ledger.settings import LedgerSettings
 from invoiceops_agent.ledger.writer import LedgerWriter
-from tests.integration.support import INVOICE_ID, RUN_ID, seed_invoice_and_run
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 TRACE_ID = "a" * 32

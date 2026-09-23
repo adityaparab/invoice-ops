@@ -7,7 +7,8 @@ grants and triggers come from step 0.7 and remain the final enforcement boundary
 ## Append with business data
 
 `LedgerWriter.append(connection, command, trace_id=...)` requires an already-active caller-owned
-transaction and a psycopg-compatible async connection returning dictionary rows. It never opens,
+transaction using PostgreSQL’s default READ COMMITTED isolation and a psycopg-compatible async
+connection returning dictionary rows. It never opens,
 commits, rolls back, or closes a transaction or connection. A returned `LedgerEvent` is staged, not
 yet durable. The caller commits business rows, ledger events, and idempotency responses together.
 The caller also configures bounded database connection, statement, and lock timeouts.
