@@ -163,5 +163,5 @@ for healthy infrastructure, runs as a non-root user, and exposes dependency read
 from process liveness. Postgres and MinIO persist in named volumes; published ports bind to localhost.
 The one-shot `migrate` service applies owner-driven Alembic migrations and provisions the restricted
 runtime login before the API or seed service starts. Only that service receives the owner DSN; the
-API uses `invoiceops_app`. The seed entry point remains a placeholder until step 2.1.
+API and [synthetic ERP seed service](SYNTHETIC_ERP.md) use `invoiceops_app`.
 See [local platform setup](../deploy/README.md).

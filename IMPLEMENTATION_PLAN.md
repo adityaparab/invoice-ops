@@ -95,7 +95,7 @@
 
 **Exit criteria:** synthetic ERP live; deterministic checks; exception taxonomy implemented.
 
-- [ ] 2.1 Synthetic ERP generator (Faker, seed-pinned): vendors, POs, goods receipts with ground truth; seeds via Compose `seed` service
+- [x] 2.1 Synthetic ERP generator (Faker, seed-pinned): vendors, POs, goods receipts with ground truth; seeds via Compose `seed` service
 - [ ] 2.2 Deterministic 3-way matcher with tolerance bands; deltas computed for evidence packages
 - [ ] 2.3 Exception taxonomy: DUP_EXACT, DUP_NEAR, PRICE_MM, QTY_MM, MISSING_PO, BANK_CHANGE, CCY_MM, TAX_ERR, MATH_ERR, STALE_PO
 - [ ] 2.4 Near-duplicate detection via pgvector embeddings
@@ -193,7 +193,7 @@ checkbox here.
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
 | P0 — Platform skeleton         | Complete    | 2026-09-23   | Compose API, storage, restricted runtime, audit enforcement, durable hello graph, CI, and ADRs implemented |
 | P1 — Extraction & validation   | Complete    | 2026-09-23   | Ingestion, extraction, validation, and measured 32-image development baseline |
-| P2 — Match + policy            | Not started | —            |                                                           |
+| P2 — Match + policy            | In progress | —            | Seed-pinned synthetic ERP and factual ground truth implemented |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
 | P4 — Observability + gateway   | Not started | —            |                                                           |
 | P5 — Eval harness + CI gate    | Not started | —            |                                                           |
@@ -227,3 +227,4 @@ checkbox here.
 | 2026-09-23 | Step 1.7 adds pure required-field, regular-invoice sign, net-line, subtotal, per-line tax, and gross-total validation. Explicit currency rules, inclusive Decimal tolerances, isolated arithmetic context, and immutable configuration make decisions reproducible. Both PASS and FAIL commit POLICY audit evidence before returning; 401 offline units and 60 restricted-role integrations pass against merged extraction. Full workflow routing remains Phase 2 work. |
 | 2026-09-23 | Step 1.2 adds a signed synthetic email webhook with bounded raw JSON and canonical attachment decoding. HMAC freshness and nonce replay controls run before ingestion; each successful nonce claim commits with the original or duplicate response. Full checks pass: 436 offline units, 65 real integrations, strict Python and TypeScript typing, and isolated Compose accept/replay/nonce/duplicate smoke. Real provider delivery remains outside this stub. |
 | 2026-09-23 | Step 1.9 measures the pinned 32-image synthetic development subset through the configured LiteLLM endpoint using `gemini25flash` for vision. Tier A micro F1 is 0.7226 across 512 eligible values; 31 extracted and one malformed-output escalation. Per-field F1 ranges from 0.0560 for line totals to 0.9841 for vendor, invoice number, and tax. B/C have no selected samples, so their metrics remain unavailable. This completes Phase 1 without adding an evaluation threshold. |
+| 2026-09-23 | Step 2.1 adds a Faker 40.39.0, seed-pinned synthetic ERP fixture with 12 vendors, 24 purchase orders, 12 goods receipts, and committed factual PO/receipt ground truth. The restricted-role Compose seed service inserts atomically, treats an exact rerun as a no-op, and rejects changed or partial data. The fixture hash and dependency lock make the default data reproducible. |
