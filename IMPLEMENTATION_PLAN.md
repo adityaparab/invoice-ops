@@ -61,7 +61,7 @@
 - [x] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
   - Implemented before 0.3 so Compose can run a real health-checked API. Idempotency context validation is ready; durable replay accompanies future mutation transactions.
 - [x] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
-- [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
+- [x] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
 - [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
 - [x] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
   - Brought forward so subsequent PRs can meet the passing-CI merge rule. Real pgvector and MinIO testcontainers run after offline unit tests; the model eval gate remains Phase 5 work.
@@ -208,3 +208,4 @@ checkbox here.
 | 2026-09-23 | Step 0.3 adds the pinned Compose stack, non-root API image, persistent storage volumes, optional local proxy, and explicit seed placeholder; CI smoke-tests the stack. |
 | 2026-09-23 | Step 0.6 adds reversible owner-driven Alembic migrations, twelve constrained tables, Decimal-safe values, audit version pins, and the 384-dimensional vector index. |
 | 2026-09-23 | Step 0.4 configures four virtual aliases for native, Ollama, and OpenAI backends; a selected-config preflight rejects missing credentials before proxy startup. All routes were startup-tested without provider access. |
+| 2026-09-23 | Step 0.7 enforces append-only audit statements, provisions a restricted SCRAM runtime login, and runs owner migrations in a separate one-shot Compose service; role-isolation regressions and authenticated API checks pass. |
