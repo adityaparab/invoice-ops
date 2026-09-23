@@ -13,6 +13,9 @@ rejection. Extraction remains planned; the hello
 graph uses stub nodes and makes no model calls.
 Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
 ingestion and later provenance endpoints. The upload endpoint uses this writer in its transaction.
+The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
+invoices and a checksummed preparation report. Every selected image is quality tier A under the
+versioned heuristic; extraction accuracy and tiers B/C remain unmeasured.
 
 ---
 
