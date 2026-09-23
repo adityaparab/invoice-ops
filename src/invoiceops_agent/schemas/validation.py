@@ -1,23 +1,14 @@
 """Versioned deterministic invoice-validation policy and decision contracts."""
 
-import hashlib
-import json
 from decimal import Decimal
-from typing import Annotated, Literal, Self
+from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from invoiceops_agent.schemas.extraction import DecimalJson, InvoiceExtraction
+from invoiceops_agent.schemas.common import ExactDecimal
+from invoiceops_agent.schemas.extraction import InvoiceExtraction
 
-
-def reject_float(value: object) -> object:
-    if isinstance(value, (float, bool)):
-        raise ValueError("Decimal values must not originate from floats or booleans")
-    return value
-
-
-ExactDecimal = Annotated[Decimal, BeforeValidator(reject_float), DecimalJson]
 IssueCode = Literal[
     "REQUIRED_FIELD",
     "EMPTY_LINES",
@@ -94,9 +85,3 @@ class ValidationResult(ValidationModel):
         if (self.status == "PASS") != (not self.issues):
             raise ValueError("PASS requires no validation issues; FAIL requires an issue")
         return self
-
-
-def model_digest(model: BaseModel) -> str:
-    """Fingerprint the exact JSON contract without ambient Decimal arithmetic."""
-    encoded = json.dumps(model.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()

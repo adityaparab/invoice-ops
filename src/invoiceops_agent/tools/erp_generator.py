@@ -8,7 +8,7 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 from faker import Faker
 
-from invoiceops_agent.tools.erp_schemas import (
+from invoiceops_agent.schemas.erp import (
     ERPFixture,
     GoodsReceipt,
     PurchaseOrder,
