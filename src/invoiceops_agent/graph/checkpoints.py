@@ -56,16 +56,34 @@ class PostgresRunLock:
     async def acquire(self, run_id: UUID, trace_id: str) -> AsyncIterator[None]:
         async with self._local_lock:
             key = _lock_key(f"invoiceops:graph:run:{run_id}")
-            cursor = await self.connection.execute(
-                "SELECT pg_try_advisory_lock(%s) AS acquired", (key,)
-            )
-            row = await cursor.fetchone()
-            if row is None or row["acquired"] is not True:
-                raise RunInProgress("Run is already executing", run_id=run_id, trace_id=trace_id)
+            acquired: bool | None = None
             try:
+                cursor = await self.connection.execute(
+                    "SELECT pg_try_advisory_lock(%s) AS acquired", (key,)
+                )
+                row = await cursor.fetchone()
+                if row is None or not isinstance(row.get("acquired"), bool):
+                    raise CheckpointUnavailable(
+                        "Run lock result unavailable", run_id=run_id, trace_id=trace_id
+                    )
+                acquired = row["acquired"]
+                if not acquired:
+                    raise RunInProgress(
+                        "Run is already executing", run_id=run_id, trace_id=trace_id
+                    )
                 yield
             finally:
-                await self.connection.execute("SELECT pg_advisory_unlock(%s)", (key,))
+                if acquired is None:
+                    # A cancelled round-trip may have acquired a server-side session lock.
+                    await self.connection.close()
+                elif acquired:
+                    released = False
+                    try:
+                        await self.connection.execute("SELECT pg_advisory_unlock(%s)", (key,))
+                        released = True
+                    finally:
+                        if not released:
+                            await self.connection.close()
 
 
 @asynccontextmanager

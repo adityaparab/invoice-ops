@@ -66,8 +66,10 @@ re-executing nodes. Reusing a run ID for a different invoice raises `RunConflict
 A local async lock serializes calls sharing one runtime connection. A PostgreSQL session advisory
 lock prevents another process from executing that run concurrently; contention returns the typed
 `RunInProgress` error immediately. Locks release after the run's checkpoint writes complete and on
-failure, and the context manager closes its connection on shutdown. This is a small single-connection
-hello scaffold, not the future worker concurrency architecture.
+failure, and the context manager closes its connection on shutdown. Cancellation during lock
+acquisition or release discards the connection when lock ownership is uncertain; open a new runtime
+before retrying. This is a small single-connection hello scaffold, not the future worker concurrency
+architecture.
 
 Node completion, run results, duration in milliseconds, and sanitized failures use structured
 key/value logs with `run_id` and `trace_id`. Completion means only that both hello stubs executed;
