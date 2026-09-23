@@ -1,0 +1,201 @@
+# Implementation Plan & Progress Tracker — InvoiceOps Agent
+
+> **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
+>
+> **Last updated:** 2026-09-04 (Phase 1 in progress)
+
+---
+
+## Technology Stack (locked)
+
+
+| Layer         | Choice                                                                                                                                                                                            | Notes                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Python        | **3.12**                                                                                                                                                                                          | Align `.python-version` + `pyproject.toml` (currently 3.11)                                                                                   |
+| Orchestration | **LangGraph** + Postgres checkpointer                                                                                                                                                             | Google ADK variant in Phase 6 (ADR 0002)                                                                                                      |
+| API           | **FastAPI** (async, uvicorn), Pydantic v2                                                                                                                                                         | RFC 7807 errors, idempotency-key header                                                                                                       |
+| DB            | **PostgreSQL + pgvector**, raw docs in **MinIO**                                                                                                                                                  | ERP sim + ledger + checkpoints                                                                                                                |
+| LLM access    | **LiteLLM proxy** (OpenAI-compliant API) for ALL traffic                                                                                                                                          | App uses only the `openai` SDK + one base URL; virtual model aliases (`extract-vision`, `triage-reasoner`, …) map to backends per environment |
+| LLM backends  | **Dev:** developer's native LiteLLM proxy (`glm-ocr` extract · `qwen38` triage · `compass-judger` judge · `nomic-embed` embed), URL+key via `.env` · **Prod/eval:** OpenAI via `config.prod.yaml` | Switching = env/config change, no code change                                                                                                 |
+| Extraction    | Dev: local vision model (Ollama-backed) · Prod: hosted vision LLM (e.g. GPT-4o class)                                                                                                             | Routed via LiteLLM alias `extract-vision`                                                                                                     |
+| Observability | **OpenTelemetry** (span per graph node), **Langfuse** (LLM traces), **Prometheus + Grafana**                                                                                                      | Cost telemetry reads LiteLLM spend logs too                                                                                                   |
+| Testing       | pytest, hypothesis, testcontainers, schemathesis, VCR-style cassettes                                                                                                                             | ADR 0007                                                                                                                                      |
+| CI/CD         | GitHub Actions: ruff → mypy → unit → integration → **eval gate** → build                                                                                                                          | Gate: fail PR on >0.5% absolute regression or metric-floor breach                                                                             |
+| Front end     | **React + TypeScript (Vite)** · **Mantine** UI library                                                                                                                                            | See "Front-End Stack" below                                                                                                                   |
+| Deployment    | Docker Compose (api, worker, postgres, minio, litellm, langfuse, grafana+prometheus, seed)                                                                                                        | Cloud variant documented as notes only                                                                                                        |
+
+
+**Resolved (2026-08-27):** dev backends run on the developer's native LiteLLM proxy (glm-ocr / qwen38 / compass-judger / nomic-embed; base URL + key in `.env`); prod/eval uses OpenAI (`config.prod.yaml`).
+
+### Front-End Stack (locked)
+
+
+| Concern            | Choice                                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Framework / build  | React + TypeScript, **Vite**                                                                                 |
+| UI components      | **Mantine** (v7+) with `@mantine/hooks`, `@mantine/notifications`, `@mantine/dates`                          |
+| Server state       | **TanStack Query**                                                                                           |
+| Tables             | **TanStack Table** (exception queue, invoice list) with Mantine styling                                      |
+| Forms & validation | **react-hook-form** + **Zod** (Zod schemas mirror the Pydantic API contracts)                                |
+| Charts             | **Recharts** (STP rate, cost per invoice, latency, aging)                                                    |
+| Routing            | **React Router**                                                                                             |
+| API client         | `fetch`/`openapi-fetch` client generated from FastAPI's OpenAPI schema                                       |
+| Auth UX            | Persona switcher (Maria / Dan / Priya / Platform Eng) driving RBAC views; service-token auth against the API |
+
+
+**Screens (from** `mocks/index.html` **+ docs/USER_JOURNEY.md):** Dashboard (Dan), Intake, Agent Run (live graph progress), Exception Review with 3-way match comparison (Maria), Audit/Trace & Provenance (Priya), Evals view (experiment log).
+
+---
+
+
+
+## Phase 0 — Repo & Platform Skeleton (Week 1)
+
+**Exit criteria:** FastAPI + Postgres + LangGraph hello-path in Docker Compose; CI green.
+
+- [ ] 0.1 Restructure to `src/` layout per README §9; remove `hello.py`; pin dev tooling (ruff, mypy strict, pytest, pytest-asyncio) as uv dev-dependencies
+- [ ] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
+- [ ] 0.3 Docker Compose stack: `api`, `postgres` (pgvector), `minio`, `litellm`; one-shot `seed` service placeholder; `langfuse` + `grafana`/`prometheus` deferred to Phase 4
+- [ ] 0.4 `deploy/litellm/config.yaml` with virtual aliases (`extract-vision`, `triage-reasoner`) mapped to dev (Ollama) / prod (OpenAI) models; API key handling via env
+- [ ] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
+- [ ] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
+- [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
+- [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
+- [ ] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
+- [ ] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
+
+
+
+## Phase 1 — Ingestion, Extraction, Validation (Weeks 2–3)
+
+**Exit criteria:** Voxel51 subset processed; extraction field F1 measured (baseline); ledger records every step.
+
+- [ ] 1.1 `POST /v1/invoices` upload endpoint (service token auth), raw doc stored in MinIO
+- [ ] 1.2 `POST /v1/invoices/email-webhook` with HMAC verification (stub email source)
+- [ ] 1.3 Content-hash dedupe on ingest → route to `Reject`
+- [ ] 1.4 Ledger writer/reader: append entries with actor_type (SYSTEM/AGENT/HUMAN/POLICY) and model/prompt/policy version pins
+- [ ] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
+- [ ] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
+- [ ] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
+- [ ] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
+- [ ] 1.9 Baseline extraction field F1 report (per-field, per-tier) — no targets yet
+
+
+
+## Phase 2 — 3-Way Match + Policy Engine (Week 4)
+
+**Exit criteria:** synthetic ERP live; deterministic checks; exception taxonomy implemented.
+
+- [ ] 2.1 Synthetic ERP generator (Faker, seed-pinned): vendors, POs, goods receipts with ground truth; seeds via Compose `seed` service
+- [ ] 2.2 Deterministic 3-way matcher with tolerance bands; deltas computed for evidence packages
+- [ ] 2.3 Exception taxonomy: DUP_EXACT, DUP_NEAR, PRICE_MM, QTY_MM, MISSING_PO, BANK_CHANGE, CCY_MM, TAX_ERR, MATH_ERR, STALE_PO
+- [ ] 2.4 Near-duplicate detection via pgvector embeddings
+- [ ] 2.5 Policy engine: spend limits, approval matrix, stale/closed-PO checks — deterministic, independent of LLM (ADR 0001)
+- [ ] 2.6 Full LangGraph state machine wiring: Ingest → Extract → Validate → Match3Way → Policy → Gate → (AutoApprove | ExceptionTriage) → HumanReview → Archive (+ Reject), checkpoint after every node
+- [ ] 2.7 Composite confidence gate: `w1·min(field_conf) + w2·(1−norm_match_delta) + w3·policy_severity_term` (ARCHITECTURE §3.5); τ configurable
+- [ ] 2.8 Retries/backoff for infra errors; business failures never retried; DLQ design implemented
+
+
+
+## Phase 3 — HITL + Triage Agent + Full Front End (Weeks 5–6)
+
+**Exit criteria:** full-fledged React UI for all six screens; decisions in ledger; confidence gate tuned via eval.
+
+- [ ] 3.1 `GET /v1/invoices` queue listing with filters; `GET /v1/invoices/{id}` aggregate view (RBAC)
+- [ ] 3.2 `POST /v1/exceptions/{id}/decision` with four-eyes check
+- [ ] 3.3 Triage agent (via `triage-reasoner` alias): evidence gathering, exception classification, recommendation draft
+- [ ] 3.4 Front-end scaffold: Vite + React + TS app in `frontend/` with Mantine provider, TanStack Query, React Router, generated API client from FastAPI OpenAPI schema, persona switcher (RBAC), wired to Compose (`ui` service, dev proxy to API)
+- [ ] 3.5 **Screen — Exception Review (Maria):** queue (TanStack Table: filter/sort/priority/SLA aging), detail view with side-by-side 3-way match comparison (invoice ↔ PO ↔ GR), extracted-fields panel with per-field confidence, agent findings & recommendation, decision form (approve / return to vendor / escalate) with rationale + reason code and four-eyes flow via react-hook-form + Zod
+- [ ] 3.6 **Screen — Dashboard (Dan):** STP rate, volumes, aging exceptions, cost per invoice, exception-type breakdown (Recharts); drill-through to queue
+- [ ] 3.7 **Screen — Intake:** invoice upload with progress, ingestion status, duplicate/reject feedback
+- [ ] 3.8 **Screen — Agent Run:** live LangGraph progress per node (polling or SSE), state inspection
+- [ ] 3.9 **Screen — Audit/Trace & Provenance (Priya):** run trace (Mantine Timeline), full ledger view with actor/version pins, provenance export
+- [ ] 3.10 **Screen — Evals:** experiment-log view — versioned metric tables, per-anomaly confusion, τ sweep chart; reads `eval/reports/`
+- [ ] 3.11 Front-end testing: Vitest + React Testing Library on decision form and queue; Playwright smoke of the happy path in CI
+- [ ] 3.12 Provenance endpoints: `GET /v1/runs/{run_id}/trace`, `GET /v1/invoices/{id}/provenance`
+
+
+
+## Phase 4 — Observability + Gateway Hardening (Week 6)
+
+**Exit criteria:** OTel traces per node; cost/latency dashboards; all traffic through LiteLLM.
+
+- [ ] 4.1 Add `langfuse`, `prometheus`, `grafana` to Compose; Grafana dashboards provisioned
+- [ ] 4.2 OTel spans per graph node + per tool call; exporters wired
+- [ ] 4.3 Langfuse tracing for all LLM calls (via LiteLLM callbacks)
+- [ ] 4.4 Cost/latency dashboards: LiteLLM spend logs + OTel metrics; `GET /v1/metrics` Prometheus endpoint
+- [ ] 4.5 Gateway hardening: model routing by task class + data-sensitivity tier, semantic cache, fallback chain, budget alerts
+
+
+
+## Phase 5 — Eval Harness + CI Gate (Weeks 7–8)
+
+**Exit criteria:** 500-invoice golden set; CI eval gate live; v0.1→v0.3 experiment report published.
+
+- [ ] 5.1 Golden dataset builder: 500 invoices = 350 clean (Voxel51 re-labeled + synthetic; 30 hard negatives with rotation/skew/stamps/faint print) + 150 anomalous (10 seeded codes, weighted prevalences); versioned (`golden/v1.0.0`), seed-pinned, held-out split
+- [ ] 5.2 `eval/runners/run_pipeline.py` — drives the real Compose stack through the API (not mocks); `--recorded` cassette mode for smoke
+- [ ] 5.3 `metrics.py`: exception recall (≥0.98), false-escalation (≤0.05), field F1 (≥0.95; money fields ≥0.97), routing accuracy (≥0.95), STP (≥0.70), cost (≤$0.04/inv), p95 latency (≤45s, N=3 runs)
+- [ ] 5.4 Diagnostics: per-anomaly confusion, per-field/per-tier F1, calibration curve, τ sweep ROC-style curve, LLM-judge triage rubric (judge via gateway, versioned)
+- [ ] 5.5 Report per model class (local-dev vs OpenAI-prod) — one extra tag through the harness
+- [ ] 5.6 `ci_gate.py`: fail PR on any primary metric regressing >0.5% absolute vs main or below floor; PR comment with deltas
+- [ ] 5.7 Versioned reports committed to `eval/reports/`; start the experiment log (hypothesis/change/delta/decision)
+
+
+
+## Phase 6 — ADK Variant + Comparison ADR (Week 9)
+
+**Exit criteria:** same graph in ADK; comparison ADR written.
+
+- [ ] 6.1 Port the state machine to Google ADK (Gemini as the ADK-side model)
+- [ ] 6.2 Comparison ADR: checkpointing, durable execution, HITL support, observability, developer ergonomics, cloud fit
+- [ ] 6.3 Run the eval suite against the ADK variant; include results in the ADR
+
+
+
+## Phase 7 — Polish (Week 10)
+
+**Exit criteria:** recorded demo; README with metrics; blog draft.
+
+- [ ] 7.1 Record 3–4 min demo video following `docs/DEMO_VIDEO_SCRIPT.md`
+- [ ] 7.2 README: replace planned-metrics tables with measured results
+- [ ] 7.3 Blog-post draft (the "experiment log" narrative)
+
+---
+
+
+
+## Progress Log
+
+
+
+### GitHub issue tracker (step → issue)
+
+All steps are tracked as GitHub issues in `adityaparab/invoice-ops`, one milestone per phase, with labels, acceptance criteria, and cross-issue dependencies. When starting a step, reference its issue; when its PR merges, close the issue and tick the checkbox here.
+
+
+| Step | Issue | Step | Issue | Step    | Issue   |
+| ---- | ----- | ---- | ----- | ------- | ------- |
+
+
+
+(Note: 3.12 is issue #35, not #39 — created first among the remaining Phase 3 issues to satisfy 3.8/3.9's dependency on it.)
+
+
+| Phase                          | Status      | Completed on | Notes                                                     |
+| ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
+| P0 — Platform skeleton         | Not started | -            |                                                           |
+| P1 — Extraction & validation   | Not started | —            |                                                           |
+| P2 — Match + policy            | Not started | —            |                                                           |
+| P3 — HITL + triage + front end | Not started | —            |                                                           |
+| P4 — Observability + gateway   | Not started | —            |                                                           |
+| P5 — Eval harness + CI gate    | Not started | —            |                                                           |
+| P6 — ADK variant + ADR         | Not started | —            |                                                           |
+| P7 — Polish                    | Not started | —            |                                                           |
+
+
+
+
+## Change Log
+
+
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    

@@ -1,0 +1,136 @@
+# InvoiceOps Architecture
+
+This document is the contract for component boundaries, workflow topology, HTTP resources, and the
+PostgreSQL system of record. Implementation details may evolve only when this document and the
+relevant ADR change together.
+
+## 3. Orchestration
+
+The primary workflow is:
+
+`Ingest -> Extract -> Validate -> Match3Way -> Policy -> Gate -> AutoApprove -> Archive`
+
+Duplicates route from Ingest to Reject. Validation, matching, policy, or low-confidence outcomes
+route to ExceptionTriage and then pause at HumanReview before Archive. Nodes checkpoint after every
+transition and remain idempotent under replay.
+
+LangGraph's managed checkpoint tables live in the isolated `langgraph` schema so they do not
+collide with the application-facing `public.checkpoints` projection. The saver uses a restricted
+MessagePack serializer, and a completed thread is returned without re-executing nodes when the same
+`run_id` is submitted again.
+
+## 4. Architecture decisions
+
+The decision records are the authority for why these cross-cutting constraints exist. Changes to a
+decision require a superseding ADR or an explicit status change.
+
+| ADR | Accepted decision |
+|---|---|
+| [0001](../adr/0001-deterministic-matcher-policy.md) | Keep matching and policy deterministic; reserve model reasoning for unstructured interpretation and triage. |
+| [0002](../adr/0002-langgraph-primary-adk-variant.md) | Use LangGraph as the primary orchestrator and build an ADK comparison variant in Phase 6. |
+| [0003](../adr/0003-composite-confidence-gate.md) | Combine extraction, match, and policy signals in a versioned gate that abstains below its threshold. |
+| [0004](../adr/0004-append-only-ledger.md) | Preserve decision history in an append-only ledger with point-in-time version pins. |
+| [0005](../adr/0005-gateway-only-model-traffic.md) | Route every model call through the gateway client and LiteLLM virtual aliases. |
+| [0006](../adr/0006-synthetic-data-anomalies.md) | Use reproducible synthetic data with seeded anomalies and published prevalence assumptions. |
+| [0007](../adr/0007-vcr-cassettes.md) | Replay committed model-response cassettes in tests; reserve live calls for explicit evaluation runs. |
+
+## 5. HTTP API
+
+The API is versioned under `/v1`. Health endpoints remain unversioned. Mutating endpoints require a
+validated `Idempotency-Key`; API failures use RFC 7807 problem details. Authentication and persona
+RBAC are dependency-injected at the transport boundary.
+
+`POST /v1/invoices` accepts service-token-authenticated PDF, PNG, and JPEG multipart uploads. It
+validates the declared type against the document signature, enforces a configurable byte limit,
+stores the raw document at `sha256/{prefix}/{content_hash}` in MinIO, and atomically creates the
+invoice, queued run, initial ledger event, and replay response. Reusing an idempotency key with the
+same request returns the original `201` body; reuse with different content returns `409`.
+
+SHA-256 is computed incrementally from the multipart spool. Identical content submitted under a new
+idempotency key returns `200` with the original invoice and run identifiers plus `duplicate=true`;
+it creates no second invoice or run. The original invoice row is locked while an
+`ingest.duplicate_rejected` SYSTEM event is appended with `route=REJECT`, making concurrent
+duplicates race-safe and auditable.
+
+`POST /v1/invoices/email-webhook` accepts a JSON stub email envelope. Authentication is
+`HMAC-SHA256(secret, "{unix_timestamp}.{nonce}." + raw_body)` in `X-Webhook-Signature`, with the
+timestamp and nonce carried in their corresponding `X-Webhook-*` headers. The body is bounded
+before parsing, signatures use constant-time comparison, timestamps have a configurable five-minute
+window, and successfully consumed nonces are unique in PostgreSQL. The decoded attachment reuses
+the same content-addressed ingestion transaction with source `EMAIL`.
+
+## 6. Data model
+
+PostgreSQL stores operational state and audit history; MinIO stores immutable raw documents by
+content hash.
+
+| Table | Purpose | Important constraints/indexes |
+|---|---|---|
+| `vendors` | Synthetic vendor master | unique `external_id` |
+| `purchase_orders` | PO header plus JSONB lines | unique `po_number`; vendor/status index |
+| `goods_receipts` | Receipt header plus JSONB lines | unique receipt; PO/received index |
+| `invoices` | Invoice read model and extraction | unique `content_hash`; status/created index; 384-dimension HNSW cosine embedding index |
+| `ingestion_requests` | Durable upload idempotency claims and original responses | primary-key idempotency key; request hash |
+| `webhook_nonces` | Consumed authenticated email webhook nonces | primary-key nonce; signed timestamp |
+| `invoice_lines` | Normalized extracted lines | unique invoice/line number; Decimal-safe numeric columns |
+| `runs` | Workflow execution | invoice/started index; graph and trace version pins |
+| `checkpoints` | Serializable node snapshots | unique run/sequence |
+| `ledger` | Append-only events | unique run/sequence; actor and non-null graph/model/prompt/policy pins |
+| `exceptions` | Human-review queue | status/SLA index; JSONB evidence and recommendation |
+| `decisions` | Append-only human decisions | unique idempotency key; action, rationale, reason, and version pins |
+
+Money uses `numeric(18,2)`, quantities use `numeric(18,4)`, tax rates use `numeric(9,6)`, and all
+timestamps are timezone-aware. The initial migration chooses HNSW over IVFFlat because HNSW serves
+accurate nearest-neighbor queries without a training phase and performs well as the corpus grows
+incrementally.
+
+`ledger` and `decisions` reject `UPDATE` and `DELETE` through database triggers. The runtime
+`invoiceops_app` role receives only `SELECT`/`INSERT` grants on these tables; migrations use a
+separate owner connection. Repositories mirror this boundary by exposing only append and read
+methods. The ledger writer resolves all four version pins from environment-backed configuration,
+while allowing an agent or policy event to override the relevant component version. The reader
+uses bounded keyset pagination for both run-scoped and cross-run invoice histories, so trace and
+provenance endpoints can render a complete history without per-entry queries.
+
+## 7. LLM gateway boundary
+
+Only `src/invoiceops_agent/gateway_client/` talks to the OpenAI-compatible LiteLLM endpoint. Callers
+use the configured virtual aliases `extract-vision`, `triage-reasoner`, `eval-judge`, and `embed`;
+an unknown alias fails before network I/O. The client redacts configured PII patterns, rejects
+configured prompt-injection heuristics, and conservatively estimates input plus requested output
+against each alias's token budget before spending.
+
+The transport disables SDK retries so the wrapper owns the retry contract: connection failures,
+timeouts, rate limits, and 5xx responses receive bounded exponential backoff; malformed structured
+output and other request failures escalate immediately as typed errors. Pydantic validates the
+returned JSON against the caller's response model. A telemetry protocol exposes one span with alias,
+prompt version, model, latency, token usage, cost, attempt count, and validation status; Phase 4
+binds it to OpenTelemetry.
+
+Tests use committed JSON cassettes keyed by alias, scenario, and prompt version. Each cassette also
+pins a hash of the fully guarded request and response schema, so prompt drift fails deterministically.
+The recording transport uses create-only writes and never overwrites an existing cassette.
+
+## 8. Extraction agent
+
+The extraction agent reads the immutable `raw_ref` through a bounded async MinIO adapter, converts
+the document to a data URL, and invokes only the gateway's `extract-vision` alias. Its system prompt
+is a packaged `extract_v1.md` artifact identified as `extract@v1`; prompt text is never assembled in
+component code.
+
+`InvoiceExtraction` represents vendor identity, IBAN, invoice/PO identifiers, currency, amounts,
+dates, and typed line items. Every scalar field carries a Decimal confidence in `[0, 1]`, and a null
+value must have confidence zero. One malformed structured response receives a schema-level retry;
+repeated malformed output becomes a typed `MALFORMED_MODEL_OUTPUT` result rather than escaping into
+the graph. Success and escalation both append an AGENT ledger event with prompt and model pins.
+
+## 9. Testing
+
+Unit tests are deterministic and offline. Integration tests apply the real migration chain to a
+clean pgvector Testcontainer and replay recorded model responses. Evaluation runs are the only tests
+permitted to contact a live model.
+
+## 10. Deployment
+
+The root `compose.yaml` is the local production-shaped topology. The API runs `alembic upgrade head`
+before uvicorn, so a clean Compose database is migrated before it accepts traffic.
