@@ -199,6 +199,14 @@ checkbox here.
 
 
 
+## ToDo
+
+- [ ] **Deferred live baseline (step 1.9):** Configure `OPENAI_API_KEY` as a GitHub Actions
+  repository secret and run the extraction baseline in CI. Deferred at the user's request on
+  2026-09-23. Continue offline implementation and cassette tests; keep live quality metrics marked
+  as unmeasured until the evaluation actually runs. A reminder is scheduled for 2026-09-24 at
+  09:00 Europe/Warsaw. Never store the key in the repository or a chat message.
+
 ## Change Log
 
 | Date | Change |
