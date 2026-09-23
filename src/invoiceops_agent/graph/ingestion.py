@@ -11,9 +11,9 @@ from uuid import UUID, uuid4
 import psycopg
 from pydantic import ValidationError
 
-from invoiceops_agent.ledger.connection import LedgerConnection
+from invoiceops_agent.ledger.audit import AuditWriter
 from invoiceops_agent.ledger.errors import LedgerError
-from invoiceops_agent.ledger.schemas import AppendEvent, LedgerEvent, VersionOverrides
+from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
 from invoiceops_agent.ledger.settings import LedgerSettings
 from invoiceops_agent.ledger.writer import LedgerWriter
 from invoiceops_agent.tools.ingestion_errors import IngestionUnavailable
@@ -27,12 +27,6 @@ INGESTION_VERSION = "ingestion-v1"
 
 def utc_now() -> datetime:
     return datetime.now(UTC)
-
-
-class AuditWriter(Protocol):
-    async def append(
-        self, connection: LedgerConnection, command: AppendEvent, *, trace_id: str
-    ) -> LedgerEvent: ...
 
 
 class UploadService(Protocol):

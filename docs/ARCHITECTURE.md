@@ -136,7 +136,11 @@ component code.
 dates, and typed line items. Every scalar field carries a Decimal confidence in `[0, 1]`, and a null
 value must have confidence zero. One malformed structured response receives a schema-level retry;
 repeated malformed output becomes a typed `MALFORMED_MODEL_OUTPUT` result rather than escaping into
-the graph. Success and escalation both append an AGENT ledger event with prompt and model pins.
+the graph. Refusals and valid business anomalies do not trigger schema repair. Success and escalation
+both commit an AGENT ledger event with prompt/model pins, source hash, preflight version, and available
+call metrics. The actor-agnostic `TransactionalAuditSink` opens a short transaction after external work
+and returns only after commit. See [the extraction contract](EXTRACTION.md) for native PDF opt-in,
+parser limits, net/gross conventions, and the deterministic validation seam.
 
 ## 9. Testing
 

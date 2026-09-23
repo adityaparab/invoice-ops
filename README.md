@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 1 in progress.** The platform foundation and invoice upload are implemented; extraction, processing, and the application screens below describe the target system.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 1 in progress.** The platform foundation, invoice ingestion, and extraction library are implemented; scheduled processing and the application screens below describe the target system.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
@@ -300,3 +300,8 @@ cassette replay. Configure its endpoint, key, and model-version policies explici
 require a compatible route and trusted document preprocessing.
 
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+
+The [extraction agent](docs/EXTRACTION.md) now provides bounded document preparation, typed
+per-field observations, one technical schema-repair pass, and committed audit outcomes through
+the gateway. It is a library seam; queued invoices are not automatically processed, and live
+extraction evaluation remains deferred.

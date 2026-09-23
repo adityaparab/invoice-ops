@@ -41,5 +41,11 @@ class InvalidGatewayResponse(GatewayError):
     code = "gateway_invalid_response"
 
 
+class InvalidStructuredOutput(InvalidGatewayResponse):
+    """The model returned malformed JSON or violated the requested Pydantic schema."""
+
+    code = "gateway_invalid_structured_output"
+
+
 class GatewayCassetteMismatch(GatewayError):
     code = "gateway_cassette_mismatch"
