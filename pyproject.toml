@@ -30,7 +30,7 @@ python_version = "3.12"
 strict = true
 explicit_package_bases = true
 mypy_path = ["src"]
-files = ["src", "tests"]
+files = ["src", "tests", "deploy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
