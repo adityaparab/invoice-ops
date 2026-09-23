@@ -2,16 +2,20 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 1 in progress.** The platform foundation and invoice upload are implemented; extraction, processing, and the application screens below describe the target system.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 1 in progress.** The platform foundation, invoice ingestion, and extraction library are implemented; scheduled processing and the application screens below describe the target system.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
 database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
 Python package, real database/object-store integrations, and Compose startup. Phase 1 adds authenticated
-invoice uploads with raw storage and durable request replay. Extraction remains planned; the hello
+invoice uploads with raw storage, durable request replay, and audited exact-content duplicate
+rejection. Extraction remains planned; the hello
 graph uses stub nodes and makes no model calls.
 Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
 ingestion and later provenance endpoints. The upload endpoint uses this writer in its transaction.
+The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
+invoices and a checksummed preparation report. Every selected image is quality tier A under the
+versioned heuristic; extraction accuracy and tiers B/C remain unmeasured.
 
 ---
 
@@ -290,4 +294,14 @@ runtime credentials. Audit tables reject updates, deletes, and truncation, inclu
 corrections append a superseding entry. See [schema and migration commands](docs/schema.md) for
 table contracts, credential provisioning, and reversible migration behavior.
 
+The [gateway client](docs/GATEWAY_CLIENT.md) provides typed async chat and embedding calls through
+LiteLLM aliases, with text guards, schema validation, token allowances, bounded retries, and offline
+cassette replay. Configure its endpoint, key, and model-version policies explicitly; binary inputs
+require a compatible route and trusted document preprocessing.
+
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+
+The [extraction agent](docs/EXTRACTION.md) now provides bounded document preparation, typed
+per-field observations, one technical schema-repair pass, and committed audit outcomes through
+the gateway. It is a library seam; queued invoices are not automatically processed, and live
+extraction evaluation remains deferred.

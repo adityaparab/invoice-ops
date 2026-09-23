@@ -102,6 +102,12 @@ jobs:
               assert accepted.status_code == replay.status_code == 201
               assert accepted.json() == replay.json()
               assert accepted.json()["status"] == "QUEUED"
+              duplicate_headers = {**headers, "Idempotency-Key": "ci-duplicate-1"}
+              duplicate = client.post("/v1/invoices", headers=duplicate_headers, files=files)
+              duplicate_replay = client.post("/v1/invoices", headers=duplicate_headers, files=files)
+              assert duplicate.status_code == duplicate_replay.status_code == 200
+              assert duplicate.json() == duplicate_replay.json()
+              assert duplicate.json() == {**accepted.json(), "duplicate": True}
           PY
 
       - name: Persist and replay the Compose hello graph

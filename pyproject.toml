@@ -9,12 +9,16 @@ dependencies = [
     "alembic==1.20.0",
     "fastapi==0.141.1",
     "httpx==0.28.1",
+    "httpx2==2.13.1",
     "langgraph==1.2.12",
     "langgraph-checkpoint-postgres==3.1.2",
+    "openai==3.19.0",
     "pgvector==0.5.0",
+    "pillow==12.3.0",
     "psycopg[binary,pool]==3.3.6",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
+    "pypdf==6.19.0",
     "python-multipart==0.0.32",
     "sqlalchemy==2.0.54",
     "uvicorn==0.53.0",
@@ -41,10 +45,11 @@ strict = true
 plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 mypy_path = ["src"]
-files = ["src", "tests", "deploy", "migrations"]
+files = ["src", "tests", "deploy", "migrations", "eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = ["--strict-config", "--strict-markers", "--import-mode=importlib"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"

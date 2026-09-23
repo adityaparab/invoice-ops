@@ -44,17 +44,17 @@ RBAC are dependency-injected at the transport boundary.
 validates the declared type against the document signature, enforces a configurable byte limit,
 stores the raw document at `sha256/{prefix}/{content_hash}` in MinIO, and atomically creates the
 invoice, queued run, initial ledger event, and replay response. Reusing an idempotency key with the
-same request returns the original `201` body; reuse with different content returns `409`.
+same request returns the original body and HTTP status (`201` or `200`); reuse with different
+content returns `409`.
 
-SHA-256 is computed incrementally from the multipart spool. Step 1.1 implements this authenticated
-upload and successful-request replay contract; see [upload setup and limits](INGESTION.md).
-The following duplicate behavior is the **step 1.3 target**: identical content submitted under a new
+SHA-256 is computed incrementally from the multipart spool. Steps 1.1 and 1.3 implement this
+authenticated upload and replay contract; see [upload setup and limits](INGESTION.md).
+Identical content submitted under a new
 idempotency key returns `200` with the original invoice and run identifiers plus `duplicate=true`;
 it creates no second invoice or run. The original invoice row is locked while an
 `ingest.duplicate_rejected` SYSTEM event is appended with `route=REJECT`, making concurrent
-duplicates race-safe and auditable.
-
-Until step 1.3, a new-key content duplicate returns `409` without a duplicate ledger event.
+duplicates race-safe and auditable. The event and its `200` replay response commit atomically;
+replaying that key emits no additional event. Original processing statuses remain unchanged.
 
 The **step 1.2 target**, `POST /v1/invoices/email-webhook`, accepts a JSON stub email envelope. Authentication is
 `HMAC-SHA256(secret, "{unix_timestamp}.{nonce}." + raw_body)` in `X-Webhook-Signature`, with the
@@ -102,19 +102,28 @@ provenance endpoints can render a complete history without per-entry queries.
 Only `src/invoiceops_agent/gateway_client/` talks to the OpenAI-compatible LiteLLM endpoint. Callers
 use the configured virtual aliases `extract-vision`, `triage-reasoner`, `eval-judge`, and `embed`;
 an unknown alias fails before network I/O. The client redacts configured PII patterns, rejects
-configured prompt-injection heuristics, and conservatively estimates input plus requested output
-against each alias's token budget before spending.
+configured prompt-injection heuristics, and estimates text input plus requested output against each
+alias's token budget before spending.
+Binary assets are opt-in, byte/count bounded, and charged a configured token allowance; trusted
+preprocessing must enforce model-specific dimensions/page counts because that allowance is not a
+guaranteed provider-token bound. Text guards do not inspect binary document contents.
 
 The transport disables SDK retries so the wrapper owns the retry contract: connection failures,
-timeouts, rate limits, and 5xx responses receive bounded exponential backoff; malformed structured
-output and other request failures escalate immediately as typed errors. Pydantic validates the
-returned JSON against the caller's response model. A telemetry protocol exposes one span with alias,
-prompt version, model, latency, token usage, cost, attempt count, and validation status; Phase 4
-binds it to OpenTelemetry.
+timeouts, transient rate limits, and 5xx responses receive bounded exponential backoff within one
+total deadline. Valid Retry-After hints are honored or the retry is declined; quota/billing errors,
+malformed structured output, and other request failures escalate immediately as typed errors.
+Pydantic validates the returned JSON against the caller's response model. Results preserve configured
+model-version pins and the gateway-reported model; virtual aliases alone are not immutable model
+pins. A telemetry protocol exposes one sanitized outcome with alias,
+prompt/model versions, latency, usage, optional cost, attempts, and validation status; Phase 4 adapts
+it to OpenTelemetry spans. Local schema validation is mandatory, while stricter wire formats are
+explicitly enabled per alias for backend compatibility.
 
 Tests use committed JSON cassettes keyed by alias, scenario, and prompt version. Each cassette also
 pins a hash of the fully guarded request and response schema, so prompt drift fails deterministically.
 The recording transport uses create-only writes and never overwrites an existing cassette.
+See [the gateway client contract](GATEWAY_CLIENT.md) for configuration, binary guard limits,
+provenance, typed errors, and offline test transport usage.
 
 ## 8. Extraction agent
 
@@ -127,7 +136,11 @@ component code.
 dates, and typed line items. Every scalar field carries a Decimal confidence in `[0, 1]`, and a null
 value must have confidence zero. One malformed structured response receives a schema-level retry;
 repeated malformed output becomes a typed `MALFORMED_MODEL_OUTPUT` result rather than escaping into
-the graph. Success and escalation both append an AGENT ledger event with prompt and model pins.
+the graph. Refusals and valid business anomalies do not trigger schema repair. Success and escalation
+both commit an AGENT ledger event with prompt/model pins, source hash, preflight version, and available
+call metrics. The actor-agnostic `TransactionalAuditSink` opens a short transaction after external work
+and returns only after commit. See [the extraction contract](EXTRACTION.md) for native PDF opt-in,
+parser limits, net/gross conventions, and the deterministic validation seam.
 
 The standalone Validate node consumes that neutral extraction contract and applies pure, versioned
 required-field, regular-invoice sign, line-math, subtotal, per-line tax, and gross-total checks.

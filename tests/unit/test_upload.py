@@ -5,6 +5,7 @@ import hashlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
+from io import BytesIO
 from tempfile import SpooledTemporaryFile
 from uuid import UUID
 
@@ -17,8 +18,9 @@ from tests.unit.test_api import assert_problem, client_for
 from invoiceops_agent.api.app import create_app
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.graph.ingestion import UploadService
+from invoiceops_agent.tools.documents import read_document
 from invoiceops_agent.tools.ingestion_errors import IngestionUnavailable
-from invoiceops_agent.tools.ingestion_schemas import IngestionResult, RawDocument
+from invoiceops_agent.tools.ingestion_schemas import IngestionOutcome, IngestionResult, RawDocument
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
 TOKEN = "synthetic-upload-token"
@@ -30,12 +32,18 @@ PDF = b"%PDF-1.7\nsynthetic-document\n%%EOF"
 class CaptureUploads:
     documents: list[RawDocument] = field(default_factory=list)
     failure: Exception | None = None
+    duplicate: bool = False
 
-    async def ingest(self, document: RawDocument, *, key: str, trace_id: str) -> IngestionResult:
+    async def ingest(self, document: RawDocument, *, key: str, trace_id: str) -> IngestionOutcome:
         self.documents.append(document)
         if self.failure is not None:
             raise self.failure
-        return IngestionResult(invoice_id=UUID(int=1), run_id=UUID(int=2))
+        return IngestionOutcome(
+            response_status=200 if self.duplicate else 201,
+            body=IngestionResult(
+                invoice_id=UUID(int=1), run_id=UUID(int=2), duplicate=self.duplicate
+            ),
+        )
 
 
 def make_app(service: CaptureUploads, settings: ApiSettings | None = None) -> FastAPI:
@@ -320,3 +328,46 @@ async def test_upload_openapi_exposes_auth_and_required_replay_header() -> None:
     assert header["in"] == "header" and header["required"] is True
     assert header["schema"]["maxLength"] == 128
     assert "multipart/form-data" in operation["requestBody"]["content"]
+    assert "200" in operation["responses"] and "201" in operation["responses"]
+
+
+async def test_duplicate_outcome_uses_200_body_contract() -> None:
+    async with client_for(make_app(CaptureUploads(duplicate=True))) as client:
+        response = await client.post(
+            "/v1/invoices", headers=HEADERS, files={"file": ("a.pdf", PDF, "application/pdf")}
+        )
+    assert response.status_code == 200
+    assert response.json() == {
+        "invoice_id": str(UUID(int=1)),
+        "run_id": str(UUID(int=2)),
+        "status": "QUEUED",
+        "duplicate": True,
+    }
+
+
+@pytest.mark.parametrize("status,duplicate", [(200, False), (201, True), (202, False)])
+async def test_inconsistent_persisted_outcomes_fail_validation(
+    status: int, duplicate: bool
+) -> None:
+    with pytest.raises(ValidationError):
+        IngestionOutcome.model_validate(
+            {
+                "response_status": status,
+                "body": {"invoice_id": UUID(int=1), "run_id": UUID(int=2), "duplicate": duplicate},
+            }
+        )
+
+
+async def test_source_changes_replay_identity_but_not_content_identity() -> None:
+    class Document:
+        def __init__(self) -> None:
+            self.buffer = BytesIO(PDF)
+
+        async def read(self, size: int = -1) -> bytes:
+            return self.buffer.read(size)
+
+    upload = await read_document(Document(), "application/pdf", max_bytes=1024)
+    email = await read_document(Document(), "application/pdf", max_bytes=1024, source="EMAIL")
+    assert upload.content_hash == email.content_hash
+    assert upload.request_hash != email.request_hash
+    assert upload.source == "UPLOAD" and email.source == "EMAIL"
