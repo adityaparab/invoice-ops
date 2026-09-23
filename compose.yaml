@@ -8,7 +8,7 @@ services:
       dockerfile: deploy/Dockerfile
     init: true
     environment:
-      INVOICEOPS_POSTGRES_DSN: ${INVOICEOPS_POSTGRES_DSN:-postgresql://${POSTGRES_USER:-invoiceops}:${POSTGRES_PASSWORD:-invoiceops-local-only}@postgres:5432/${POSTGRES_DB:-invoiceops}}
+      INVOICEOPS_POSTGRES_DSN: ${INVOICEOPS_POSTGRES_DSN:-postgresql://invoiceops_app:${INVOICEOPS_APP_PASSWORD:-invoiceops-app-local-only-password}@postgres:5432/${POSTGRES_DB:-invoiceops}}
       INVOICEOPS_MINIO_URL: http://minio:9000
       INVOICEOPS_READINESS_TIMEOUT_SECONDS: "2"
     ports:
@@ -16,6 +16,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio:
@@ -27,6 +29,21 @@ services:
       start_period: 30s
       retries: 5
     restart: unless-stopped
+
+  migrate:
+    image: invoiceops-api:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    init: true
+    command: ["python", "-m", "invoiceops_agent.db.migrate"]
+    environment:
+      INVOICEOPS_MIGRATION_DSN: ${INVOICEOPS_MIGRATION_DSN:-postgresql+psycopg://${POSTGRES_USER:-invoiceops}:${POSTGRES_PASSWORD:-invoiceops-local-only}@postgres:5432/${POSTGRES_DB:-invoiceops}}
+      INVOICEOPS_APP_PASSWORD: ${INVOICEOPS_APP_PASSWORD:-invoiceops-app-local-only-password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   postgres:
     image: pgvector/pgvector:0.8.6-pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
@@ -96,6 +113,24 @@ services:
       retries: 5
     restart: unless-stopped
 
+  graph-demo:
+    profiles: ["tools"]
+    image: invoiceops-api:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    init: true
+    command: ["invoiceops-graph-demo"]
+    environment:
+      # The demo bootstraps its isolated schema and needs an owner-capable connection.
+      INVOICEOPS_CHECKPOINT_DSN: ${INVOICEOPS_CHECKPOINT_DSN:-postgresql://${POSTGRES_USER:-invoiceops}:${POSTGRES_PASSWORD:-invoiceops-local-only}@postgres:5432/${POSTGRES_DB:-invoiceops}}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
   seed:
     profiles: ["tools"]
     image: invoiceops-api:local
@@ -104,6 +139,8 @@ services:
       dockerfile: deploy/Dockerfile
     command: ["python", "/app/deploy/seed.py"]
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio:

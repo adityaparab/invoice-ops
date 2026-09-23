@@ -3,7 +3,7 @@
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from invoiceops_agent.db.settings import MigrationSettings
+from invoiceops_agent.db.settings import MigrationSettings, ProvisioningSettings
 
 pytestmark = pytest.mark.unit
 
@@ -47,3 +47,29 @@ def test_invalid_owner_dsn_is_rejected_without_exposing_input(dsn: str) -> None:
         MigrationSettings(migration_dsn=SecretStr(dsn))
 
     assert "synthetic-password" not in str(failure.value)
+
+
+@pytest.mark.parametrize("password", ["", "   ", "synthetic-password\x00"])
+def test_provisioning_rejects_empty_or_unusable_passwords_without_echoing_them(
+    password: str,
+) -> None:
+    with pytest.raises(ValidationError) as failure:
+        ProvisioningSettings(
+            migration_dsn=SecretStr("postgresql+psycopg://owner:owner-password@localhost/test"),
+            app_password=SecretStr(password),
+        )
+
+    assert "synthetic-password" not in str(failure.value)
+    assert "owner-password" not in str(failure.value)
+
+
+def test_provisioning_requires_a_separate_application_password(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(
+        "INVOICEOPS_MIGRATION_DSN", "postgresql+psycopg://owner:owner-password@localhost/test"
+    )
+    monkeypatch.delenv("INVOICEOPS_APP_PASSWORD", raising=False)
+
+    with pytest.raises(ValidationError, match="app_password"):
+        ProvisioningSettings()

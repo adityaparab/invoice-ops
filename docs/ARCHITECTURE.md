@@ -84,7 +84,8 @@ timestamps are timezone-aware. The initial migration chooses HNSW over IVFFlat b
 accurate nearest-neighbor queries without a training phase and performs well as the corpus grows
 incrementally.
 
-`ledger` and `decisions` reject `UPDATE` and `DELETE` through database triggers. The runtime
+`ledger` and `decisions` reject `UPDATE`, `DELETE`, and `TRUNCATE` through always-enabled statement
+triggers, including empty matches and owner writes. The runtime
 `invoiceops_app` role receives only `SELECT`/`INSERT` grants on these tables; migrations use a
 separate owner connection. Repositories mirror this boundary by exposing only append and read
 methods. The ledger writer resolves all four version pins from environment-backed configuration,
@@ -136,5 +137,7 @@ The root `compose.yaml` starts the API, Postgres with pgvector, and MinIO. An op
 profile starts the Compose LiteLLM proxy when a native developer gateway is not used. The API waits
 for healthy infrastructure, runs as a non-root user, and exposes dependency readiness separately
 from process liveness. Postgres and MinIO persist in named volumes; published ports bind to localhost.
-The one-shot seed entry point remains a placeholder until step 2.1. Schema migrations are step 0.6;
-the current API command starts uvicorn directly. See [local platform setup](../deploy/README.md).
+The one-shot `migrate` service applies owner-driven Alembic migrations and provisions the restricted
+runtime login before the API or seed service starts. Only that service receives the owner DSN; the
+API uses `invoiceops_app`. The seed entry point remains a placeholder until step 2.1.
+See [local platform setup](../deploy/README.md).

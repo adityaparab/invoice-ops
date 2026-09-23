@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-23 (Phase 0 in progress)
+> **Last updated:** 2026-09-23 (Phase 0 complete)
 
 ---
 
@@ -61,11 +61,12 @@
 - [x] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
   - Implemented before 0.3 so Compose can run a real health-checked API. Idempotency context validation is ready; durable replay accompanies future mutation transactions.
 - [x] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
-- [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
-- [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
+- [x] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
+- [x] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
 - [x] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
   - Brought forward so subsequent PRs can meet the passing-CI merge rule. Real pgvector and MinIO testcontainers run after offline unit tests; the model eval gate remains Phase 5 work.
-- [ ] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
+- [x] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
+  - All seven accepted ADRs were present in the initial repository; verified their decisions and corrected package paths and tracker references.
 
 
 
@@ -185,7 +186,7 @@ checkbox here.
 
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| P0 — Platform skeleton         | In progress | —            | Package scaffold, Python 3.12 pin, and CI implemented      |
+| P0 — Platform skeleton         | Complete    | 2026-09-23   | Compose API, storage, restricted runtime, audit enforcement, durable hello graph, CI, and ADRs implemented |
 | P1 — Extraction & validation   | Not started | —            |                                                           |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
@@ -208,3 +209,7 @@ checkbox here.
 | 2026-09-23 | Step 0.3 adds the pinned Compose stack, non-root API image, persistent storage volumes, optional local proxy, and explicit seed placeholder; CI smoke-tests the stack. |
 | 2026-09-23 | Step 0.6 adds reversible owner-driven Alembic migrations, twelve constrained tables, Decimal-safe values, audit version pins, and the 384-dimensional vector index. |
 | 2026-09-23 | Step 0.4 configures four virtual aliases for native, Ollama, and OpenAI backends; a selected-config preflight rejects missing credentials before proxy startup. All routes were startup-tested without provider access. |
+| 2026-09-23 | Step 0.7 enforces append-only audit statements, provisions a restricted SCRAM runtime login, and runs owner migrations in a separate one-shot Compose service; role-isolation regressions and authenticated API checks pass. |
+| 2026-09-23 | Step 0.8 adds a typed hello-stub graph, isolated Postgres checkpoints, restart/resume, completed-run replay, concurrency controls, and a two-run Compose smoke. No business approval or model calls occur in the hello path. |
+| 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
+| 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |

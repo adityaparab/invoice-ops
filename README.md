@@ -2,7 +2,13 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building** — Phase 0 package scaffold and development tooling; application features below describe the target system.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 0 complete.** The platform foundation is implemented; invoice processing and the application screens below describe the target system.
+
+The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
+Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
+database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
+Python package, real database/object-store integrations, and Compose startup. Invoice ingestion
+endpoints and extraction begin in Phase 1; the hello graph uses stub nodes and makes no model calls.
 
 ---
 
@@ -242,11 +248,11 @@ InvoiceOps/
 ## 13. Development Quickstart
 
 ```bash
-uv sync                                   # install env from uv.lock
+uv sync --locked                          # install env from uv.lock
 uv run ruff check .                       # lint
 uv run ruff format --check .              # formatting
-uv run mypy                               # strict type check (src + tests)
-uv run pytest -m unit                     # offline package smoke tests
+uv run mypy                               # strict type check (src, tests, deploy, migrations)
+uv run pytest -m unit --disable-socket --allow-unix-socket  # offline unit tests
 uv build                                 # build the wheel and source distribution
 ```
 
@@ -264,7 +270,9 @@ must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@
 
 Start the local API, Postgres, and MinIO with `docker compose up -d --build --wait`.
 See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed placeholder,
-and the optional Compose LiteLLM proxy. The graph demo and invoice ingestion remain steps 0.8 and 1.1.
+and the optional Compose LiteLLM proxy. Run `docker compose run --rm graph-demo` for the durable
+LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. Invoice
+ingestion remains step 1.1.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
 MinIO tests through disposable Testcontainers, a package build, and a Compose startup/health smoke
 on every PR and push to `main`.
@@ -272,8 +280,10 @@ To run the infrastructure tests locally, start Docker and run `uv run pytest -m 
 The model evaluation gate is planned in Phase 5; these tests make no live model calls.
 
 Database migrations run with a separate owner connection in `INVOICEOPS_MIGRATION_DSN`:
-`uv run alembic upgrade head`. See [schema and migration commands](docs/schema.md) for the URL format,
-table contracts, and reversible migration behavior. Runtime-role grants and audit immutability are
-the following step, 0.7.
+`uv run alembic upgrade head`. The Compose `migrate` service additionally provisions the restricted
+`invoiceops_app` login from `INVOICEOPS_APP_PASSWORD` before the API starts. The API receives only
+runtime credentials. Audit tables reject updates, deletes, and truncation, including owner writes;
+corrections append a superseding entry. See [schema and migration commands](docs/schema.md) for
+table contracts, credential provisioning, and reversible migration behavior.
 
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).

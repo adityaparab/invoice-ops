@@ -5,11 +5,15 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-from invoiceops_agent.db.settings import MigrationSettings
+from invoiceops_agent.db.settings import (
+    OWNER_CONNECT_TIMEOUT,
+    OWNER_CONNECTION_OPTIONS,
+    MigrationSettings,
+)
 
 config = context.config
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+if config.config_file_name is not None and config.attributes.get("configure_logger", True):
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 
 def run_migrations_offline() -> None:
@@ -32,11 +36,8 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
         hide_parameters=True,
         connect_args={
-            "connect_timeout": 5,
-            "options": (
-                "-c timezone=UTC -c search_path=public "
-                "-c lock_timeout=5000 -c statement_timeout=60000"
-            ),
+            "connect_timeout": OWNER_CONNECT_TIMEOUT,
+            "options": OWNER_CONNECTION_OPTIONS,
         },
     )
     try:

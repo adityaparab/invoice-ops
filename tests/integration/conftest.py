@@ -5,8 +5,10 @@ from collections.abc import Iterator
 import psycopg
 import pytest
 from minio import Minio
+from sqlalchemy.engine import URL
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.wait_strategies import ExecWaitStrategy, HttpWaitStrategy
+from tests.integration.support import migrate
 from urllib3 import PoolManager, Timeout
 
 POSTGRES_IMAGE = (
@@ -70,3 +72,29 @@ def minio_client() -> Iterator[Minio]:
             region="us-east-1",
             http_client=http,
         )
+
+
+@pytest.fixture
+def migration_dsn(
+    postgres_connection: psycopg.Connection[tuple[object, ...]], monkeypatch: pytest.MonkeyPatch
+) -> str:
+    info = postgres_connection.info
+    dsn = URL.create(
+        "postgresql+psycopg",
+        username=info.user,
+        password=info.password,
+        host=info.host,
+        port=info.port,
+        database=info.dbname,
+    ).render_as_string(hide_password=False)
+    monkeypatch.setenv("INVOICEOPS_MIGRATION_DSN", dsn)
+    postgres_connection.autocommit = True
+    return dsn
+
+
+@pytest.fixture
+def migrated_database(
+    postgres_connection: psycopg.Connection[tuple[object, ...]], migration_dsn: str
+) -> psycopg.Connection[tuple[object, ...]]:
+    migrate("upgrade", "head")
+    return postgres_connection

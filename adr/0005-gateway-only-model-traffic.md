@@ -16,7 +16,7 @@ on free local models while prod/eval use hosted OpenAI models.
 ## Decision
 
 1. Application code never uses provider SDKs directly. All model traffic flows through
-   **one thin wrapper** (`src/gateway_client/`) over a single OpenAI-compliant endpoint.
+   **one thin wrapper** (`src/invoiceops_agent/gateway_client/`) over a single OpenAI-compliant endpoint.
 2. That endpoint is a **LiteLLM proxy**: model routing, fallback chains, budgets, and
    spend logging are configuration (`deploy/litellm/config.yaml`).
 3. Applications address models **only by virtual aliases** (`extract-vision`,
@@ -32,4 +32,4 @@ on free local models while prod/eval use hosted OpenAI models.
 - Per-alias cost/latency telemetry comes free from LiteLLM spend logs.
 - One more service in Compose; model *names* remain configurable, documented in the
   config file header.
-- Direct provider SDK calls appearing anywhere outside `src/gateway_client/` are bugs.
+- Direct provider SDK calls appearing anywhere outside `src/invoiceops_agent/gateway_client/` are bugs.
