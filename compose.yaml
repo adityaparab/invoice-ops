@@ -170,12 +170,13 @@ services:
       context: .
       dockerfile: deploy/Dockerfile
     command: ["python", "/app/deploy/seed.py"]
+    environment:
+      INVOICEOPS_POSTGRES_DSN: ${INVOICEOPS_POSTGRES_DSN:-postgresql://invoiceops_app:${INVOICEOPS_APP_PASSWORD:-invoiceops-app-local-only-password}@postgres:5432/${POSTGRES_DB:-invoiceops}}
+      INVOICEOPS_SEED: ${INVOICEOPS_SEED:-20260827}
     depends_on:
       migrate:
         condition: service_completed_successfully
       postgres:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     restart: "no"
 

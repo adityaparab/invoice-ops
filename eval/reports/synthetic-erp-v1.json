@@ -1,0 +1,422 @@
+{
+  "counts": {
+    "goods_receipts": 12,
+    "purchase_orders": 24,
+    "vendors": 12
+  },
+  "fixture_sha256": "5d458199836517375ab1fefef03d6063d9622c60efbf8590d8aa2edfd5ec45c5",
+  "ground_truth": [
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "11",
+        "5"
+      ],
+      "ordered_total": "2984.44",
+      "po_number": "SYN-20260827-PO0001",
+      "received_quantities": [
+        "0",
+        "0"
+      ],
+      "status": "OPEN",
+      "vendor_external_id": "SYN-20260827-V001"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "12",
+        "2",
+        "10",
+        "6"
+      ],
+      "ordered_total": "4342.10",
+      "po_number": "SYN-20260827-PO0002",
+      "received_quantities": [
+        "6",
+        "1",
+        "5",
+        "3"
+      ],
+      "status": "PARTIALLY_RECEIVED",
+      "vendor_external_id": "SYN-20260827-V001"
+    },
+    {
+      "fully_received": true,
+      "ordered_quantities": [
+        "2",
+        "5"
+      ],
+      "ordered_total": "566.39",
+      "po_number": "SYN-20260827-PO0003",
+      "received_quantities": [
+        "2",
+        "5"
+      ],
+      "status": "CLOSED",
+      "vendor_external_id": "SYN-20260827-V002"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "9",
+        "8"
+      ],
+      "ordered_total": "2045.34",
+      "po_number": "SYN-20260827-PO0004",
+      "received_quantities": [
+        "0",
+        "0"
+      ],
+      "status": "CANCELLED",
+      "vendor_external_id": "SYN-20260827-V002"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "2",
+        "12",
+        "6"
+      ],
+      "ordered_total": "2328.68",
+      "po_number": "SYN-20260827-PO0005",
+      "received_quantities": [
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "OPEN",
+      "vendor_external_id": "SYN-20260827-V003"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "4",
+        "11",
+        "4"
+      ],
+      "ordered_total": "3200.78",
+      "po_number": "SYN-20260827-PO0006",
+      "received_quantities": [
+        "2",
+        "5",
+        "2"
+      ],
+      "status": "PARTIALLY_RECEIVED",
+      "vendor_external_id": "SYN-20260827-V003"
+    },
+    {
+      "fully_received": true,
+      "ordered_quantities": [
+        "11",
+        "9",
+        "5",
+        "10"
+      ],
+      "ordered_total": "5042.16",
+      "po_number": "SYN-20260827-PO0007",
+      "received_quantities": [
+        "11",
+        "9",
+        "5",
+        "10"
+      ],
+      "status": "CLOSED",
+      "vendor_external_id": "SYN-20260827-V004"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "5",
+        "8",
+        "8"
+      ],
+      "ordered_total": "2459.05",
+      "po_number": "SYN-20260827-PO0008",
+      "received_quantities": [
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "CANCELLED",
+      "vendor_external_id": "SYN-20260827-V004"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "7",
+        "6"
+      ],
+      "ordered_total": "1747.64",
+      "po_number": "SYN-20260827-PO0009",
+      "received_quantities": [
+        "0",
+        "0"
+      ],
+      "status": "OPEN",
+      "vendor_external_id": "SYN-20260827-V005"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "6",
+        "5",
+        "9",
+        "5"
+      ],
+      "ordered_total": "5124.52",
+      "po_number": "SYN-20260827-PO0010",
+      "received_quantities": [
+        "3",
+        "2",
+        "4",
+        "2"
+      ],
+      "status": "PARTIALLY_RECEIVED",
+      "vendor_external_id": "SYN-20260827-V005"
+    },
+    {
+      "fully_received": true,
+      "ordered_quantities": [
+        "10",
+        "12",
+        "10"
+      ],
+      "ordered_total": "5449.50",
+      "po_number": "SYN-20260827-PO0011",
+      "received_quantities": [
+        "10",
+        "12",
+        "10"
+      ],
+      "status": "CLOSED",
+      "vendor_external_id": "SYN-20260827-V006"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "6",
+        "3"
+      ],
+      "ordered_total": "1768.92",
+      "po_number": "SYN-20260827-PO0012",
+      "received_quantities": [
+        "0",
+        "0"
+      ],
+      "status": "CANCELLED",
+      "vendor_external_id": "SYN-20260827-V006"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "6",
+        "10",
+        "2"
+      ],
+      "ordered_total": "1231.50",
+      "po_number": "SYN-20260827-PO0013",
+      "received_quantities": [
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "OPEN",
+      "vendor_external_id": "SYN-20260827-V007"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "4",
+        "8"
+      ],
+      "ordered_total": "520.28",
+      "po_number": "SYN-20260827-PO0014",
+      "received_quantities": [
+        "2",
+        "4"
+      ],
+      "status": "PARTIALLY_RECEIVED",
+      "vendor_external_id": "SYN-20260827-V007"
+    },
+    {
+      "fully_received": true,
+      "ordered_quantities": [
+        "6",
+        "10",
+        "5",
+        "11"
+      ],
+      "ordered_total": "6330.20",
+      "po_number": "SYN-20260827-PO0015",
+      "received_quantities": [
+        "6",
+        "10",
+        "5",
+        "11"
+      ],
+      "status": "CLOSED",
+      "vendor_external_id": "SYN-20260827-V008"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "11",
+        "3",
+        "2",
+        "3"
+      ],
+      "ordered_total": "2033.66",
+      "po_number": "SYN-20260827-PO0016",
+      "received_quantities": [
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "CANCELLED",
+      "vendor_external_id": "SYN-20260827-V008"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "9",
+        "5",
+        "3",
+        "12"
+      ],
+      "ordered_total": "5693.74",
+      "po_number": "SYN-20260827-PO0017",
+      "received_quantities": [
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "OPEN",
+      "vendor_external_id": "SYN-20260827-V009"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "9",
+        "10",
+        "7",
+        "6"
+      ],
+      "ordered_total": "3769.68",
+      "po_number": "SYN-20260827-PO0018",
+      "received_quantities": [
+        "4",
+        "5",
+        "3",
+        "3"
+      ],
+      "status": "PARTIALLY_RECEIVED",
+      "vendor_external_id": "SYN-20260827-V009"
+    },
+    {
+      "fully_received": true,
+      "ordered_quantities": [
+        "8",
+        "11",
+        "5"
+      ],
+      "ordered_total": "3586.72",
+      "po_number": "SYN-20260827-PO0019",
+      "received_quantities": [
+        "8",
+        "11",
+        "5"
+      ],
+      "status": "CLOSED",
+      "vendor_external_id": "SYN-20260827-V010"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "3",
+        "12",
+        "12"
+      ],
+      "ordered_total": "1865.85",
+      "po_number": "SYN-20260827-PO0020",
+      "received_quantities": [
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "CANCELLED",
+      "vendor_external_id": "SYN-20260827-V010"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "11",
+        "10",
+        "2",
+        "5"
+      ],
+      "ordered_total": "4605.95",
+      "po_number": "SYN-20260827-PO0021",
+      "received_quantities": [
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "status": "OPEN",
+      "vendor_external_id": "SYN-20260827-V011"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "11",
+        "8",
+        "3",
+        "10"
+      ],
+      "ordered_total": "4136.23",
+      "po_number": "SYN-20260827-PO0022",
+      "received_quantities": [
+        "5",
+        "4",
+        "1",
+        "5"
+      ],
+      "status": "PARTIALLY_RECEIVED",
+      "vendor_external_id": "SYN-20260827-V011"
+    },
+    {
+      "fully_received": true,
+      "ordered_quantities": [
+        "3",
+        "4"
+      ],
+      "ordered_total": "1285.71",
+      "po_number": "SYN-20260827-PO0023",
+      "received_quantities": [
+        "3",
+        "4"
+      ],
+      "status": "CLOSED",
+      "vendor_external_id": "SYN-20260827-V012"
+    },
+    {
+      "fully_received": false,
+      "ordered_quantities": [
+        "12",
+        "10"
+      ],
+      "ordered_total": "4501.12",
+      "po_number": "SYN-20260827-PO0024",
+      "received_quantities": [
+        "0",
+        "0"
+      ],
+      "status": "CANCELLED",
+      "vendor_external_id": "SYN-20260827-V012"
+    }
+  ],
+  "seed": 20260827,
+  "version": "synthetic-erp@v1"
+}
