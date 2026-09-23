@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building** — Phase 1 extraction and validation in progress (16/57 tracker issues complete)
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building** — Phase 0 package scaffold and development tooling; application features below describe the target system.
 
 ---
 
@@ -169,7 +169,7 @@ The eval suite is a **CI gate**: pull requests fail if any metric regresses beyo
 ## 9. Repository Layout (planned)
 
 ```
-agent-ops-gpt/
+InvoiceOps/
 ├── README.md                  # this document
 ├── docs/
 │   ├── USER_JOURNEY.md        # personas + step-by-step journeys
@@ -178,7 +178,7 @@ agent-ops-gpt/
 │   └── DEMO_VIDEO_SCRIPT.md   # 3–4 min video storyboard + narration
 ├── mocks/
 │   └── index.html             # interactive working mock (open in browser)
-├── src/
+├── src/invoiceops_agent/      # installable Python package; component boundaries below
 │   ├── api/                   # FastAPI app, routes, dependencies
 │   ├── graph/                 # LangGraph definition + ADK variant
 │   │   ├── nodes/             # extract, validate, match, policy, gate, triage
@@ -246,45 +246,22 @@ uv sync                                   # install env from uv.lock
 uv run ruff check .                       # lint
 uv run ruff format --check .              # formatting
 uv run mypy                               # strict type check (src + tests)
-uv run pytest -m unit                     # fast tests; -m integration needs the stack
+uv run pytest -m unit                     # offline package smoke tests
+uv build                                 # build the wheel and source distribution
 ```
 
-The infrastructure stack is declared in `compose.yaml`. Start the application and its required
-services with:
+Use Python 3.12 and `uv`. Development dependencies have exact versions in `pyproject.toml`, with
+transitive dependencies recorded in `uv.lock`; use `uv sync --locked` to verify the lockfile without
+updating it. The interpreter pin is tracked separately in step 0.2.
 
-```bash
-cp .env.example .env
-docker compose up -d
-docker compose run --rm seed
-```
+The installed namespace is `invoiceops_agent`; its component packages follow the architecture
+boundaries in `AGENTS.md`. The packages currently contain no application behavior. Package smoke
+tests verify that the architectural entry points and typing marker are available after installation.
+Pytest uses strict configuration and markers, with function-scoped asyncio loops. Future tests
+must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@pytest.mark.asyncio`.
 
-Postgres persists in `postgres_data`, MinIO persists in `minio_data`, and every other service is
-stateless. The checked-in credentials are local-only examples and must be replaced outside local
-development.
-
-LiteLLM exposes the stable aliases `extract-vision`, `triage-reasoner`, `eval-judge`, and `embed`.
-Development maps them to Ollama through `OLLAMA_API_BASE`; production/evaluation uses the pinned
-OpenAI mappings in `deploy/litellm/config.prod.yaml`. A local completion check is skipped when the
-configured Ollama models are not installed, but the proxy and alias catalogue remain testable.
-
-The API publishes liveness at `/healthz` and dependency readiness at `/readyz`. Every error is an
-RFC 7807 `application/problem+json` document carrying a request `trace_id`; mutations can consume
-the validated `Idempotency-Key` context through the injected persistence seam.
-
-Run a fake invoice through the durable LangGraph hello path with `uv run invoiceops-graph-demo`
-while Compose is up. Reusing its `run_id` resumes from Postgres or returns the completed state
-without duplicating node execution.
-
-Submit a synthetic PDF to the authenticated ingestion path with:
-
-```bash
-curl --fail --header 'Authorization: Bearer service-local-development-only' \
-  --header 'Idempotency-Key: local-upload-1' \
-  --form 'file=@tests/fixtures/sample-invoice.pdf;type=application/pdf' \
-  http://localhost:8000/v1/invoices
-```
-
-The local token is intentionally development-only; replace it and every checked-in example
-credential outside the local Compose environment.
+Compose, the FastAPI endpoints, the graph demo, and invoice ingestion are planned work in steps
+0.3, 0.5, 0.8, and 1.1 respectively. Their services and example fixtures are not available yet.
+GitHub Actions is tracked in step 0.9; the checks above currently run locally.
 
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
