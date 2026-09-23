@@ -4,7 +4,16 @@ version = "0.1.0"
 description = "Agentic invoice processing with deterministic controls and auditable decisions"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "langgraph==1.2.12",
+    "langgraph-checkpoint-postgres==3.1.2",
+    "psycopg[binary,pool]==3.3.6",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+]
+
+[project.scripts]
+invoiceops-graph-demo = "invoiceops_agent.graph.cli:main"
 
 [build-system]
 requires = ["uv_build==0.11.25"]
@@ -19,8 +28,11 @@ src = ["src"]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
 [tool.mypy]
+plugins = ["pydantic.mypy"]
 python_version = "3.12"
 strict = true
+explicit_package_bases = true
+mypy_path = ["src"]
 files = ["src", "tests"]
 
 [tool.pytest.ini_options]
@@ -40,7 +52,6 @@ markers = [
 dev = [
     "minio==7.2.20",
     "mypy==2.3.1",
-    "psycopg[binary]==3.3.6",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-socket==0.8.1",
