@@ -264,7 +264,9 @@ must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@
 
 Start the local API, Postgres, and MinIO with `docker compose up -d --build --wait`.
 See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed placeholder,
-and the optional Compose LiteLLM proxy. The graph demo and invoice ingestion remain steps 0.8 and 1.1.
+and the optional Compose LiteLLM proxy. Run `docker compose run --rm graph-demo` for the durable
+LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. Invoice
+ingestion remains step 1.1.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
 MinIO tests through disposable Testcontainers, a package build, and a Compose startup/health smoke
 on every PR and push to `main`.
