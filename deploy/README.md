@@ -32,9 +32,10 @@ The optional Compose LiteLLM proxy starts with:
 docker compose --profile gateway up -d --wait
 ```
 
-It binds to port 4001 to leave port 4000 available for a native developer gateway. Its initial
-configuration contains no model routes; virtual aliases are step 0.4. The health check verifies
-proxy readiness without invoking models. Application gateway traffic is implemented in step 1.5.
+It binds to port 4001 to leave port 4000 available for a native developer gateway. Supply the selected
+upstream's environment variables first; [gateway configuration](litellm/README.md) describes the
+native bridge, Ollama, and production routes. Startup rejects missing variables. The health check
+verifies proxy readiness without invoking models. Application gateway traffic is implemented in step 1.5.
 
 All published ports bind to `127.0.0.1`; `.env.example` lists port overrides and synthetic local
 credentials. Change credentials before a shared deployment. Docker build context excludes local
