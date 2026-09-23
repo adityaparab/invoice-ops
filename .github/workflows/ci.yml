@@ -63,6 +63,21 @@ jobs:
           docker compose up -d --build --wait --wait-timeout 120
           curl --fail --silent --show-error http://localhost:8000/healthz
           curl --fail --silent --show-error http://localhost:8000/readyz
+          docker compose exec -T api python - <<'PY'
+          import os
+          import psycopg
+          from invoiceops_agent.api.settings import ApiSettings
+
+          owner_variables = ("INVOICEOPS_MIGRATION_DSN", "INVOICEOPS_CHECKPOINT_DSN", "POSTGRES_PASSWORD")
+          assert not any(name in os.environ for name in owner_variables)
+          dsn = ApiSettings().postgres_dsn
+          assert dsn is not None
+          with psycopg.connect(dsn.get_secret_value(), connect_timeout=5) as connection:
+              assert connection.execute("SELECT current_user").fetchone() == ("invoiceops_app",)
+              assert connection.execute(
+                  "SELECT has_table_privilege(current_user, 'public.ledger', 'UPDATE,DELETE,TRUNCATE')"
+              ).fetchone() == (False,)
+          PY
           docker compose run --rm seed
 
       - name: Persist and replay the Compose hello graph
