@@ -28,6 +28,8 @@ select = ["E", "F", "I", "UP", "B", "ASYNC"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+explicit_package_bases = true
+mypy_path = ["src"]
 files = ["src", "tests"]
 
 [tool.pytest.ini_options]
@@ -45,8 +47,12 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "minio==7.2.20",
     "mypy==2.3.1",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
+    "pytest-socket==0.8.1",
     "ruff==0.16.8",
+    "testcontainers==4.15.0",
+    "urllib3==2.8.0",
 ]
