@@ -118,6 +118,8 @@ agree arithmetically: inconsistent source documents must remain representable fo
 human review. Confidence is constrained to `[0,1]`.
 
 The nullable `invoices.embedding` is `vector(384)` and uses an HNSW `vector_cosine_ops` index.
+Migration 0003 pairs it with nullable `embedding_model_version`; vectors are compared only when
+their model pins match. Previously stored vectors receive the nonsearchable legacy pin.
 Invoice status/creation, vendor/PO relationships, PO vendor/status, receipt PO/time, run invoice/start,
 exception status/SLA, and audit invoice/creation/UUID indexes support expected access paths. The
 run/sequence unique indexes support ordered checkpoints and ledger reads. Ledger and decision

@@ -96,7 +96,8 @@ def test_embeddings_enforce_384_dimensions_and_use_hnsw_cosine_index(
     seed_invoice_and_run(migrated_database)
     embedding = "[1," + ",".join("0" for _ in range(383)) + "]"
     migrated_database.execute(
-        "UPDATE invoices SET embedding = %s::vector WHERE id = %s", (embedding, INVOICE_ID)
+        "UPDATE invoices SET embedding = %s::vector, embedding_model_version = %s WHERE id = %s",
+        (embedding, "synthetic-embed@v1", INVOICE_ID),
     )
     query = "SELECT id FROM invoices ORDER BY embedding <=> %s::vector LIMIT 1"
     assert migrated_database.execute(query, (embedding,)).fetchone() == (INVOICE_ID,)
@@ -113,6 +114,25 @@ def test_embeddings_enforce_384_dimensions_and_use_hnsw_cosine_index(
         migrated_database.execute(
             "UPDATE invoices SET embedding = '[1,2,3]'::vector WHERE id = %s", (INVOICE_ID,)
         )
+    with pytest.raises(psycopg.errors.CheckViolation):
+        migrated_database.execute(
+            "UPDATE invoices SET embedding_model_version = NULL WHERE id = %s", (INVOICE_ID,)
+        )
+
+
+def test_migration_preserves_legacy_vectors_without_comparing_them_to_new_models(
+    migrated_database: psycopg.Connection[tuple[object, ...]],
+) -> None:
+    migrate("downgrade", "0002_append_only_audit")
+    seed_invoice_and_run(migrated_database)
+    vector = "[1," + ",".join("0" for _ in range(383)) + "]"
+    migrated_database.execute(
+        "UPDATE invoices SET embedding = %s::vector WHERE id = %s", (vector, INVOICE_ID)
+    )
+    migrate("upgrade", "head")
+    assert migrated_database.execute(
+        "SELECT embedding_model_version FROM invoices WHERE id = %s", (INVOICE_ID,)
+    ).fetchone() == ("__legacy_unpinned__",)
 
 
 def test_uniqueness_prevents_duplicate_content_checkpoints_and_replay_claims(
