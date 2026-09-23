@@ -22,6 +22,30 @@ graph failures and excludes exception messages and connection credentials from i
 file. `INVOICEOPS_GRAPH_TIMEOUT_SECONDS` defaults to 30 and must be greater than zero and at most
 300. Database connection establishment and individual statements have five-second limits.
 
+## Compose demo
+
+The `graph-demo` service uses the API image and the `tools` profile. It waits only for healthy
+PostgreSQL, because LangGraph manages its own schema independently of application migrations.
+Build the image and execute the same pair of IDs twice:
+
+```bash
+docker compose build graph-demo
+docker compose run --rm graph-demo invoiceops-graph-demo \
+  --run-id 00000000-0000-4000-8000-000000000001 \
+  --invoice-id 00000000-0000-4000-8000-000000000002
+docker compose run --rm graph-demo invoiceops-graph-demo \
+  --run-id 00000000-0000-4000-8000-000000000001 \
+  --invoice-id 00000000-0000-4000-8000-000000000002
+```
+
+The second execution logs `graph_replayed` and returns the persisted state. CI repeats this smoke
+after starting the default Compose stack. Neither execution performs a business decision.
+
+Compose defaults `INVOICEOPS_CHECKPOINT_DSN` to the synthetic local PostgreSQL owner credentials.
+Override it with a percent-encoded owner-capable DSN if needed. This explicit demo connection creates
+the isolated `langgraph` schema and saver tables; it is separate from the application's restricted
+runtime database role. A migration-service dependency is unnecessary for these managed tables.
+
 ## Persistence and replay
 
 An async context manager owns one psycopg connection, the Postgres checkpointer, and the compiled

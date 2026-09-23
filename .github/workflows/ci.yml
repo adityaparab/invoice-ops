@@ -55,3 +55,30 @@ jobs:
 
       - name: Build distribution
         run: uv build
+
+      - name: Validate and start Compose stack
+        timeout-minutes: 5
+        run: |
+          docker compose config --quiet
+          docker compose up -d --build --wait --wait-timeout 120
+          curl --fail --silent --show-error http://localhost:8000/healthz
+          curl --fail --silent --show-error http://localhost:8000/readyz
+          docker compose run --rm seed
+
+      - name: Persist and replay the Compose hello graph
+        timeout-minutes: 2
+        run: |
+          docker compose run --rm graph-demo invoiceops-graph-demo \
+            --run-id 00000000-0000-4000-8000-000000000001 \
+            --invoice-id 00000000-0000-4000-8000-000000000002
+          docker compose run --rm graph-demo invoiceops-graph-demo \
+            --run-id 00000000-0000-4000-8000-000000000001 \
+            --invoice-id 00000000-0000-4000-8000-000000000002
+
+      - name: Compose diagnostics
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Clean up Compose services
+        if: always()
+        run: docker compose down --volumes --remove-orphans

@@ -1,0 +1,122 @@
+name: invoiceops
+
+services:
+  api:
+    image: invoiceops-api:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    init: true
+    environment:
+      INVOICEOPS_POSTGRES_DSN: ${INVOICEOPS_POSTGRES_DSN:-postgresql://${POSTGRES_USER:-invoiceops}:${POSTGRES_PASSWORD:-invoiceops-local-only}@postgres:5432/${POSTGRES_DB:-invoiceops}}
+      INVOICEOPS_MINIO_URL: http://minio:9000
+      INVOICEOPS_READINESS_TIMEOUT_SECONDS: "2"
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/readyz', timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-invoiceops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-invoiceops-local-only}
+      POSTGRES_DB: ${POSTGRES_DB:-invoiceops}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-invoiceops-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-invoiceops-local-only-password}
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9000/minio/health/ready"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+
+  litellm:
+    profiles: ["gateway"]
+    image: ghcr.io/berriai/litellm:v1.102.1@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-invoiceops-local-development-only}
+    ports:
+      - "127.0.0.1:${LITELLM_PORT:-4001}:4000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./deploy/litellm/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:4000/health/readiness', timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 5
+    restart: unless-stopped
+
+  graph-demo:
+    profiles: ["tools"]
+    image: invoiceops-api:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    init: true
+    command: ["invoiceops-graph-demo"]
+    environment:
+      # The demo bootstraps its isolated schema and needs an owner-capable connection.
+      INVOICEOPS_CHECKPOINT_DSN: ${INVOICEOPS_CHECKPOINT_DSN:-postgresql://${POSTGRES_USER:-invoiceops}:${POSTGRES_PASSWORD:-invoiceops-local-only}@postgres:5432/${POSTGRES_DB:-invoiceops}}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  seed:
+    profiles: ["tools"]
+    image: invoiceops-api:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    command: ["python", "/app/deploy/seed.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  postgres_data:
+  minio_data:

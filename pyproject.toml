@@ -5,13 +5,16 @@ description = "Agentic invoice processing with deterministic controls and audita
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic==1.20.0",
     "fastapi==0.141.1",
     "httpx==0.28.1",
     "langgraph==1.2.12",
     "langgraph-checkpoint-postgres==3.1.2",
+    "pgvector==0.5.0",
     "psycopg[binary,pool]==3.3.6",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
+    "sqlalchemy==2.0.54",
     "uvicorn==0.53.0",
 ]
 
@@ -31,12 +34,12 @@ src = ["src"]
 select = ["E", "F", "I", "UP", "B", "ASYNC"]
 
 [tool.mypy]
-plugins = ["pydantic.mypy"]
 python_version = "3.12"
 strict = true
+plugins = ["pydantic.mypy"]
 explicit_package_bases = true
 mypy_path = ["src"]
-files = ["src", "tests"]
+files = ["src", "tests", "deploy", "migrations"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
