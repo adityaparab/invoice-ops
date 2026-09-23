@@ -142,6 +142,13 @@ call metrics. The actor-agnostic `TransactionalAuditSink` opens a short transact
 and returns only after commit. See [the extraction contract](EXTRACTION.md) for native PDF opt-in,
 parser limits, net/gross conventions, and the deterministic validation seam.
 
+The standalone Validate node consumes that neutral extraction contract and applies pure, versioned
+required-field, regular-invoice sign, line-math, subtotal, per-line tax, and gross-total checks.
+Missing operands remain typed issues; unknown currencies never inherit an assumed rounding scale.
+Both PASS and FAIL commit a POLICY ledger event with the complete policy, its fingerprint, the
+extraction fingerprint, and Decimal evidence before returning. Full worker wiring and durable node
+replay remain Phase 2 work. See [validation rules and contracts](VALIDATION.md).
+
 ## 9. Testing
 
 Unit tests are deterministic and offline. Integration tests apply the real migration chain to a
