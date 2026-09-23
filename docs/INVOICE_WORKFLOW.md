@@ -1,0 +1,33 @@
+# Invoice workflow worker
+
+Step 2.6 connects an accepted invoice run to the `invoice-v1` LangGraph workflow. The graph
+checkpoints synchronously after Ingest, Extract, Validate, Match3Way, Policy, Gate, and each chosen
+terminal or review node. A run uses its existing `run_id` as the checkpoint thread ID. Repeating a
+completed or paused run returns its checkpoint without another model call or audit event. If an audit
+event committed before its checkpoint, the worker reads that event and checks its input fingerprint
+before continuing.
+
+New uploads pin `invoice-v1`; already queued `ingestion-v1` runs remain readable and keep their
+original ledger version pin. The upload API creates queued runs. Start a one-shot worker for an
+accepted run with its returned `run_id`:
+
+```bash
+docker compose run --rm invoice-worker invoiceops-invoice-run <run_id>
+```
+
+For native development, set the restricted `INVOICEOPS_POSTGRES_DSN`, owner-capable
+`INVOICEOPS_CHECKPOINT_DSN`, and MinIO endpoint/credentials, then run
+`uv run invoiceops-invoice-run <run_id>`. The checkpoint connection creates only LangGraph's
+isolated `langgraph` schema. The operational connection uses the restricted application role.
+
+The worker reads `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`,
+`LITELLM_EMBED_MODEL`, and optionally `LITELLM_EXTRACT_MODEL` from the environment. It does not
+read a LiteLLM proxy configuration file. `LITELLM_EMBED_MODEL` must name a route that returns one
+384-dimensional vector. If `LITELLM_EXTRACT_MODEL` is empty, extraction uses `LITELLM_MODEL`.
+
+The interim gate defaults to review. An operator may set
+`INVOICEOPS_AUTO_APPROVAL_ENABLED=true` only for a controlled environment; it still requires a
+policy-eligible invoice and at least 0.99 confidence on every observed field. Step 2.7 replaces
+this with the versioned composite gate. Exception triage currently prepares deterministic evidence
+and pauses at HumanReview. The review API and four-eyes control arrive in Phase 3; the graph's
+typed resume command is exercised by offline and Postgres restart tests.

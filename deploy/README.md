@@ -17,8 +17,8 @@ The default stack starts Postgres and MinIO, then runs the one-shot `migrate` se
 is healthy. It applies Alembic migrations and provisions the `invoiceops_app` login using
 `INVOICEOPS_APP_PASSWORD`. The API and seed service wait for migration success; both also require
 healthy Postgres and MinIO. API readiness checks query Postgres and the MinIO readiness endpoint.
-The seed entry point currently logs `seed.placeholder` and exits without changing data;
-reproducible ERP seeding is step 2.1.
+The seed entry point inserts the seed-pinned synthetic ERP fixture and treats an exact rerun as a
+no-op.
 
 The database owner credentials (`POSTGRES_USER` and `POSTGRES_PASSWORD`) configure Postgres and
 the migration connection only. The API receives a separate runtime DSN for `invoiceops_app`, which
@@ -85,3 +85,12 @@ nonce, and retry semantics.
 Compose passes MinIO credentials only to the API and bucket initializer, separately from database
 owner credentials. See [the upload contract](../docs/INGESTION.md) for a curl example, limits,
 idempotency, and audited new-key duplicate rejection (`200` with the original IDs).
+
+Run an accepted invoice with the optional one-shot worker using its upload response `run_id`:
+
+```bash
+docker compose run --rm invoice-worker invoiceops-invoice-run <run_id>
+```
+
+The worker uses the three LiteLLM connection/model variables plus an embedding model name; it
+does not use the optional local proxy configuration. See [workflow operation](../docs/INVOICE_WORKFLOW.md).

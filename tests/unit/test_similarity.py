@@ -7,7 +7,10 @@ import pytest
 from pydantic import ValidationError
 from tests.unit.matching_support import matching_request, snapshot_for
 
-from invoiceops_agent.agents.near_duplicate_settings import LiteLLMEmbeddingSettings
+from invoiceops_agent.agents.near_duplicate_settings import (
+    LiteLLMEmbeddingSettings,
+    LiteLLMWorkflowSettings,
+)
 from invoiceops_agent.schemas.similarity import (
     EMBEDDING_DIMENSIONS,
     EmbeddingVector,
@@ -67,3 +70,25 @@ def test_embedding_gateway_uses_only_litellm_url_key_and_model(
     monkeypatch.setenv("LITELLM_EMBED_MODEL", "__legacy_unpinned__")
     with pytest.raises(ValidationError, match="Legacy vectors"):
         LiteLLMEmbeddingSettings(_env_file=None)
+
+
+def test_workflow_gateway_uses_only_litellm_env_model_names(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LITELLM_API_BASE", "https://gateway.example.test/v1")
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-key")
+    monkeypatch.setenv("LITELLM_MODEL", "synthetic-general")
+    monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "synthetic-vision")
+    monkeypatch.setenv("LITELLM_EMBED_MODEL", "synthetic-384")
+    monkeypatch.setenv("LITELLM_CONFIG", "never-read.yaml")
+    monkeypatch.setenv("INVOICEOPS_GATEWAY_ALIASES", "invalid-json")
+    gateway = LiteLLMWorkflowSettings(_env_file=None).gateway_settings()
+    assert str(gateway.base_url) == "https://gateway.example.test/v1"
+    assert gateway.api_key.get_secret_value() == "synthetic-key"
+    assert {name: policy.model_name for name, policy in gateway.aliases.items()} == {
+        "extract-vision": "synthetic-vision",
+        "embed": "synthetic-384",
+    }
+    monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "")
+    fallback = LiteLLMWorkflowSettings(_env_file=None).gateway_settings()
+    assert fallback.aliases["extract-vision"].model_name == "synthetic-general"

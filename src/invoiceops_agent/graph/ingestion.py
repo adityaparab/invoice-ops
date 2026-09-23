@@ -23,7 +23,7 @@ from invoiceops_agent.tools.raw_storage import RawStorage
 from invoiceops_agent.tools.webhook_auth import WebhookNonce
 
 logger = logging.getLogger(__name__)
-INGESTION_VERSION = "ingestion-v1"
+INGESTION_VERSION = "invoice-v1"
 
 
 def utc_now() -> datetime:

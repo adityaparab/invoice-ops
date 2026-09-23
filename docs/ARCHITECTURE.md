@@ -10,9 +10,10 @@ The primary workflow is:
 
 `Ingest -> Extract -> Validate -> Match3Way -> Policy -> Gate -> AutoApprove -> Archive`
 
-Duplicates route from Ingest to Reject. Validation, matching, policy, or low-confidence outcomes
-route to ExceptionTriage and then pause at HumanReview before Archive. Nodes checkpoint after every
-transition and remain idempotent under replay.
+Duplicates route from Ingest to Reject. Extraction escalations and outcomes that fail the policy or
+gate route to ExceptionTriage and pause at HumanReview before Archive. Nodes checkpoint after every
+transition and remain idempotent under replay. The interim gate defaults to review until step 2.7
+adds the composite score; see [worker operation and configuration](INVOICE_WORKFLOW.md).
 
 LangGraph's managed checkpoint tables live in the isolated `langgraph` schema so they do not
 collide with the application-facing `public.checkpoints` projection. The saver uses a restricted
@@ -146,8 +147,9 @@ The standalone Validate node consumes that neutral extraction contract and appli
 required-field, regular-invoice sign, line-math, subtotal, per-line tax, and gross-total checks.
 Missing operands remain typed issues; unknown currencies never inherit an assumed rounding scale.
 Both PASS and FAIL commit a POLICY ledger event with the complete policy, its fingerprint, the
-extraction fingerprint, and Decimal evidence before returning. Full worker wiring and durable node
-replay remain Phase 2 work. See [validation rules and contracts](VALIDATION.md).
+extraction fingerprint, and Decimal evidence before returning. The one-shot worker connects the
+nodes and replays committed evidence after a checkpoint interruption. See
+[validation rules and contracts](VALIDATION.md).
 
 ## 9. Testing
 

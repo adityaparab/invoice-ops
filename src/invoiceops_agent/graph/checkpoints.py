@@ -14,18 +14,23 @@ from psycopg.rows import DictRow, dict_row
 
 from invoiceops_agent.graph.errors import CheckpointUnavailable, RunInProgress
 from invoiceops_agent.graph.hello import build_hello_graph
+from invoiceops_agent.graph.invoice import build_invoice_graph
+from invoiceops_agent.graph.invoice_nodes import InvoiceNodes
+from invoiceops_agent.graph.invoice_runner import InvoiceGraphRunner
 from invoiceops_agent.graph.nodes.hello import HelloNodes
 from invoiceops_agent.graph.runner import GraphRunner
 from invoiceops_agent.graph.settings import GraphSettings
-from invoiceops_agent.graph.state import GraphState
+from invoiceops_agent.graph.state import GraphState, InvoiceGraphState
 
 logger = logging.getLogger(__name__)
 
 
 def restricted_serializer() -> JsonPlusSerializer:
-    """Allow built-in safe types and the one pinned state model; never allow pickle."""
+    """Allow built-in safe types and pinned state models; never allow pickle."""
     return JsonPlusSerializer(
-        pickle_fallback=False, allowed_msgpack_modules=[GraphState], allowed_json_modules=[]
+        pickle_fallback=False,
+        allowed_msgpack_modules=[GraphState, InvoiceGraphState],
+        allowed_json_modules=[],
     )
 
 
@@ -87,9 +92,9 @@ class PostgresRunLock:
 
 
 @asynccontextmanager
-async def postgres_graph(
-    settings: GraphSettings, *, nodes: HelloNodes | None = None
-) -> AsyncIterator[GraphRunner]:
+async def _postgres_saver(
+    settings: GraphSettings,
+) -> AsyncIterator[tuple[psycopg.AsyncConnection[DictRow], AsyncPostgresSaver]]:
     """Create only LangGraph's isolated tables and close the connection on every exit."""
     try:
         connection = await psycopg.AsyncConnection.connect(
@@ -114,9 +119,29 @@ async def postgres_graph(
                 await connection.execute("SELECT pg_advisory_unlock(%s)", (setup_key,))
         except psycopg.Error as error:
             raise CheckpointUnavailable("Checkpoint setup failed") from error
-        logger.info("checkpoint_store_ready schema=langgraph graph_version=hello-v1")
+        logger.info("checkpoint_store_ready schema=langgraph")
+        yield connection, saver
+
+
+@asynccontextmanager
+async def postgres_graph(
+    settings: GraphSettings, *, nodes: HelloNodes | None = None
+) -> AsyncIterator[GraphRunner]:
+    async with _postgres_saver(settings) as (connection, saver):
         yield GraphRunner(
             build_hello_graph(saver, nodes=nodes),
             PostgresRunLock(connection),
             timeout_seconds=settings.graph_timeout_seconds,
+        )
+
+
+@asynccontextmanager
+async def postgres_invoice_graph(
+    settings: GraphSettings, nodes: InvoiceNodes
+) -> AsyncIterator[InvoiceGraphRunner]:
+    async with _postgres_saver(settings) as (connection, saver):
+        yield InvoiceGraphRunner(
+            build_invoice_graph(saver, nodes),
+            PostgresRunLock(connection),
+            timeout_seconds=settings.invoice_graph_timeout_seconds,
         )

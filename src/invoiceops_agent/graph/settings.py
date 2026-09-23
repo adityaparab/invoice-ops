@@ -11,6 +11,7 @@ class GraphSettings(BaseSettings):
 
     checkpoint_dsn: SecretStr
     graph_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    invoice_graph_timeout_seconds: float = Field(default=180, gt=0, le=600)
 
     @field_validator("checkpoint_dsn")
     @classmethod

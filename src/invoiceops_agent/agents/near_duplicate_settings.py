@@ -1,15 +1,34 @@
 """Use only the caller's LiteLLM URL, key, and embedding-model name."""
 
 from pydantic import HttpUrl, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 from invoiceops_agent.gateway_client.schemas import Version
 from invoiceops_agent.gateway_client.settings import AliasPolicy, GatewaySettings
 
 
+class DirectGatewaySettings(GatewaySettings):
+    """Validate explicit LiteLLM values without loading another settings source."""
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (init_settings,)
+
+
 class LiteLLMEmbeddingSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="LITELLM_", env_file=".env", extra="ignore", hide_input_in_errors=True
+        env_prefix="LITELLM_",
+        env_file=".env",
+        env_ignore_empty=True,
+        extra="ignore",
+        hide_input_in_errors=True,
     )
 
     api_base: HttpUrl
@@ -24,7 +43,7 @@ class LiteLLMEmbeddingSettings(BaseSettings):
         return value
 
     def gateway_settings(self) -> GatewaySettings:
-        return GatewaySettings(
+        return DirectGatewaySettings(
             base_url=self.api_base,
             api_key=self.master_key,
             aliases={
@@ -33,5 +52,30 @@ class LiteLLMEmbeddingSettings(BaseSettings):
                     model_name=self.embed_model,
                 )
             },
-            _env_file=None,
+        )
+
+
+class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
+    """Add the existing general/vision names without reading proxy config files."""
+
+    model: Version
+    extract_model: Version | None = None
+
+    def gateway_settings(self) -> GatewaySettings:
+        vision_model = self.extract_model or self.model
+        return DirectGatewaySettings(
+            base_url=self.api_base,
+            api_key=self.master_key,
+            aliases={
+                "extract-vision": AliasPolicy(
+                    model_version=vision_model,
+                    model_name=vision_model,
+                    allow_images=True,
+                    allow_pdf=True,
+                ),
+                "embed": AliasPolicy(
+                    model_version=self.embed_model,
+                    model_name=self.embed_model,
+                ),
+            },
         )
