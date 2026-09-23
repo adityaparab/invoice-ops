@@ -14,6 +14,9 @@ versioned routing manifest; a virtual alias alone is not an immutable model vers
 must keep the pin synchronized with the gateway configuration, including fallback routes.
 The response also preserves the gateway-reported `model` string; the client cannot independently
 attest the actual provider revision behind that string.
+An optional `model_name` sends a specific LiteLLM route while callers continue to use the
+application alias. Without it, the alias itself is sent. `model_name` can be a mutable route name;
+the configured `model_version` pin and recorded gateway response should be interpreted accordingly.
 
 An alias policy controls `input_token_limit`, `output_token_limit`, `total_token_limit`,
 `binary_token_reserve`, `allow_images`, `allow_pdf`, and `response_format`. The default response
