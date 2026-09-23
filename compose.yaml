@@ -68,15 +68,26 @@ services:
   litellm:
     profiles: ["gateway"]
     image: ghcr.io/berriai/litellm:v1.102.1@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+    entrypoint: ["python", "/app/preflight.py"]
     command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-invoiceops-local-development-only}
+      NATIVE_LITELLM_BASE_URL: ${NATIVE_LITELLM_BASE_URL:-}
+      NATIVE_LITELLM_API_KEY: ${NATIVE_LITELLM_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      OLLAMA_EXTRACT_MODEL: ${OLLAMA_EXTRACT_MODEL:-}
+      OLLAMA_TRIAGE_MODEL: ${OLLAMA_TRIAGE_MODEL:-}
+      OLLAMA_JUDGE_MODEL: ${OLLAMA_JUDGE_MODEL:-}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "127.0.0.1:${LITELLM_PORT:-4001}:4000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./deploy/litellm/config.yaml:/app/config.yaml:ro
+      - ./deploy/litellm/${LITELLM_CONFIG:-config.yaml}:/app/config.yaml:ro
+      - ./deploy/litellm/preflight.py:/app/preflight.py:ro
     healthcheck:
       test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:4000/health/readiness', timeout=3).close()"]
       interval: 10s
