@@ -28,7 +28,7 @@ from invoiceops_agent.graph.state import InvoiceGraphState, ReviewDecision
 from invoiceops_agent.ledger.audit import TransactionalAuditSink
 from invoiceops_agent.ledger.settings import LedgerSettings
 from invoiceops_agent.ledger.writer import LedgerWriter
-from invoiceops_agent.schemas.gate import GateConfig
+from invoiceops_agent.schemas.gate import CompositeGateConfig
 from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.document_settings import DocumentSettings
 from invoiceops_agent.tools.raw_document_reader import S3DocumentReader
@@ -42,7 +42,7 @@ class InvoiceRuntimeSettings(BaseSettings):
     )
 
     postgres_dsn: SecretStr
-    auto_approval_enabled: bool = False
+    auto_approval_enabled: bool = True
 
 
 def utc_now() -> datetime:
@@ -174,7 +174,7 @@ async def invoice_runtime(
             policy=PolicyNode(audit),
             audit=audit,
             audit_writer=writer,
-            gate_config=GateConfig(auto_approval_enabled=runtime.auto_approval_enabled),
+            gate_config=CompositeGateConfig(auto_approval_enabled=runtime.auto_approval_enabled),
         )
         async with postgres_invoice_graph(graph, InvoiceNodes(services)) as runner:
             yield InvoiceWorkflowRuntime(runner, initial)

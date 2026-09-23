@@ -12,8 +12,9 @@ The primary workflow is:
 
 Duplicates route from Ingest to Reject. Extraction escalations and outcomes that fail the policy or
 gate route to ExceptionTriage and pause at HumanReview before Archive. Nodes checkpoint after every
-transition and remain idempotent under replay. The interim gate defaults to review until step 2.7
-adds the composite score; see [worker operation and configuration](INVOICE_WORKFLOW.md).
+transition and remain idempotent under replay. The [composite confidence gate](CONFIDENCE_GATE.md)
+records its three terms, threshold, versioned configuration, and evidence fingerprints; see
+[worker operation and configuration](INVOICE_WORKFLOW.md).
 
 LangGraph's managed checkpoint tables live in the isolated `langgraph` schema so they do not
 collide with the application-facing `public.checkpoints` projection. The saver uses a restricted

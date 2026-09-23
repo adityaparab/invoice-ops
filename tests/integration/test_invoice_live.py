@@ -44,7 +44,7 @@ from invoiceops_agent.ledger.settings import LedgerSettings
 from invoiceops_agent.ledger.writer import LedgerWriter
 from invoiceops_agent.schemas.documents import DocumentReference
 from invoiceops_agent.schemas.extraction import InvoiceExtraction
-from invoiceops_agent.schemas.gate import GateConfig
+from invoiceops_agent.schemas.gate import CompositeGateConfig, CompositeGateResult
 from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.erp_generator import generate_fixture
 from invoiceops_agent.tools.erp_seed import seed_fixture
@@ -153,7 +153,7 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         policy=PolicyNode(sink),
         audit=sink,
         audit_writer=ledger_writer,
-        gate_config=GateConfig(auto_approval_enabled=True),
+        gate_config=CompositeGateConfig(auto_approval_enabled=True),
     )
     initial, version = await load_invoice_state(
         lambda: runtime_connection(ledger_runtime_dsn), RUN_ID, as_of=date(2026, 9, 23)
@@ -189,6 +189,11 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         "approval.auto_granted",
         "workflow.archived",
     ]
+    gate_event = next(event for event in page.events if event.event_type == "gate.completed")
+    audited_gate = CompositeGateResult.model_validate(gate_event.payload)
+    assert gate_event.versions.policy_version == "composite-gate@v1"
+    assert audited_gate.score == 1
+    assert audited_gate.route == "AUTO_APPROVE"
     transitions = WorkflowTransitions(lambda: runtime_connection(ledger_runtime_dsn), ledger_writer)
     await transitions.append_once(
         result,
