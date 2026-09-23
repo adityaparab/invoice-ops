@@ -97,7 +97,7 @@
 
 - [x] 2.1 Synthetic ERP generator (Faker, seed-pinned): vendors, POs, goods receipts with ground truth; seeds via Compose `seed` service
 - [x] 2.2 Deterministic 3-way matcher with tolerance bands; deltas computed for evidence packages
-- [ ] 2.3 Exception taxonomy: DUP_EXACT, DUP_NEAR, PRICE_MM, QTY_MM, MISSING_PO, BANK_CHANGE, CCY_MM, TAX_ERR, MATH_ERR, STALE_PO
+- [x] 2.3 Exception taxonomy: DUP_EXACT, DUP_NEAR, PRICE_MM, QTY_MM, MISSING_PO, BANK_CHANGE, CCY_MM, TAX_ERR, MATH_ERR, STALE_PO
 - [ ] 2.4 Near-duplicate detection via pgvector embeddings
 - [ ] 2.5 Policy engine: spend limits, approval matrix, stale/closed-PO checks — deterministic, independent of LLM (ADR 0001)
 - [ ] 2.6 Full LangGraph state machine wiring: Ingest → Extract → Validate → Match3Way → Policy → Gate → (AutoApprove | ExceptionTriage) → HumanReview → Archive (+ Reject), checkpoint after every node
@@ -229,3 +229,4 @@ checkbox here.
 | 2026-09-23 | Step 1.9 measures the pinned 32-image synthetic development subset through the configured LiteLLM endpoint using `gemini25flash` for vision. Tier A micro F1 is 0.7226 across 512 eligible values; 31 extracted and one malformed-output escalation. Per-field F1 ranges from 0.0560 for line totals to 0.9841 for vendor, invoice number, and tax. B/C have no selected samples, so their metrics remain unavailable. This completes Phase 1 without adding an evaluation threshold. |
 | 2026-09-23 | Step 2.1 adds a Faker 40.39.0, seed-pinned synthetic ERP fixture with 12 vendors, 24 purchase orders, 12 goods receipts, and committed factual PO/receipt ground truth. The restricted-role Compose seed service inserts atomically, treats an exact rerun as a no-op, and rejects changed or partial data. The fixture hash and dependency lock make the default data reproducible. |
 | 2026-09-24 | Step 2.2 adds pure, versioned three-way comparisons across invoice, PO, and cumulative goods receipts. Exact Decimal tolerance bands and signed deltas cover prices, ordered/received quantities, line amounts, and header amounts; identity and missing-data states remain explicit. A bounded async ERP reader and audited Match3Way node provide typed integration points without wiring the full graph yet. |
+| 2026-09-24 | Step 2.3 adds the ten-code deterministic exception taxonomy with source and line references, input fingerprints, explicit unresolved evidence, and an audited classification node. Bank values stay out of classification output; near-duplicate and date-staleness signals are supplied by later steps. |
