@@ -9,6 +9,8 @@ Docker Compose, reversible schema migrations, append-only audit tables with a re
 database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
 Python package, real database/object-store integrations, and Compose startup. Invoice ingestion
 endpoints and extraction begin in Phase 1; the hello graph uses stub nodes and makes no model calls.
+Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
+ingestion and later provenance endpoints.
 
 ---
 
