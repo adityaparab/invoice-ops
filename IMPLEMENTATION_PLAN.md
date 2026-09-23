@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-23 (Phase 0 in progress)
+> **Last updated:** 2026-09-23 (Phase 0 complete)
 
 ---
 
@@ -186,7 +186,7 @@ checkbox here.
 
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| P0 — Platform skeleton         | In progress | —            | Package scaffold, Python 3.12 pin, and CI implemented      |
+| P0 — Platform skeleton         | Complete    | 2026-09-23   | Compose API, storage, restricted runtime, audit enforcement, durable hello graph, CI, and ADRs implemented |
 | P1 — Extraction & validation   | Not started | —            |                                                           |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
@@ -212,3 +212,4 @@ checkbox here.
 | 2026-09-23 | Step 0.7 enforces append-only audit statements, provisions a restricted SCRAM runtime login, and runs owner migrations in a separate one-shot Compose service; role-isolation regressions and authenticated API checks pass. |
 | 2026-09-23 | Step 0.8 adds a typed hello-stub graph, isolated Postgres checkpoints, restart/resume, completed-run replay, concurrency controls, and a two-run Compose smoke. No business approval or model calls occur in the hello path. |
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
+| 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |

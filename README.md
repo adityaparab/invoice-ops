@@ -2,7 +2,13 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building** — Phase 0 package scaffold and development tooling; application features below describe the target system.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 0 complete.** The platform foundation is implemented; invoice processing and the application screens below describe the target system.
+
+The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
+Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
+database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
+Python package, real database/object-store integrations, and Compose startup. Invoice ingestion
+endpoints and extraction begin in Phase 1; the hello graph uses stub nodes and makes no model calls.
 
 ---
 
@@ -242,11 +248,11 @@ InvoiceOps/
 ## 13. Development Quickstart
 
 ```bash
-uv sync                                   # install env from uv.lock
+uv sync --locked                          # install env from uv.lock
 uv run ruff check .                       # lint
 uv run ruff format --check .              # formatting
-uv run mypy                               # strict type check (src + tests)
-uv run pytest -m unit                     # offline package smoke tests
+uv run mypy                               # strict type check (src, tests, deploy, migrations)
+uv run pytest -m unit --disable-socket --allow-unix-socket  # offline unit tests
 uv build                                 # build the wheel and source distribution
 ```
 
