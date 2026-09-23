@@ -1,0 +1,32 @@
+{
+  "alias": "extract-vision",
+  "scenario": "invoice",
+  "prompt_version": "extract@v1",
+  "request_sha256": "f2a29a36311fa4d0e5b37a8495677cd45904ef542d5af0ba9709e39d866e46e4",
+  "status_code": 200,
+  "headers": {
+    "x-litellm-response-cost": "0.0012",
+    "content-type": "application/json"
+  },
+  "response": {
+    "id": "chatcmpl-synthetic-fixture",
+    "object": "chat.completion",
+    "created": 1790164800,
+    "model": "synthetic-vision-revision-1",
+    "choices": [
+      {
+        "index": 0,
+        "finish_reason": "stop",
+        "message": {
+          "role": "assistant",
+          "content": "{\"invoice_number\":\"SYN-001\",\"total\":\"123.45\"}"
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 20,
+      "completion_tokens": 8,
+      "total_tokens": 28
+    }
+  }
+}

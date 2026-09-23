@@ -13,6 +13,15 @@ from starlette.responses import JSONResponse
 from invoiceops_agent.api.context import get_request_context
 from invoiceops_agent.api.schemas.health import DependencyStatuses
 from invoiceops_agent.api.schemas.problem import ProblemDetails
+from invoiceops_agent.tools.ingestion_errors import (
+    DocumentTooLarge,
+    DuplicateContent,
+    IdempotencyConflict,
+    IngestionError,
+    IngestionUnavailable,
+    InvalidDocument,
+    UnsupportedDocument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,3 +86,23 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(HTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     app.add_exception_handler(Exception, _unexpected_error)
+    app.add_exception_handler(IngestionError, _ingestion_error)
+
+
+async def _ingestion_error(request: Request, error: Exception) -> JSONResponse:
+    statuses: dict[type[Exception], int] = {
+        InvalidDocument: 400,
+        UnsupportedDocument: 415,
+        DocumentTooLarge: 413,
+        IdempotencyConflict: 409,
+        DuplicateContent: 409,
+        IngestionUnavailable: 503,
+    }
+    status = statuses.get(type(error), 500)
+    logger.warning(
+        "upload_rejected trace_id=%s error_type=%s status=%d",
+        get_request_context(request).trace_id,
+        type(error).__name__,
+        status,
+    )
+    return problem_response(request, status=status, detail=str(error))

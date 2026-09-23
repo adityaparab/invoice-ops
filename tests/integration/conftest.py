@@ -54,7 +54,7 @@ def postgres_connection() -> Iterator[psycopg.Connection[tuple[object, ...]]]:
 
 
 @pytest.fixture
-def minio_client() -> Iterator[Minio]:
+def minio_endpoint() -> Iterator[str]:
     container = (
         DockerContainer(MINIO_IMAGE, docker_client_kw={"timeout": 30})
         .with_env("MINIO_ROOT_USER", TEST_USER)
@@ -63,9 +63,15 @@ def minio_client() -> Iterator[Minio]:
         .with_exposed_ports(9000)
         .waiting_for(HttpWaitStrategy(9000, "/minio/health/ready").with_startup_timeout(60))
     )
-    with container, PoolManager(timeout=Timeout(connect=5, read=5), retries=False) as http:
+    with container:
+        yield f"http://{container.get_container_host_ip()}:{container.get_exposed_port(9000)}"
+
+
+@pytest.fixture
+def minio_client(minio_endpoint: str) -> Iterator[Minio]:
+    with PoolManager(timeout=Timeout(connect=5, read=5), retries=False) as http:
         yield Minio(
-            f"{container.get_container_host_ip()}:{container.get_exposed_port(9000)}",
+            minio_endpoint.removeprefix("http://"),
             access_key=TEST_USER,
             secret_key=TEST_PASSWORD,
             secure=False,

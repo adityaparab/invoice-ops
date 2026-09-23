@@ -73,3 +73,12 @@ Provisioning rejects a conflicting preexisting role instead of taking it over. C
 `POSTGRES_PASSWORD` in `.env` does not rotate the owner password in an existing Postgres volume;
 owner credential management is separate from application password rotation. Logs are available
 with `docker compose logs migrate api postgres minio`.
+
+## Upload storage and credentials
+
+The API waits for both owner migrations and the `storage-init` bucket provisioning service.
+`INVOICEOPS_SERVICE_TOKEN` authenticates multipart invoice uploads; the checked-in example is
+synthetic local-only configuration. `INVOICEOPS_RAW_BUCKET` selects the raw-object bucket.
+Compose passes MinIO credentials only to the API and bucket initializer, separately from database
+owner credentials. See [the upload contract](../docs/INGESTION.md) for a curl example, limits,
+idempotency, and the temporary new-key duplicate `409` response in step 1.1.

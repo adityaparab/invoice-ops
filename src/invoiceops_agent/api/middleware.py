@@ -9,13 +9,13 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from invoiceops_agent.api.context import RequestContext
+from invoiceops_agent.api.context import IDEMPOTENCY_KEY_PATTERN, RequestContext
 from invoiceops_agent.api.errors import problem_response
 
 logger = logging.getLogger(__name__)
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
 _TRACE_ID = re.compile(r"[0-9a-f]{32}")
-_IDEMPOTENCY_KEY = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")
+_IDEMPOTENCY_KEY = re.compile(IDEMPOTENCY_KEY_PATTERN)
 
 
 class RequestContextMiddleware:
