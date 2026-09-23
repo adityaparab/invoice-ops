@@ -262,6 +262,9 @@ must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@
 
 Compose, the FastAPI endpoints, the graph demo, and invoice ingestion are planned work in steps
 0.3, 0.5, 0.8, and 1.1 respectively. Their services and example fixtures are not available yet.
-GitHub Actions is tracked in step 0.9; the checks above currently run locally.
+GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
+MinIO tests through disposable Testcontainers, and a package build on every PR and push to `main`.
+To run the infrastructure tests locally, start Docker and run `uv run pytest -m integration`.
+The model evaluation gate is planned in Phase 5; these tests make no live model calls.
 
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).

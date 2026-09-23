@@ -62,7 +62,8 @@
 - [ ] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
 - [ ] 0.7 Append-only enforcement on `ledger` + `decisions` (grants + triggers)
 - [ ] 0.8 LangGraph hello-path graph (stub nodes) with Postgres checkpointer, run end-to-end in Compose
-- [ ] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
+- [x] 0.9 GitHub Actions CI: ruff → mypy → pytest, running against Compose (or testcontainers)
+  - Brought forward so subsequent PRs can meet the passing-CI merge rule. Real pgvector and MinIO testcontainers run after offline unit tests; the model eval gate remains Phase 5 work.
 - [ ] 0.10 Write ADRs 0001–0007 into `adr/` (decisions already made in docs; record them)
 
 
@@ -183,7 +184,7 @@ checkbox here.
 
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
-| P0 — Platform skeleton         | In progress | —            | Package scaffold and Python 3.12 pin implemented           |
+| P0 — Platform skeleton         | In progress | —            | Package scaffold, Python 3.12 pin, and CI implemented      |
 | P1 — Extraction & validation   | Not started | —            |                                                           |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
@@ -200,4 +201,5 @@ checkbox here.
 | Date | Change |
 | --- | --- |
 | 2026-09-23 | Step 0.1: package scaffold and pinned tooling prepared; local checks and isolated wheel smoke tests pass. PR merge remains pending CI. |
-| 2026-09-23 | PR #1 merged. Step 0.2 pins the developer interpreter to Python 3.12; step 0.9 is brought forward to provide CI before subsequent PR merges. |
+| 2026-09-23 | PR #1 merged. Step 0.9 brought forward: GitHub Actions runs lint, strict typing, offline unit tests, isolated pgvector/MinIO integration tests, and package builds. |
+| 2026-09-23 | Step 0.2 pins the developer interpreter to Python 3.12. PR #3 establishes CI before subsequent PR merges. |
