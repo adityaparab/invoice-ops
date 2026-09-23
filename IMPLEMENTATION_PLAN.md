@@ -78,7 +78,7 @@
 - [ ] 1.2 `POST /v1/invoices/email-webhook` with HMAC verification (stub email source)
 - [ ] 1.3 Content-hash dedupe on ingest → route to `Reject`
 - [ ] 1.4 Ledger writer/reader: append entries with actor_type (SYSTEM/AGENT/HUMAN/POLICY) and model/prompt/policy version pins
-- [ ] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
+- [x] 1.5 Gateway client: thin `openai`-SDK wrapper over LiteLLM endpoint — virtual aliases, PII redaction, schema validation, token budgets, retries/backoff
 - [ ] 1.6 Extraction agent: doc → typed `InvoiceExtraction` (Pydantic) with per-field confidence, via `extract-vision` alias
 - [ ] 1.7 Validate node: schema checks, line-math, tax checks (deterministic)
 - [ ] 1.8 Download + preprocess Voxel51 subset (incl. quality-tier labeling A/B/C)
@@ -187,7 +187,7 @@ checkbox here.
 | Phase                          | Status      | Completed on | Notes                                                     |
 | ------------------------------ | ----------- | ------------ | --------------------------------------------------------- |
 | P0 — Platform skeleton         | Complete    | 2026-09-23   | Compose API, storage, restricted runtime, audit enforcement, durable hello graph, CI, and ADRs implemented |
-| P1 — Extraction & validation   | Not started | —            |                                                           |
+| P1 — Extraction & validation   | In progress | —            | Typed gateway client with offline cassettes implemented    |
 | P2 — Match + policy            | Not started | —            |                                                           |
 | P3 — HITL + triage + front end | Not started | —            |                                                           |
 | P4 — Observability + gateway   | Not started | —            |                                                           |
@@ -213,3 +213,4 @@ checkbox here.
 | 2026-09-23 | Step 0.8 adds a typed hello-stub graph, isolated Postgres checkpoints, restart/resume, completed-run replay, concurrency controls, and a two-run Compose smoke. No business approval or model calls occur in the hello path. |
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
+| 2026-09-23 | Step 1.5 implements the async pinned-SDK gateway client with alias policies, text guards, bounded multimodal requests, typed schema validation and provenance, deadline-aware retries, sanitized telemetry, and immutable offline cassettes. |

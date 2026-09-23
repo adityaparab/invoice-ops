@@ -98,19 +98,28 @@ provenance endpoints can render a complete history without per-entry queries.
 Only `src/invoiceops_agent/gateway_client/` talks to the OpenAI-compatible LiteLLM endpoint. Callers
 use the configured virtual aliases `extract-vision`, `triage-reasoner`, `eval-judge`, and `embed`;
 an unknown alias fails before network I/O. The client redacts configured PII patterns, rejects
-configured prompt-injection heuristics, and conservatively estimates input plus requested output
-against each alias's token budget before spending.
+configured prompt-injection heuristics, and estimates text input plus requested output against each
+alias's token budget before spending.
+Binary assets are opt-in, byte/count bounded, and charged a configured token allowance; trusted
+preprocessing must enforce model-specific dimensions/page counts because that allowance is not a
+guaranteed provider-token bound. Text guards do not inspect binary document contents.
 
 The transport disables SDK retries so the wrapper owns the retry contract: connection failures,
-timeouts, rate limits, and 5xx responses receive bounded exponential backoff; malformed structured
-output and other request failures escalate immediately as typed errors. Pydantic validates the
-returned JSON against the caller's response model. A telemetry protocol exposes one span with alias,
-prompt version, model, latency, token usage, cost, attempt count, and validation status; Phase 4
-binds it to OpenTelemetry.
+timeouts, transient rate limits, and 5xx responses receive bounded exponential backoff within one
+total deadline. Valid Retry-After hints are honored or the retry is declined; quota/billing errors,
+malformed structured output, and other request failures escalate immediately as typed errors.
+Pydantic validates the returned JSON against the caller's response model. Results preserve configured
+model-version pins and the gateway-reported model; virtual aliases alone are not immutable model
+pins. A telemetry protocol exposes one sanitized outcome with alias,
+prompt/model versions, latency, usage, optional cost, attempts, and validation status; Phase 4 adapts
+it to OpenTelemetry spans. Local schema validation is mandatory, while stricter wire formats are
+explicitly enabled per alias for backend compatibility.
 
 Tests use committed JSON cassettes keyed by alias, scenario, and prompt version. Each cassette also
 pins a hash of the fully guarded request and response schema, so prompt drift fails deterministically.
 The recording transport uses create-only writes and never overwrites an existing cassette.
+See [the gateway client contract](GATEWAY_CLIENT.md) for configuration, binary guard limits,
+provenance, typed errors, and offline test transport usage.
 
 ## 8. Extraction agent
 
