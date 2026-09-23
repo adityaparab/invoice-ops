@@ -99,7 +99,7 @@
 - [x] 2.2 Deterministic 3-way matcher with tolerance bands; deltas computed for evidence packages
 - [x] 2.3 Exception taxonomy: DUP_EXACT, DUP_NEAR, PRICE_MM, QTY_MM, MISSING_PO, BANK_CHANGE, CCY_MM, TAX_ERR, MATH_ERR, STALE_PO
 - [x] 2.4 Near-duplicate detection via pgvector embeddings
-- [ ] 2.5 Policy engine: spend limits, approval matrix, stale/closed-PO checks — deterministic, independent of LLM (ADR 0001)
+- [x] 2.5 Policy engine: spend limits, approval matrix, stale/closed-PO checks — deterministic, independent of LLM (ADR 0001)
 - [ ] 2.6 Full LangGraph state machine wiring: Ingest → Extract → Validate → Match3Way → Policy → Gate → (AutoApprove | ExceptionTriage) → HumanReview → Archive (+ Reject), checkpoint after every node
 - [ ] 2.7 Composite confidence gate: `w1·min(field_conf) + w2·(1−norm_match_delta) + w3·policy_severity_term` (ARCHITECTURE §3.5); τ configurable
 - [ ] 2.8 Retries/backoff for infra errors; business failures never retried; DLQ design implemented
@@ -231,3 +231,4 @@ checkbox here.
 | 2026-09-24 | Step 2.2 adds pure, versioned three-way comparisons across invoice, PO, and cumulative goods receipts. Exact Decimal tolerance bands and signed deltas cover prices, ordered/received quantities, line amounts, and header amounts; identity and missing-data states remain explicit. A bounded async ERP reader and audited Match3Way node provide typed integration points without wiring the full graph yet. |
 | 2026-09-24 | Step 2.3 adds the ten-code deterministic exception taxonomy with source and line references, input fingerprints, explicit unresolved evidence, and an audited classification node. Bank values stay out of classification output; near-duplicate and date-staleness signals are supplied by later steps. |
 | 2026-09-24 | Step 2.4 adds 384-dimensional LiteLLM embedding intake, model-isolated pgvector cosine search at a versioned threshold, and atomic embedding-plus-ledger decisions. Fixed-vector tests cover near matches, model isolation, invalid responses, and audit rollback; the full graph connection follows in step 2.6. |
+| 2026-09-24 | Step 2.5 adds a pure, versioned per-currency spend matrix and approval tiers, exact-duplicate/cancelled-PO blocks, and stale/closed/future-PO review controls. Coherent evidence fingerprints and an injected evaluation date make decisions reproducible; the standalone node commits POLICY evidence before routing in step 2.6. |
