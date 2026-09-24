@@ -10,6 +10,7 @@ import pytest
 from eval.golden.schema import GoldenSample
 from eval.runners.build_smoke_cassettes import OUTPUT, record
 from eval.runners.run_pipeline import (
+    RECORDED_DOCUMENT,
     Compose,
     PipelineRunError,
     load_manifest,
@@ -98,7 +99,7 @@ def test_recorded_mode_reconstructs_one_development_document_and_uses_real_bound
 def test_live_runner_uploads_only_the_batch_it_is_ready_to_process() -> None:
     manifest, digest = load_manifest()
     selected = select_samples(manifest, split="development", limit=3)
-    documents = preflight_documents(Path("eval/data/golden/v1.0.1"), selected, recorded=False)
+    documents = {sample.sample_id: RECORDED_DOCUMENT.read_bytes() for sample in selected}
     events: list[str] = []
 
     class OrderedAPI(FakeAPI):
