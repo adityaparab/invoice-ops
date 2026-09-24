@@ -67,6 +67,12 @@ before parsing, signatures use constant-time comparison, timestamps have a confi
 window, and successfully consumed nonces are unique in PostgreSQL. The decoded attachment reuses
 the same content-addressed ingestion transaction with source `EMAIL`.
 
+The [queue and detail reads](INVOICE_READ_API.md) use separate analyst, manager, and auditor
+persona tokens. The [exception decision endpoint](EXCEPTION_DECISIONS.md) requires an analyst
+proposal and independent manager signoff. It commits each decision and its HUMAN ledger event in
+one transaction; the one-shot review worker resumes the paused graph and settles the run after
+committed review evidence is present.
+
 ## 6. Data model
 
 PostgreSQL stores operational state and audit history; MinIO stores immutable raw documents by

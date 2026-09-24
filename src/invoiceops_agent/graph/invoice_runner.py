@@ -75,17 +75,20 @@ class InvoiceGraphRunner:
                     )
                 state = self._state(snapshot.values, run_id, trace_id)
                 self._identity(state, run_id, invoice_id, trace_id)
-                if state.status != "awaiting_review" or "HumanReview" not in snapshot.next:
+                expected_review = decision.model_dump(mode="json")
+                if state.status == "completed" and state.review == expected_review:
+                    return state
+                if state.status == "awaiting_review" and "HumanReview" in snapshot.next:
+                    command: Command[object] | None = Command(resume=expected_review)
+                elif state.status == "running" and state.review == expected_review:
+                    command = None
+                else:
                     raise InvalidCheckpoint(
-                        "Invoice workflow is not waiting for human review",
+                        "Invoice workflow is not waiting for this human decision",
                         run_id=run_id,
                         trace_id=trace_id,
                     )
-                output = await self.graph.ainvoke(
-                    Command(resume=decision.model_dump(mode="json")),
-                    config,
-                    durability="sync",
-                )
+                output = await self.graph.ainvoke(command, config, durability="sync")
                 result = self._state(output, run_id, trace_id)
                 if result.status != "completed":
                     raise InvalidCheckpoint(

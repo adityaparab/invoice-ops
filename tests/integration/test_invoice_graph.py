@@ -44,5 +44,14 @@ async def test_invoice_review_resumes_after_postgres_checkpoint_restart(
             decision=decision,
         )
         assert completed.status == "completed"
+        assert (
+            await restarted.resume(
+                run_id=paused.run_id,
+                invoice_id=paused.invoice_id,
+                trace_id=paused.trace_id,
+                decision=decision,
+            )
+            == completed
+        )
     assert first_services.calls[-1] == "ExceptionTriage"
     assert restarted_services.calls == ["HumanReview", "Archive"]
