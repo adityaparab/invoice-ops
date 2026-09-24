@@ -82,7 +82,7 @@ running the bootstrap command additionally reprovisions the configured password.
 | `ingestion_requests` | Nonblank idempotency key up to 128 characters, request hash, invoice/run identity, original successful HTTP status (`200` or `201`) and JSONB response object. |
 | `webhook_nonces` | Nonblank nonce up to 128 characters and authenticated `signed_at` timestamp. The timestamp index supports eventual expiry cleanup. |
 | `ledger` | Positive sequence unique within the run, event type, actor identity, JSONB payload, all four version pins, and optional `supersedes_id`. |
-| `exceptions` | Invoice/run identity, extensible exception type, priority `0`–`3` (zero is highest), SLA deadline, optional assignee, JSONB evidence and recommendation objects. |
+| `exceptions` | Invoice/run identity, extensible exception type, priority `0`–`3` (three is highest), SLA deadline, optional assignee, JSONB evidence and recommendation objects. |
 | `decisions` | Required exception and its invoice/run identity; unique idempotency key, human actor identity, action, nonblank rationale/reason, all four version pins, and optional `supersedes_id`. |
 
 Foreign keys use the default restrictive deletion behavior, including all audit references. Composite

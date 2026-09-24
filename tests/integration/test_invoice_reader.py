@@ -10,7 +10,9 @@ from tests.integration.support import INVOICE_ID, RUN_ID
 from tests.integration.test_ledger import ledger_runtime_dsn as ledger_runtime_dsn
 from tests.integration.test_ledger import runtime_connection, writer
 
+from invoiceops_agent.api.decision_service import DecisionService
 from invoiceops_agent.api.invoice_reader import InvoiceNotFound, PostgresInvoiceReader
+from invoiceops_agent.api.schemas.decision import DecisionRequest
 from invoiceops_agent.api.schemas.invoice_read import InvoiceListQuery
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.ledger.schemas import AppendEvent
@@ -91,7 +93,26 @@ async def test_queue_filters_keyset_and_aggregate_detail(ledger_runtime_dsn: str
     assert detail.exception is not None and detail.exception.id == EXCEPTION
     assert detail.exception.sla_due_at == due_at
     assert detail.evidence["extraction.completed"]["result"] is not None
+    assert detail.pending_proposal is None
     assert detail.read_at == datetime(2026, 9, 24, tzinfo=UTC)
+    proposal = await DecisionService(
+        ApiSettings(postgres_dsn=SecretStr(ledger_runtime_dsn))
+    ).submit(
+        exception_id=EXCEPTION,
+        request=DecisionRequest(
+            action="RETURN",
+            rationale="Synthetic amount mismatch",
+            reason_code="AMOUNT_MISMATCH",
+        ),
+        role="ANALYST",
+        idempotency_key="synthetic-invoice-read-proposal",
+        trace_id="a" * 32,
+    )
+    proposed_detail = await reader.detail(SECOND_INVOICE)
+    assert proposed_detail.pending_proposal is not None
+    assert proposed_detail.pending_proposal.id == proposal.decision_id
+    assert proposed_detail.pending_proposal.action == "RETURN"
+    assert proposed_detail.pending_proposal.rationale == "Synthetic amount mismatch"
     with pytest.raises(InvoiceNotFound):
         await reader.detail(UUID(int=999))
     assert RUN_ID != SECOND_RUN
