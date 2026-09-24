@@ -13,6 +13,11 @@ from uuid import UUID
 
 import httpx2
 import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.trace import StatusCode
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from invoiceops_agent.gateway_client import (
@@ -138,6 +143,117 @@ async def test_sdk_success_has_typed_value_metadata_and_sanitized_telemetry() ->
     assert body["response_format"] == {"type": "text"}
     assert len(telemetry.events) == 1
     assert telemetry.events[0].status == "succeeded"
+
+
+@pytest.mark.asyncio
+async def test_gateway_generation_span_is_langfuse_compatible_and_sanitized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(trace, "get_tracer", provider.get_tracer)
+
+    async with GatewayClient(
+        settings(), transport=httpx2.MockTransport(lambda _: fixture_response())
+    ) as client:
+        await client.complete(request("Sensitive invoice SYN-001"), SyntheticExtraction)
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    span = spans[0]
+    assert span.name == "invoiceops.llm.extract-vision"
+    assert span.end_time is not None
+    assert span.start_time is not None
+    assert span.end_time > span.start_time
+    assert span.attributes is not None
+    assert span.attributes["langfuse.observation.type"] == "generation"
+    assert span.attributes["langfuse.observation.model.name"] == "synthetic-vision-revision-1"
+    assert span.attributes["gen_ai.request.model"] == "extract-vision"
+    assert span.attributes["gen_ai.usage.input_tokens"] == 20
+    assert span.attributes["gen_ai.usage.output_tokens"] == 8
+    assert span.attributes["langfuse.observation.cost_details"] == '{"total":0.0012}'
+    assert "Sensitive invoice" not in str(span)
+    assert "synthetic-gateway-secret" not in str(span)
+    provider.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_failed_gateway_call_records_typed_error_without_remote_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(trace, "get_tracer", provider.get_tracer)
+
+    async with GatewayClient(
+        settings(),
+        transport=httpx2.MockTransport(
+            lambda _: httpx2.Response(401, json={"error": {"message": "private provider text"}})
+        ),
+    ) as client:
+        with pytest.raises(GatewayRequestRejected):
+            await client.complete(request(), SyntheticExtraction)
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    span = spans[0]
+    assert span.attributes is not None
+    assert span.attributes["invoiceops.gateway.status"] == "failed"
+    assert span.attributes["invoiceops.gateway.attempts"] == 1
+    assert span.attributes["error.type"] == "GatewayRequestRejected"
+    assert span.attributes["invoiceops.gateway.error_code"] == GatewayRequestRejected.code
+    assert span.status.status_code == StatusCode.ERROR
+    assert "private provider text" not in str(span)
+    provider.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_embedding_call_uses_a_child_observation_span(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(trace, "get_tracer", provider.get_tracer)
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        assert call.url.path == "/v1/embeddings"
+        return httpx2.Response(
+            200,
+            json={
+                "object": "list",
+                "model": "synthetic-embed-revision-1",
+                "data": [{"object": "embedding", "index": 0, "embedding": [0.1, 0.2]}],
+                "usage": {"prompt_tokens": 7, "total_tokens": 7},
+            },
+        )
+
+    async with GatewayClient(settings(), transport=httpx2.MockTransport(handle)) as client:
+        with provider.get_tracer("invoiceops-test").start_as_current_span("workflow"):
+            await client.embed(
+                EmbeddingRequest(
+                    run_id=UUID(int=1),
+                    trace_id="a" * 32,
+                    prompt_version="embed@v1",
+                    inputs=("synthetic invoice summary",),
+                )
+            )
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 2
+    embedding, workflow = spans
+    assert embedding.name == "invoiceops.llm.embed"
+    assert embedding.attributes is not None
+    assert embedding.attributes["langfuse.observation.type"] == "embedding"
+    assert embedding.attributes["gen_ai.usage.input_tokens"] == 7
+    assert embedding.attributes["gen_ai.usage.output_tokens"] == 0
+    assert embedding.parent is not None
+    assert workflow.context is not None
+    assert embedding.parent.span_id == workflow.context.span_id
+    assert "synthetic invoice summary" not in str(embedding)
+    provider.shutdown()
 
 
 @pytest.mark.asyncio

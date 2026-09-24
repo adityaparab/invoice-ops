@@ -48,6 +48,8 @@ from invoiceops_agent.gateway_client.telemetry import (
     GatewayEvent,
     GatewayTelemetry,
     LoggingTelemetry,
+    SpanGatewayTelemetry,
+    gateway_span,
 )
 
 
@@ -103,7 +105,7 @@ class GatewayClient:
         self._clock = clock
         self._utcnow = utcnow
         self._sleep = sleep
-        self._telemetry = telemetry or LoggingTelemetry()
+        self._telemetry = SpanGatewayTelemetry(telemetry or LoggingTelemetry())
         # SDK debug request logs contain document payloads. This application has one SDK doorway.
         logging.getLogger("openai._base_client").setLevel(logging.WARNING)
         self._sdk = AsyncOpenAI(
@@ -252,6 +254,15 @@ class GatewayClient:
         alias: ModelAlias,
         prepare: Callable[[AliasPolicy], Callable[[float], Awaitable[_Response[T]]]],
     ) -> GatewayResult[T]:
+        with gateway_span(context, alias):
+            return await self._invoke_core(context, alias, prepare)
+
+    async def _invoke_core[T: BaseModel](
+        self,
+        context: RequestContext,
+        alias: ModelAlias,
+        prepare: Callable[[AliasPolicy], Callable[[float], Awaitable[_Response[T]]]],
+    ) -> GatewayResult[T]:
         policy = self.configured_policy(alias, context)
         started = self._clock()
         deadline = started + self._settings.total_timeout_seconds
@@ -359,6 +370,7 @@ class GatewayClient:
                     prompt_version=context.prompt_version,
                     scenario=context.scenario,
                     alias=alias,
+                    requested_model=policy.model_name or alias,
                     model=response.model if response and status == "succeeded" else None,
                     model_version=policy.model_version,
                     status=status,

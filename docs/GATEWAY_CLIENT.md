@@ -110,14 +110,19 @@ other 4xx responses, rejected guards, and malformed/schema/business responses es
 A valid `Retry-After` number or HTTP date is honored; the client declines to retry if that delay
 exceeds its configured delay cap or remaining deadline. Invalid hints use bounded local backoff.
 Attempts, request timeout, retry delays, and total elapsed time are all bounded. Cancellation
-propagates immediately and never retries. The gateway proxy must also retain `num_retries: 0` to
-avoid a second retry layer. The wrapper does not promise model-call idempotency: a lost response
+propagates immediately and never retries. The OpenAI SDK has `max_retries=0`, leaving this wrapper
+as the only application retry layer. The wrapper does not promise model-call idempotency: a lost response
 can lead to a charged retry, and repeated calls from the application remain separate invocations.
 
 Errors expose stable typed categories, run ID, trace ID, and attempt count without SDK exception
 text, response bodies, URLs, keys, or document content. SDK debug payload logging is disabled by
 the doorway. `GatewayTelemetry.record` receives one sanitized outcome for a configured call,
-including guard failures and cancellation; Phase 4 can adapt it into a completed trace span.
+including guard failures and cancellation. It annotates one OpenTelemetry generation or
+embedding span per logical call with model, version, token, latency, cost, and typed failure
+metadata. The span is a child of the workflow tool span when called from the invoice graph.
+Langfuse receives it through the same optional OTLP exporter as workflow spans. Prompts,
+outputs, document bytes, embedding vectors, credentials, and provider error messages are
+excluded; see [ADR 0009](../adr/0009-gateway-boundary-llm-tracing.md).
 Telemetry implementations must be nonblocking and must not throw. Application/ledger adapters
 consume these metadata hooks; the gateway itself does not own a database transaction.
 
