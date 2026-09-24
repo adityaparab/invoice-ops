@@ -27,5 +27,5 @@ other findings or extraction escalation get priority 2 with 24 hours; the
 remaining review cases get priority 1 with 72 hours. The clock is injected so
 the deadlines and audit evidence are reproducible in tests.
 
-The endpoints are read only. The decision mutation and four-eyes control are
-step 3.2 of the implementation plan.
+The endpoints are read only. The separate [decision endpoint](EXCEPTION_DECISIONS.md)
+records the analyst proposal and manager signoff.

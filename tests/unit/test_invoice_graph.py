@@ -174,6 +174,13 @@ async def test_review_pauses_and_resumes_only_after_human_decision() -> None:
     assert completed.status == "completed"
     assert completed.review == decision.model_dump(mode="json")
     assert services.calls[-2:] == ["HumanReview", "Archive"]
+    assert (
+        await runner.resume(
+            run_id=RUN_ID, invoice_id=INVOICE_ID, trace_id=TRACE_ID, decision=decision
+        )
+        == completed
+    )
+    assert services.calls[-2:] == ["HumanReview", "Archive"]
 
 
 async def test_duplicate_and_failed_extraction_branches() -> None:

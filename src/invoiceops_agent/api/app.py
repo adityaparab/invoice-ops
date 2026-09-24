@@ -15,6 +15,7 @@ from invoiceops_agent.api.context import (
     RequestContext,
     get_request_context,
 )
+from invoiceops_agent.api.decision_service import DecisionService, DecisionWriter
 from invoiceops_agent.api.dependencies import (
     ApiRuntime,
     DependencyFactory,
@@ -30,6 +31,7 @@ from invoiceops_agent.api.ingestion_dependencies import (
 from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceReader
 from invoiceops_agent.api.middleware import RequestContextMiddleware
 from invoiceops_agent.api.read_auth import authenticate_read, authorize_queue
+from invoiceops_agent.api.schemas.decision import DecisionRequest, DecisionResponse
 from invoiceops_agent.api.schemas.email import email_request_schema
 from invoiceops_agent.api.schemas.health import (
     DependencyStatuses,
@@ -59,6 +61,7 @@ def create_app(
     dependency_factory: DependencyFactory | None = None,
     upload_factory: UploadFactory | None = None,
     invoice_reader: InvoiceReader | None = None,
+    decision_writer: DecisionWriter | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -69,6 +72,7 @@ def create_app(
     uploads = UploadRuntime()
     ingestion_factory = upload_factory if upload_factory is not None else default_upload_factory
     reads = invoice_reader if invoice_reader is not None else PostgresInvoiceReader(configuration)
+    decisions = decision_writer if decision_writer is not None else DecisionService(configuration)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -244,6 +248,50 @@ def create_app(
     async def get_invoice(invoice_id: UUID, request: Request) -> InvoiceDetail:
         authenticate_read(request, configuration)
         return await reads.detail(invoice_id)
+
+    @app.post(
+        "/v1/exceptions/{exception_id}/decision",
+        response_model=DecisionResponse,
+        status_code=201,
+        tags=["exceptions"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={
+            status: {"model": ProblemDetails} for status in (400, 401, 403, 404, 409, 422, 503)
+        },
+        openapi_extra={
+            "parameters": [
+                {
+                    "name": "Idempotency-Key",
+                    "in": "header",
+                    "required": True,
+                    "schema": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "pattern": IDEMPOTENCY_KEY_PATTERN,
+                    },
+                }
+            ]
+        },
+    )
+    async def submit_exception_decision(
+        exception_id: UUID,
+        request: Request,
+        decision: DecisionRequest,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+    ) -> DecisionResponse:
+        role = authenticate_read(request, configuration)
+        if role == "AUDITOR":
+            raise HTTPException(403, "Auditors cannot make exception decisions.")
+        if context.idempotency_key is None:
+            raise HTTPException(400, "An Idempotency-Key is required.")
+        return await decisions.submit(
+            exception_id=exception_id,
+            request=decision,
+            role=role,
+            idempotency_key=context.idempotency_key,
+            trace_id=context.trace_id,
+        )
 
     @app.get("/healthz", response_model=LivenessResponse, tags=["health"])
     async def healthz() -> LivenessResponse:

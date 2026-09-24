@@ -29,8 +29,9 @@ The [composite gate](CONFIDENCE_GATE.md) now combines observed field confidence,
 three-way match delta, and policy severity at a versioned threshold. A policy finding that requires
 review still overrides the score. Set `INVOICEOPS_AUTO_APPROVAL_ENABLED=false` to disable automatic
 approval during an operational hold. Exception triage prepares deterministic evidence and pauses at
-HumanReview. The review API and four-eyes control arrive in Phase 3; the graph's typed resume
-command is exercised by offline and Postgres restart tests.
+HumanReview. The [exception decision API](EXCEPTION_DECISIONS.md) records analyst proposals and
+independent manager signoff. Its one-shot worker resumes the checkpoint, and repeating the same
+accepted decision does not repeat the human review or archive event.
 
 [Retry and dead-letter operation](RETRY_AND_DLQ.md) records run status, retries only uncaught
 infrastructure failures, and supports audited operator redrive.
