@@ -14,6 +14,8 @@ from tests.unit.matching_support import matching_request, snapshot_for
 
 from invoiceops_agent.agents.extraction import ExtractionAgent
 from invoiceops_agent.agents.near_duplicate import NearDuplicateAgent
+from invoiceops_agent.agents.triage import TriageAgent
+from invoiceops_agent.gateway_client import GatewayUnavailable
 from invoiceops_agent.gateway_client.schemas import (
     EmbeddingRequest,
     EmbeddingValue,
@@ -48,6 +50,7 @@ from invoiceops_agent.ledger.writer import LedgerWriter
 from invoiceops_agent.schemas.documents import DocumentReference
 from invoiceops_agent.schemas.extraction import InvoiceExtraction
 from invoiceops_agent.schemas.gate import CompositeGateConfig, CompositeGateResult
+from invoiceops_agent.schemas.triage import TriageDraft
 from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.erp_generator import generate_fixture
 from invoiceops_agent.tools.erp_seed import seed_fixture
@@ -77,18 +80,53 @@ class FakePreflight(DocumentPreflight):
 
 
 class FakeGateway:
-    def __init__(self, extraction: InvoiceExtraction) -> None:
+    def __init__(self, extraction: InvoiceExtraction, *, fail_triage: bool = False) -> None:
         self.extraction = extraction
+        self.fail_triage = fail_triage
         self.completions = 0
         self.embeddings = 0
 
     def configured_policy(self, alias: str, context: RequestContext) -> AliasPolicy:
-        return AliasPolicy(model_version="synthetic-extract@v1", allow_pdf=True)
+        return AliasPolicy(
+            model_version="synthetic-triage@v1"
+            if alias == "triage-reasoner"
+            else "synthetic-extract@v1",
+            allow_pdf=True,
+        )
 
     async def complete[T: BaseModel](
         self, request: GatewayRequest, response_model: type[T]
     ) -> GatewayResult[T]:
         self.completions += 1
+        if request.alias == "triage-reasoner":
+            if self.fail_triage:
+                raise GatewayUnavailable(
+                    RequestContext(
+                        run_id=request.run_id,
+                        trace_id=request.trace_id,
+                        prompt_version=request.prompt_version,
+                        scenario=request.scenario,
+                    ),
+                    attempts=1,
+                )
+            triage: GatewayResult[TriageDraft] = GatewayResult(
+                value=TriageDraft(
+                    recommended_action="APPROVE",
+                    summary="Synthetic matching evidence is complete",
+                    rationale="The policy and match evidence are clear",
+                    evidence_refs=("policy:status", "match:status"),
+                ),
+                provenance=GatewayProvenance(
+                    alias="triage-reasoner",
+                    model="synthetic-triage@v1",
+                    model_version="synthetic-triage@v1",
+                    prompt_version=request.prompt_version,
+                ),
+                usage=TokenUsage(input_tokens=12, output_tokens=8, total_tokens=20),
+                attempts=1,
+                latency_ms=1,
+            )
+            return cast(GatewayResult[T], triage)
         result: GatewayResult[InvoiceExtraction] = GatewayResult(
             value=self.extraction,
             provenance=GatewayProvenance(
@@ -119,14 +157,17 @@ class FakeGateway:
         )
 
 
-@pytest.mark.parametrize("auto_approval", [True, False])
+@pytest.mark.parametrize(
+    "auto_approval,fail_triage", [(True, False), (False, False), (False, True)]
+)
 async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
     ledger_runtime_dsn: str,
     auto_approval: bool,
+    fail_triage: bool,
 ) -> None:
     source = matching_request(snapshot_for("CLOSED"))
     assert source.snapshot is not None
-    gateway = FakeGateway(source.extraction)
+    gateway = FakeGateway(source.extraction, fail_triage=fail_triage)
     ledger_writer = LedgerWriter(
         LedgerSettings(
             graph_version="invoice-v1",
@@ -159,6 +200,7 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         audit=sink,
         audit_writer=ledger_writer,
         gate_config=CompositeGateConfig(auto_approval_enabled=auto_approval),
+        triage_agent=TriageAgent(gateway),
     )
     initial, version = await load_invoice_state(
         lambda: runtime_connection(ledger_runtime_dsn), RUN_ID, as_of=date(2026, 9, 23)
@@ -179,9 +221,9 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
     ).process(RUN_ID)
     assert result.status == ("completed" if auto_approval else "awaiting_review")
     assert result.route == ("AUTO_APPROVE" if auto_approval else "REVIEW")
-    assert gateway.completions == 1 and gateway.embeddings == 1
+    assert gateway.completions == (1 if auto_approval else 2) and gateway.embeddings == 1
     assert await services.extract(initial) == await services.extract(initial)
-    assert gateway.completions == 1
+    assert gateway.completions == (1 if auto_approval else 2)
     with pytest.raises(ReplayEvidenceError, match="source changed"):
         await services.extract(initial.model_copy(update={"content_hash": "f" * 64}))
     assert await runner.run(initial) == result
@@ -222,8 +264,16 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         assert exception["status"] == "OPEN"
         assert exception["priority"] == 1
         assert exception["evidence"]["extraction_escalated"] is False
-        assert exception["recommendation"]["recommendation"] == "REVIEW"
+        assert exception["recommendation"]["recommendation"] == (
+            "REVIEW" if fail_triage else "APPROVE"
+        )
+        assert exception["recommendation"]["triage"]["status"] == (
+            "FALLBACK" if fail_triage else "DRAFT"
+        )
+        assert page.events[-1].actor_type == "AGENT"
         assert page.events[-1].versions.policy_version == "exception-queue@v1"
+        assert page.events[-1].versions.model_version == "synthetic-triage@v1"
+        assert page.events[-1].versions.prompt_version == "triage@v1"
         return
     assert exception is None
     transitions = WorkflowTransitions(lambda: runtime_connection(ledger_runtime_dsn), ledger_writer)

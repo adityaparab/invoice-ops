@@ -79,6 +79,7 @@ def test_workflow_gateway_uses_only_litellm_env_model_names(
     monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-key")
     monkeypatch.setenv("LITELLM_MODEL", "synthetic-general")
     monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "synthetic-vision")
+    monkeypatch.setenv("LITELLM_TRIAGE_MODEL", "synthetic-triage")
     monkeypatch.setenv("LITELLM_EMBED_MODEL", "synthetic-384")
     monkeypatch.setenv("LITELLM_CONFIG", "never-read.yaml")
     monkeypatch.setenv("INVOICEOPS_GATEWAY_ALIASES", "invalid-json")
@@ -88,7 +89,10 @@ def test_workflow_gateway_uses_only_litellm_env_model_names(
     assert {name: policy.model_name for name, policy in gateway.aliases.items()} == {
         "extract-vision": "synthetic-vision",
         "embed": "synthetic-384",
+        "triage-reasoner": "synthetic-triage",
     }
     monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "")
+    monkeypatch.setenv("LITELLM_TRIAGE_MODEL", "")
     fallback = LiteLLMWorkflowSettings(_env_file=None).gateway_settings()
     assert fallback.aliases["extract-vision"].model_name == "synthetic-general"
+    assert fallback.aliases["triage-reasoner"].model_name == "synthetic-general"

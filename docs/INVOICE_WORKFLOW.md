@@ -21,9 +21,9 @@ For native development, set the restricted `INVOICEOPS_POSTGRES_DSN`, owner-capa
 isolated `langgraph` schema. The operational connection uses the restricted application role.
 
 The worker reads `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`,
-`LITELLM_EMBED_MODEL`, and optionally `LITELLM_EXTRACT_MODEL` from the environment. It does not
+`LITELLM_EMBED_MODEL`, and optionally `LITELLM_EXTRACT_MODEL` and `LITELLM_TRIAGE_MODEL` from the environment. It does not
 read a LiteLLM proxy configuration file. `LITELLM_EMBED_MODEL` must name a route that returns one
-384-dimensional vector. If `LITELLM_EXTRACT_MODEL` is empty, extraction uses `LITELLM_MODEL`.
+384-dimensional vector. If either optional model name is empty, that task uses `LITELLM_MODEL`.
 
 The [composite gate](CONFIDENCE_GATE.md) now combines observed field confidence, normalized
 three-way match delta, and policy severity at a versioned threshold. A policy finding that requires
@@ -32,6 +32,10 @@ approval during an operational hold. Exception triage prepares deterministic evi
 HumanReview. The [exception decision API](EXCEPTION_DECISIONS.md) records analyst proposals and
 independent manager signoff. Its one-shot worker resumes the checkpoint, and repeating the same
 accepted decision does not repeat the human review or archive event.
+
+The [triage agent](TRIAGE_AGENT.md) drafts cited recommendations through the `triage-reasoner`
+alias. It uses the deterministic exception taxonomy and policy evidence, and records its model and
+prompt pins with the review queue projection.
 
 [Retry and dead-letter operation](RETRY_AND_DLQ.md) records run status, retries only uncaught
 infrastructure failures, and supports audited operator redrive.
