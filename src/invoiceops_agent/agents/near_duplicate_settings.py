@@ -60,6 +60,7 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
 
     model: Version
     extract_model: Version | None = None
+    triage_model: Version | None = None
 
     def gateway_settings(self) -> GatewaySettings:
         vision_model = self.extract_model or self.model
@@ -76,6 +77,10 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
                 "embed": AliasPolicy(
                     model_version=self.embed_model,
                     model_name=self.embed_model,
+                ),
+                "triage-reasoner": AliasPolicy(
+                    model_version=self.triage_model or self.model,
+                    model_name=self.triage_model or self.model,
                 ),
             },
         )

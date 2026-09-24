@@ -13,6 +13,7 @@ from pydantic import BaseModel, JsonValue, TypeAdapter
 
 from invoiceops_agent.agents.extraction import ExtractionAgent
 from invoiceops_agent.agents.near_duplicate import NearDuplicateAgent
+from invoiceops_agent.agents.triage import TriageAgent
 from invoiceops_agent.graph.nodes.exception_taxonomy import ExceptionTaxonomyNode
 from invoiceops_agent.graph.nodes.match3way import Match3WayNode
 from invoiceops_agent.graph.nodes.policy import PolicyNode
@@ -37,11 +38,13 @@ from invoiceops_agent.schemas.gate import (
 from invoiceops_agent.schemas.matching import ERPSnapshot, MatchRequest, MatchResult
 from invoiceops_agent.schemas.policy import PolicyRequest, PolicyResult
 from invoiceops_agent.schemas.similarity import SimilarityRequest, SimilarityResult
+from invoiceops_agent.schemas.triage import TriageRequest, TriageResult
 from invoiceops_agent.schemas.validation import ValidationRequest, ValidationResult
 from invoiceops_agent.tools.erp_repository import ERPRepository
 from invoiceops_agent.tools.exception_queue import project_exception
 from invoiceops_agent.tools.gate import evaluate_composite_gate
 from invoiceops_agent.tools.policy import po_age_exceeded
+from invoiceops_agent.tools.triage_evidence import gather_triage_evidence
 
 logger = logging.getLogger(__name__)
 type ConnectionFactory = Callable[[], AbstractAsyncContextManager[psycopg.AsyncConnection[DictRow]]]
@@ -148,6 +151,7 @@ class LiveInvoiceServices:
         audit: AuditSink,
         audit_writer: AuditWriter,
         gate_config: CompositeGateConfig | None = None,
+        triage_agent: TriageAgent | None = None,
         queue_config: QueueConfig | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
         new_id: Callable[[], UUID] = uuid4,
@@ -167,6 +171,7 @@ class LiveInvoiceServices:
         self._transitions = WorkflowTransitions(connection, audit_writer)
         self._policy_config = policy.config
         self._gate_config = gate_config if gate_config is not None else CompositeGateConfig()
+        self._triage_agent = triage_agent
         self._queue_config = queue_config if queue_config is not None else QueueConfig()
 
     async def extract(self, state: InvoiceGraphState) -> ExtractionResult:
@@ -339,6 +344,36 @@ class LiveInvoiceServices:
             "codes": list(taxonomy.codes) if taxonomy else [],
             "extraction_escalated": state.extraction is None,
         }
+        triage_result: TriageResult | None = None
+        if (
+            self._triage_agent is not None
+            and await self._events.read(state, "triage.prepared") is None
+        ):
+            evidence = gather_triage_evidence(
+                taxonomy=taxonomy,
+                policy=PolicyResult.model_validate(state.policy) if state.policy else None,
+                match=MatchResult.model_validate(state.match) if state.match else None,
+                validation=ValidationResult.model_validate(state.validation)
+                if state.validation
+                else None,
+                extraction_escalated=state.extraction is None,
+            )
+            triage_result = await self._triage_agent.prepare(
+                TriageRequest(
+                    run_id=state.run_id,
+                    invoice_id=state.invoice_id,
+                    trace_id=state.trace_id,
+                    evidence=evidence,
+                    evidence_sha256=model_digest(evidence),
+                )
+            )
+            payload["recommendation"] = (
+                triage_result.draft.recommended_action
+                if triage_result.draft is not None
+                else "REVIEW"
+            )
+            payload["evidence"] = evidence.model_dump(mode="json")
+            payload["triage"] = triage_result.model_dump(mode="json")
         async with self._connection() as connection, connection.transaction():
             locked = await connection.execute(
                 "SELECT id FROM public.runs WHERE id = %s AND invoice_id = %s FOR UPDATE",
@@ -401,11 +436,17 @@ class LiveInvoiceServices:
                         invoice_id=state.invoice_id,
                         event_type="triage.prepared",
                         node="ExceptionTriage",
-                        actor_type="SYSTEM",
-                        actor_id="invoiceops-queue-projection",
+                        actor_type="AGENT" if triage_result else "SYSTEM",
+                        actor_id=(
+                            "invoiceops-triage" if triage_result else "invoiceops-queue-projection"
+                        ),
                         versions=VersionOverrides(
-                            model_version="not-applicable@v1",
-                            prompt_version="not-applicable@v1",
+                            model_version=triage_result.model_version
+                            if triage_result
+                            else "not-applicable@v1",
+                            prompt_version=triage_result.prompt_version
+                            if triage_result
+                            else "not-applicable@v1",
                             policy_version=self._queue_config.version,
                         ),
                         payload=payload,

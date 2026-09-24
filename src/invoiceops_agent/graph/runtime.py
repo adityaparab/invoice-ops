@@ -13,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from invoiceops_agent.agents.extraction import ExtractionAgent
 from invoiceops_agent.agents.near_duplicate import NearDuplicateAgent
 from invoiceops_agent.agents.near_duplicate_settings import LiteLLMWorkflowSettings
+from invoiceops_agent.agents.triage import TriageAgent
 from invoiceops_agent.gateway_client import GatewayClient
 from invoiceops_agent.graph.checkpoints import postgres_invoice_graph
 from invoiceops_agent.graph.errors import RunNotFound
@@ -175,6 +176,7 @@ async def invoice_runtime(
             audit=audit,
             audit_writer=writer,
             gate_config=CompositeGateConfig(auto_approval_enabled=runtime.auto_approval_enabled),
+            triage_agent=TriageAgent(gateway),
             clock=clock,
         )
         async with postgres_invoice_graph(graph, InvoiceNodes(services)) as runner:
