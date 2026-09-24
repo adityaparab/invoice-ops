@@ -146,7 +146,7 @@
 - [x] 5.3 `metrics.py`: exception recall (≥0.98), false-escalation (≤0.05), field F1 (≥0.95; money fields ≥0.97), routing accuracy (≥0.95), STP (≥0.70), cost (≤$0.04/inv), p95 latency (≤45s, N=3 runs)
 - [x] 5.4 Diagnostics: per-anomaly confusion, per-field/per-tier F1, calibration curve, τ sweep ROC-style curve, LLM-judge triage rubric (judge via gateway, versioned)
 - [x] 5.5 Report per model class (local-dev vs OpenAI-prod) — one extra tag through the harness
-- [ ] 5.6 `ci_gate.py`: fail PR on any primary metric regressing >0.5% absolute vs main or below floor; PR comment with deltas
+- [x] 5.6 `ci_gate.py`: fail PR on any primary metric regressing >0.5% absolute vs main or below floor; PR comment with deltas
 - [ ] 5.7 Versioned reports committed to `eval/reports/`; start the experiment log (hypothesis/change/delta/decision)
 
 
@@ -196,7 +196,7 @@ checkbox here.
 | P2 — Match + policy            | Complete    | 2026-09-24   | Deterministic matching, taxonomy, similarity, policy, durable graph, composite gate, and audited retry/DLQ |
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
 | P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
-| P5 — Eval harness + CI gate    | In progress | —            | Golden dataset, Compose runner, metrics, diagnostics, and model-class report contracts implemented; CI gate and measured experiment report remain |
+| P5 — Eval harness + CI gate    | In progress | —            | Golden dataset, Compose runner, metrics, diagnostics, model-class report contracts, and strict CI gate implemented; live baseline and measured experiment report remain |
 | P6 — ADK variant + ADR         | Not started | —            |                                                           |
 | P7 — Polish                    | Not started | —            |                                                           |
 
@@ -257,3 +257,4 @@ checkbox here.
 | 2026-09-24 | Step 5.3 adds eight primary golden metrics with explicit denominators and coverage. It requires exact injected-code detection, scores only known extraction labels, includes embedding cost in immutable similarity evidence and dashboard totals, and uses three independent live runs for audited auto-approval p95. Recorded smoke and partial selections remain visibly ineligible for release claims; live suite measurements follow after an embedding model route is configured. |
 | 2026-09-24 | Step 5.4 adds per-anomaly confusion, per-field/per-tier extraction F1, score calibration bins, and a policy-preserving τ sweep. A versioned advisory triage rubric calls the existing gateway via an eval-only agent and the optional `LITELLM_JUDGE_MODEL` name; judge output is source- and evidence-bound, with unavailable results kept separate from zero scores. No live model-quality measurement is claimed. |
 | 2026-09-24 | Step 5.5 carries an explicit local-dev/OpenAI-prod experiment tag through v2 pipeline, metric, diagnostic, and judge reports. A typed class comparison pins source checksums, model-version evidence, all eight metric deltas, and completeness. Historical v1 evidence remains readable; no class measurements are invented before live evaluation. |
+| 2026-09-24 | Step 5.6 adds a fail-closed comparator for complete live 500-invoice, three-run primary reports, eight versioned floors, and 0.5-percentage-point or native-unit regression bounds. The PR workflow checks the committed candidate against the report at main, posts a `gh` comment with deltas, and bootstraps the first baseline against all floors. The live quality gate remains dormant until a measured report is committed in step 5.7; recorded smoke cannot activate it. |
