@@ -98,6 +98,7 @@ export function Intake() {
             </div>
           )}
           <Link className={styles.queueLink} to="/queue">Open Exception Review</Link>
+          <Link className={styles.queueLink} to={`/runs?run_id=${result.run_id}`}>Follow Agent Run</Link>
         </section>
       )}
     </div>

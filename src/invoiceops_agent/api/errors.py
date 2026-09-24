@@ -24,6 +24,11 @@ from invoiceops_agent.api.invoice_reader import (
     InvoiceReadError,
     InvoiceReadUnavailable,
 )
+from invoiceops_agent.api.run_progress_reader import (
+    RunNotFound,
+    RunProgressError,
+    RunProgressUnavailable,
+)
 from invoiceops_agent.api.schemas.health import DependencyStatuses
 from invoiceops_agent.api.schemas.problem import ProblemDetails
 from invoiceops_agent.tools.ingestion_errors import (
@@ -103,6 +108,23 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(InvoiceReadError, _invoice_read_error)
     app.add_exception_handler(DecisionError, _decision_error)
     app.add_exception_handler(DashboardUnavailable, _dashboard_error)
+    app.add_exception_handler(RunProgressError, _run_progress_error)
+
+
+async def _run_progress_error(request: Request, error: Exception) -> JSONResponse:
+    status = 404 if isinstance(error, RunNotFound) else 503
+    logger.warning(
+        "run_progress_rejected trace_id=%s error_type=%s status=%d",
+        get_request_context(request).trace_id,
+        type(error).__name__,
+        status,
+    )
+    detail = (
+        str(error)
+        if isinstance(error, (RunNotFound, RunProgressUnavailable))
+        else "Run progress unavailable"
+    )
+    return problem_response(request, status=status, detail=detail)
 
 
 async def _dashboard_error(request: Request, error: Exception) -> JSONResponse:

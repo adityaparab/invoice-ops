@@ -145,3 +145,11 @@
     padding: 1rem;
   }
 }
+.runLink {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: #08745f;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+}

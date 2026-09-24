@@ -31,7 +31,8 @@ from invoiceops_agent.api.ingestion_dependencies import (
 )
 from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceReader
 from invoiceops_agent.api.middleware import RequestContextMiddleware
-from invoiceops_agent.api.read_auth import authenticate_read, authorize_queue
+from invoiceops_agent.api.read_auth import authenticate_read, authenticate_run, authorize_queue
+from invoiceops_agent.api.run_progress_reader import PostgresRunProgressReader, RunProgressReader
 from invoiceops_agent.api.schemas.dashboard import DashboardSummary
 from invoiceops_agent.api.schemas.decision import DecisionRequest, DecisionResponse
 from invoiceops_agent.api.schemas.email import email_request_schema
@@ -50,6 +51,7 @@ from invoiceops_agent.api.schemas.invoice_read import (
     RunStatus,
 )
 from invoiceops_agent.api.schemas.problem import ProblemDetails
+from invoiceops_agent.api.schemas.run_progress import RunProgress
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
 from invoiceops_agent.api.webhooks import decode_email_document, read_signed_email
@@ -65,6 +67,7 @@ def create_app(
     invoice_reader: InvoiceReader | None = None,
     decision_writer: DecisionWriter | None = None,
     dashboard_reader: DashboardReader | None = None,
+    run_progress_reader: RunProgressReader | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -78,6 +81,11 @@ def create_app(
     decisions = decision_writer if decision_writer is not None else DecisionService(configuration)
     dashboard = (
         dashboard_reader if dashboard_reader is not None else PostgresDashboardReader(configuration)
+    )
+    run_progress = (
+        run_progress_reader
+        if run_progress_reader is not None
+        else PostgresRunProgressReader(configuration)
     )
 
     @asynccontextmanager
@@ -269,6 +277,17 @@ def create_app(
     async def get_invoice(invoice_id: UUID, request: Request) -> InvoiceDetail:
         authenticate_read(request, configuration)
         return await reads.detail(invoice_id)
+
+    @app.get(
+        "/v1/runs/{run_id}/progress",
+        response_model=RunProgress,
+        tags=["runs"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (401, 404, 422, 503)},
+    )
+    async def get_run_progress(run_id: UUID, request: Request) -> RunProgress:
+        authenticate_run(request, configuration)
+        return await run_progress.read(run_id)
 
     @app.post(
         "/v1/exceptions/{exception_id}/decision",

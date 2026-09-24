@@ -17,6 +17,9 @@ const Dashboard = lazy(() => import("../features/dashboard/Dashboard").then(
 const Intake = lazy(() => import("../features/intake/Intake").then(
   (module) => ({ default: module.Intake }),
 ));
+const AgentRun = lazy(() => import("../features/runs/AgentRun").then(
+  (module) => ({ default: module.AgentRun }),
+));
 
 function HealthStatus() {
   const health = useQuery({
@@ -43,14 +46,12 @@ function PersonaSwitcher() {
           if (value && isPersona(value)) choosePersona(value);
         }}
       />
-      {persona !== "platform" && (
-        <PasswordInput
-          label="Persona API token"
-          description="Entered token stays in this tab only"
-          value={token}
-          onChange={(event) => setToken(event.currentTarget.value)}
-        />
-      )}
+      <PasswordInput
+        label={persona === "platform" ? "Service API token" : "Persona API token"}
+        description="Entered token stays in this tab only"
+        value={token}
+        onChange={(event) => setToken(event.currentTarget.value)}
+      />
     </form>
   );
 }
@@ -80,6 +81,7 @@ function GuardedScreen({ route }: { route: AppRoute }) {
   if (route.path === "/queue") return <Suspense fallback={<Text>Loading review…</Text>}><ExceptionReview /></Suspense>;
   if (route.path === "/dashboard") return <Suspense fallback={<Text>Loading dashboard…</Text>}><Dashboard /></Suspense>;
   if (route.path === "/intake") return <Suspense fallback={<Text>Loading intake…</Text>}><Intake /></Suspense>;
+  if (route.path === "/runs") return <Suspense fallback={<Text>Loading run…</Text>}><AgentRun /></Suspense>;
   return <ScreenPlaceholder route={route} />;
 }
 

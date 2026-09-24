@@ -730,6 +730,63 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "NodeProgress": {
+        "additionalProperties": false,
+        "properties": {
+          "event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Type"
+          },
+          "name": {
+            "enum": [
+              "Ingest",
+              "Extract",
+              "Validate",
+              "Match3Way",
+              "Policy",
+              "Gate",
+              "AutoApprove",
+              "ExceptionTriage",
+              "HumanReview",
+              "Archive",
+              "Reject"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "state": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "State",
+            "type": "object"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NodeProgress",
+        "type": "object"
+      },
       "PendingProposal": {
         "additionalProperties": false,
         "properties": {
@@ -845,6 +902,118 @@
           "dependencies"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "RunProgress": {
+        "additionalProperties": false,
+        "properties": {
+          "active_node": {
+            "anyOf": [
+              {
+                "enum": [
+                  "Ingest",
+                  "Extract",
+                  "Validate",
+                  "Match3Way",
+                  "Policy",
+                  "Gate",
+                  "AutoApprove",
+                  "ExceptionTriage",
+                  "HumanReview",
+                  "Archive",
+                  "Reject"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Node"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "graph_version": {
+            "title": "Graph Version",
+            "type": "string"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NodeProgress"
+            },
+            "maxItems": 11,
+            "minItems": 11,
+            "title": "Nodes",
+            "type": "array"
+          },
+          "progress_source": {
+            "const": "audit-ledger",
+            "default": "audit-ledger",
+            "title": "Progress Source",
+            "type": "string"
+          },
+          "read_at": {
+            "format": "date-time",
+            "title": "Read At",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "PAUSED",
+              "COMPLETED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "invoice_id",
+          "status",
+          "graph_version",
+          "active_node",
+          "nodes",
+          "started_at",
+          "completed_at",
+          "read_at"
+        ],
+        "title": "RunProgress",
         "type": "object"
       }
     },
@@ -1731,6 +1900,84 @@
         "summary": "Get Invoice",
         "tags": [
           "invoices"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/progress": {
+      "get": {
+        "operationId": "get_run_progress_v1_runs__run_id__progress_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunProgress"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "PersonaToken": []
+          }
+        ],
+        "summary": "Get Run Progress",
+        "tags": [
+          "runs"
         ]
       }
     }
