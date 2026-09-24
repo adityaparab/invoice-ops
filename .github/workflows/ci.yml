@@ -17,7 +17,7 @@ jobs:
   checks:
     name: Python checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       UV_PYTHON: "3.12"
       RYUK_CONTAINER_IMAGE: testcontainers/ryuk:0.8.1@sha256:bf3f74a47dee0acda89aba4b2fc9c7fdcf994a084db02a2d06566f07baae022e
@@ -115,6 +115,13 @@ jobs:
           docker compose --profile ui up -d --build --wait --wait-timeout 120 ui
           curl --retry 10 --retry-delay 1 --fail --silent --show-error http://localhost:5173/
           curl --retry 10 --retry-delay 1 --fail --silent --show-error http://localhost:5173/healthz
+
+      - name: Browser review smoke
+        timeout-minutes: 5
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e
 
       - name: Accept and replay an authenticated Compose upload
         timeout-minutes: 1

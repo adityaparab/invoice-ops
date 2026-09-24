@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --environment jsdom",
+    "test": "vitest run --environment jsdom src/",
+    "test:e2e": "playwright test",
     "generate:api": "uv run --project .. python -m invoiceops_agent.api.openapi_cli --output openapi.json && npm run generate:types",
     "generate:types": "openapi-typescript openapi.json -o src/generated/api.ts"
   },
@@ -28,6 +29,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "1.55.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
     "@types/node": "22.20.4",
