@@ -94,3 +94,5 @@ docker compose run --rm invoice-worker invoiceops-invoice-run <run_id>
 
 The worker uses the three LiteLLM connection/model variables plus an embedding model name; it
 does not use the optional local proxy configuration. See [workflow operation](../docs/INVOICE_WORKFLOW.md).
+Failed runs can be inspected and redriven with `invoiceops-invoice-dlq`; see
+[retry and dead-letter operation](../docs/RETRY_AND_DLQ.md).

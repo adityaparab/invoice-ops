@@ -15,6 +15,8 @@ gate route to ExceptionTriage and pause at HumanReview before Archive. Nodes che
 transition and remain idempotent under replay. The [composite confidence gate](CONFIDENCE_GATE.md)
 records its three terms, threshold, versioned configuration, and evidence fingerprints; see
 [worker operation and configuration](INVOICE_WORKFLOW.md).
+The one-shot worker applies [bounded infrastructure retry and an audited dead-letter queue](RETRY_AND_DLQ.md)
+using `runs.status=FAILED` plus sanitized retry metadata. Business decisions are never retried.
 
 LangGraph's managed checkpoint tables live in the isolated `langgraph` schema so they do not
 collide with the application-facing `public.checkpoints` projection. The saver uses a restricted

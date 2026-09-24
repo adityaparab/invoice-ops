@@ -37,7 +37,10 @@ from invoiceops_agent.graph.nodes.exception_taxonomy import ExceptionTaxonomyNod
 from invoiceops_agent.graph.nodes.match3way import Match3WayNode
 from invoiceops_agent.graph.nodes.policy import PolicyNode
 from invoiceops_agent.graph.nodes.validate import ValidateNode
+from invoiceops_agent.graph.retry import RetryConfig
 from invoiceops_agent.graph.runtime import load_invoice_state
+from invoiceops_agent.graph.state import InvoiceGraphState
+from invoiceops_agent.graph.worker import PostgresAttemptStore, RetryWorker
 from invoiceops_agent.ledger.audit import TransactionalAuditSink
 from invoiceops_agent.ledger.reader import LedgerReader
 from invoiceops_agent.ledger.settings import LedgerSettings
@@ -163,7 +166,15 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         build_invoice_graph(InMemorySaver(serde=restricted_serializer()), InvoiceNodes(services)),
         InProcessRunLock(),
     )
-    result = await runner.run(initial)
+
+    async def run_once(run_id: UUID) -> InvoiceGraphState:
+        assert run_id == RUN_ID
+        return await runner.run(initial)
+
+    result = await RetryWorker(
+        PostgresAttemptStore(lambda: runtime_connection(ledger_runtime_dsn), RetryConfig()),
+        run_once,
+    ).process(RUN_ID)
     assert result.status == "completed"
     assert result.route == "AUTO_APPROVE"
     assert gateway.completions == 1 and gateway.embeddings == 1
@@ -177,7 +188,11 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         status = await (
             await connection.execute("SELECT status FROM invoices WHERE id = %s", (INVOICE_ID,))
         ).fetchone()
+        run_status = await (
+            await connection.execute("SELECT status FROM runs WHERE id = %s", (RUN_ID,))
+        ).fetchone()
     assert status == {"status": "APPROVED"}
+    assert run_status == {"status": "COMPLETED"}
     assert [event.event_type for event in page.events] == [
         "extraction.completed",
         "validation.completed",
