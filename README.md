@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 3 implementation complete.** Observability hardening and golden-set evaluation remain planned.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 4 complete.** Golden-set evaluation remains planned.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
@@ -15,7 +15,7 @@ validation, matching, policy, and human decisions commit to the
 and eval screens. Auditors can read [run traces and cross-run invoice provenance](docs/PROVENANCE_API.md).
 The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
 invoices and a checksummed preparation report. Every selected image is quality tier A under the
-versioned heuristic; extraction accuracy and tiers B/C remain unmeasured.
+versioned heuristic. The measured tier-A baseline field F1 is 0.7226; tiers B/C remain unmeasured.
 
 ---
 
