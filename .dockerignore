@@ -10,5 +10,8 @@
 !deploy/
 !deploy/Dockerfile
 !deploy/seed.py
+!eval/
+!eval/reports/
+!eval/reports/**
 **/__pycache__/
 **/*.pyc

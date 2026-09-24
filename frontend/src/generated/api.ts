@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/evals/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Eval Reports */
+        get: operations["get_eval_reports_v1_evals_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/exceptions/{exception_id}/decision": {
         parameters: {
             query?: never;
@@ -172,6 +189,19 @@ export interface components {
             sla_overdue: number;
             /** Under 24 Hours */
             under_24_hours: number;
+        };
+        /** AnomalyConfusion */
+        AnomalyConfusion: {
+            /** Anomaly Code */
+            anomaly_code: string;
+            /** Fn */
+            fn: number;
+            /** Fp */
+            fp: number;
+            /** Tn */
+            tn: number;
+            /** Tp */
+            tp: number;
         };
         /** AuditRunPage */
         AuditRunPage: {
@@ -306,12 +336,70 @@ export interface components {
              */
             postgres: "ok" | "unavailable" | "timeout" | "unconfigured";
         };
+        /** EvalDashboard */
+        EvalDashboard: {
+            /** Experiments */
+            experiments: components["schemas"]["ExperimentEntry"][];
+            /**
+             * Read At
+             * Format: date-time
+             */
+            read_at: string;
+            /** Reports */
+            reports: components["schemas"]["EvalReport"][];
+        };
+        /** EvalReport */
+        EvalReport: {
+            /** Caveats */
+            caveats: string[];
+            /** Dataset Version */
+            dataset_version: string;
+            /**
+             * Measured At
+             * Format: date-time
+             */
+            measured_at: string;
+            /** Metrics */
+            metrics: components["schemas"]["MetricRow"][];
+            /** Model Versions */
+            model_versions: string[];
+            /** Per Anomaly Confusion */
+            per_anomaly_confusion: components["schemas"]["AnomalyConfusion"][];
+            /** Report Id */
+            report_id: string;
+            /** Report Version */
+            report_version: string;
+            /** Tau Sweep */
+            tau_sweep: components["schemas"]["TauSweepPoint"][];
+            /** Title */
+            title: string;
+        };
         /** ExceptionCount */
         ExceptionCount: {
             /** Code */
             code: string;
             /** Count */
             count: number;
+        };
+        /** ExperimentEntry */
+        ExperimentEntry: {
+            /** Change */
+            change: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Decision */
+            decision: string;
+            /** Hypothesis */
+            hypothesis: string;
+            /** Id */
+            id: string;
+            /** Observation */
+            observation: string;
+            /** Report Id */
+            report_id: string;
         };
         /** InvoiceDetail */
         InvoiceDetail: {
@@ -507,6 +595,30 @@ export interface components {
              */
             status: "ok";
         };
+        /** MetricRow */
+        MetricRow: {
+            /** Fn */
+            fn?: number | null;
+            /** Fp */
+            fp?: number | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Sample Count */
+            sample_count?: number | null;
+            /** Scope */
+            scope: string;
+            /** Tp */
+            tp?: number | null;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "rate" | "usd" | "ms" | "count";
+            /** Value */
+            value: string;
+        };
         /** NodeProgress */
         NodeProgress: {
             /** Event Type */
@@ -625,6 +737,17 @@ export interface components {
              */
             status: "QUEUED" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
         };
+        /** TauSweepPoint */
+        TauSweepPoint: {
+            /** Exception Recall */
+            exception_recall: string;
+            /** False Escalation Rate */
+            false_escalation_rate: string;
+            /** Stp Rate */
+            stp_rate: string;
+            /** Threshold */
+            threshold: string;
+        };
         /** VersionPins */
         VersionPins: {
             /** Graph Version */
@@ -735,6 +858,53 @@ export interface operations {
             };
             /** @description Unprocessable Entity */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_eval_reports_v1_evals_reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalDashboard"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

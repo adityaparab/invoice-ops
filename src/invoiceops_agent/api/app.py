@@ -25,6 +25,7 @@ from invoiceops_agent.api.dependencies import (
     default_dependency_factory,
 )
 from invoiceops_agent.api.errors import install_error_handlers, problem_response
+from invoiceops_agent.api.eval_reader import EvalReader, FileEvalReader
 from invoiceops_agent.api.ingestion_dependencies import (
     UploadFactory,
     UploadRuntime,
@@ -32,12 +33,18 @@ from invoiceops_agent.api.ingestion_dependencies import (
 )
 from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceReader
 from invoiceops_agent.api.middleware import RequestContextMiddleware
-from invoiceops_agent.api.read_auth import authenticate_read, authenticate_run, authorize_queue
+from invoiceops_agent.api.read_auth import (
+    authenticate_evals,
+    authenticate_read,
+    authenticate_run,
+    authorize_queue,
+)
 from invoiceops_agent.api.run_progress_reader import PostgresRunProgressReader, RunProgressReader
 from invoiceops_agent.api.schemas.audit import AuditRunPage
 from invoiceops_agent.api.schemas.dashboard import DashboardSummary
 from invoiceops_agent.api.schemas.decision import DecisionRequest, DecisionResponse
 from invoiceops_agent.api.schemas.email import email_request_schema
+from invoiceops_agent.api.schemas.evals import EvalDashboard
 from invoiceops_agent.api.schemas.health import (
     DependencyStatuses,
     LivenessResponse,
@@ -71,6 +78,7 @@ def create_app(
     dashboard_reader: DashboardReader | None = None,
     run_progress_reader: RunProgressReader | None = None,
     audit_reader: AuditReader | None = None,
+    eval_reader: EvalReader | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -91,6 +99,7 @@ def create_app(
         else PostgresRunProgressReader(configuration)
     )
     audit = audit_reader if audit_reader is not None else PostgresAuditReader(configuration)
+    evals = eval_reader if eval_reader is not None else FileEvalReader(configuration)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -312,6 +321,17 @@ def create_app(
         return await audit.for_run(
             run_id, trace_id=context.trace_id, limit=limit, after_sequence=after_sequence
         )
+
+    @app.get(
+        "/v1/evals/reports",
+        response_model=EvalDashboard,
+        tags=["evals"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (401, 403, 503)},
+    )
+    async def get_eval_reports(request: Request) -> EvalDashboard:
+        authenticate_evals(request, configuration)
+        return await evals.dashboard()
 
     @app.post(
         "/v1/exceptions/{exception_id}/decision",

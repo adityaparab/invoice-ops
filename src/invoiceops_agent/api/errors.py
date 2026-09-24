@@ -19,6 +19,7 @@ from invoiceops_agent.api.decision_service import (
     DecisionNotFound,
     DecisionUnavailable,
 )
+from invoiceops_agent.api.eval_reader import EvalReadError
 from invoiceops_agent.api.invoice_reader import (
     InvalidInvoiceCursor,
     InvoiceNotFound,
@@ -111,6 +112,16 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DashboardUnavailable, _dashboard_error)
     app.add_exception_handler(RunProgressError, _run_progress_error)
     app.add_exception_handler(AuditReadError, _audit_read_error)
+    app.add_exception_handler(EvalReadError, _eval_read_error)
+
+
+async def _eval_read_error(request: Request, error: Exception) -> JSONResponse:
+    logger.warning(
+        "eval_read_rejected trace_id=%s error_type=%s",
+        get_request_context(request).trace_id,
+        type(error).__name__,
+    )
+    return problem_response(request, status=503, detail=str(error))
 
 
 async def _audit_read_error(request: Request, error: Exception) -> JSONResponse:

@@ -51,3 +51,18 @@ def authenticate_run(request: Request, settings: ApiSettings) -> None:
         if settings.service_token is None and error.status_code == 401:
             raise
         authenticate_upload(request, settings)
+
+
+def authenticate_evals(request: Request, settings: ApiSettings) -> None:
+    """Evaluation reports are visible to the auditor and platform service only."""
+    try:
+        role = authenticate_read(request, settings)
+    except HTTPException as error:
+        if error.status_code not in {401, 503}:
+            raise
+        if settings.service_token is None and error.status_code == 401:
+            raise
+        authenticate_upload(request, settings)
+    else:
+        if role != "AUDITOR":
+            raise HTTPException(403, "Only the auditor or platform service can read evaluations.")

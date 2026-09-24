@@ -1,5 +1,6 @@
 """Environment-backed API configuration, loaded only when the app is created."""
 
+from pathlib import Path
 from typing import Self
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -23,6 +24,7 @@ class ApiSettings(StorageSettings):
     webhook_window_seconds: int = Field(default=300, ge=1, le=3600)
     webhook_max_bytes: int = Field(default=14 * 1024 * 1024, gt=0, le=140 * 1024 * 1024)
     webhook_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+    eval_reports_dir: Path = Path("eval/reports")
 
     @field_validator("postgres_dsn")
     @classmethod

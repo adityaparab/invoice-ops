@@ -16,6 +16,7 @@ COPY --from=build --chown=invoiceops:invoiceops /app/.venv /app/.venv
 COPY --chown=invoiceops:invoiceops deploy/seed.py /app/deploy/seed.py
 COPY --chown=invoiceops:invoiceops alembic.ini /app/alembic.ini
 COPY --chown=invoiceops:invoiceops migrations /app/migrations
+COPY --chown=invoiceops:invoiceops eval/reports /app/eval/reports
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 USER invoiceops
 EXPOSE 8000
