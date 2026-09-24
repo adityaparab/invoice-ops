@@ -2,8 +2,8 @@
 
 Vite, React, TypeScript, Mantine, TanStack Query, and React Router form the
 single-page application shell. The Exception Review screen is connected to the
-queue, detail, and decision endpoints; the remaining workspaces follow in plan
-steps 3.6–3.10.
+queue, detail, and decision endpoints. Dan's dashboard uses the manager-only
+summary endpoint; the remaining workspaces follow in plan steps 3.7–3.10.
 
 ```sh
 cd frontend
@@ -39,3 +39,9 @@ audited invoice/PO/receipt comparisons, extracted field confidence, and cited
 triage draft. Maria submits an analyst proposal; Dan can inspect that
 proposal after a reload and independently sign it. The decision endpoint
 enforces the role and four-eyes rules.
+
+Dan's dashboard shows exact server-computed STP, volume, exception aging, and
+observed model cost for a selectable UTC period. Model cost coverage is shown
+beside the per-invoice figure. Recharts modules load only when the dashboard
+route is opened. [Dashboard metric definitions](../docs/DASHBOARD.md) specify
+the denominators and missing-cost behavior.

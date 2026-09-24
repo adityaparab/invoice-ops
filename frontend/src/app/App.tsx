@@ -1,12 +1,19 @@
 import { Badge, Button, PasswordInput, Select, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router";
 import { fetchHealth } from "../api/health";
-import { ExceptionReview } from "../features/review/ExceptionReview";
 import { isPersona, personaIds, personaLabels, usePersona } from "./persona";
 import { appRoutes, routesFor } from "./routes";
 import type { AppRoute } from "./routes";
 import styles from "./App.module.css";
+
+const ExceptionReview = lazy(() => import("../features/review/ExceptionReview").then(
+  (module) => ({ default: module.ExceptionReview }),
+));
+const Dashboard = lazy(() => import("../features/dashboard/Dashboard").then(
+  (module) => ({ default: module.Dashboard }),
+));
 
 function HealthStatus() {
   const health = useQuery({
@@ -67,7 +74,9 @@ function GuardedScreen({ route }: { route: AppRoute }) {
     const home = routesFor(persona)[0];
     return <Navigate to={home?.path ?? "/queue"} replace />;
   }
-  return route.path === "/queue" ? <ExceptionReview /> : <ScreenPlaceholder route={route} />;
+  if (route.path === "/queue") return <Suspense fallback={<Text>Loading review…</Text>}><ExceptionReview /></Suspense>;
+  if (route.path === "/dashboard") return <Suspense fallback={<Text>Loading dashboard…</Text>}><Dashboard /></Suspense>;
+  return <ScreenPlaceholder route={route} />;
 }
 
 export function App() {
