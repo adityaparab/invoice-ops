@@ -10,9 +10,8 @@ from uuid import UUID
 import httpx2
 
 from eval.baseline.run import BaselineAuditSink, PreparedReader
-from eval.golden.builder import render_invoice
 from eval.golden.schema import GoldenManifest, InvoiceLabel
-from eval.runners.run_pipeline import COMMITTED_MANIFEST, RECORDED_SAMPLE_ID
+from eval.runners.run_pipeline import COMMITTED_MANIFEST, RECORDED_DOCUMENT, RECORDED_SAMPLE_ID
 from invoiceops_agent.agents.extraction import ExtractionAgent
 from invoiceops_agent.agents.triage import TriageAgent
 from invoiceops_agent.artifacts import write_new_artifact
@@ -117,7 +116,7 @@ def _fixture_response(request: httpx2.Request, extraction: InvoiceExtraction) ->
 async def record(output: Path) -> None:
     manifest = GoldenManifest.model_validate_json(COMMITTED_MANIFEST.read_bytes())
     sample = next(row for row in manifest.samples if row.sample_id == RECORDED_SAMPLE_ID)
-    body = render_invoice(sample.label)
+    body = RECORDED_DOCUMENT.read_bytes()
     if hashlib.sha256(body).hexdigest() != sample.document_sha256:
         raise ValueError("Smoke document differs from the committed checksum")
     expected = _extraction(sample.label)

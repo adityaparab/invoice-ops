@@ -14,8 +14,8 @@ With the direct LiteLLM URL, key, and `LITELLM_MODEL` present in `.env`:
 uv run python -m eval.runners.run_pipeline --recorded
 ```
 
-This rebuilds one development invoice (`SYN-CLEAN-0034`) from its committed
-label, verifies its PNG checksum, starts Compose, seeds the golden ERP, uploads
+This uses the committed PNG for one development invoice (`SYN-CLEAN-0034`),
+verifies its checksum against the golden label, starts Compose, seeds the golden ERP, uploads
 through `POST /v1/invoices`, runs the real worker in a one-shot Compose
 container, and reads invoice detail and auditor provenance through the API.
 Three committed synthetic cassettes replay extraction, embedding, and triage
@@ -28,6 +28,11 @@ verify the cassettes offline with:
 ```bash
 uv run python -m eval.runners.build_smoke_cassettes
 ```
+
+The smoke PNG is committed because the same pixels can have different PNG
+checksums when native zlib encoders differ. The full golden builder records
+its Pillow and zlib versions and rejects drift; recorded mode uses identical
+document bytes on every CI host.
 
 The current confidence gate routes this clean sample to human review, so the
 smoke expects a `PAUSED` run and `NEEDS_REVIEW` invoice with a `triage.prepared`

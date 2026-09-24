@@ -16,7 +16,6 @@ import httpx
 from pydantic import Field, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from eval.golden.builder import render_invoice
 from eval.golden.schema import GoldenManifest, GoldenSample
 from eval.runners.schema import PipelineReport, RunRecord, utc_now
 from invoiceops_agent.agents.near_duplicate_settings import LiteLLMWorkflowSettings
@@ -29,6 +28,7 @@ logger = logging.getLogger(__name__)
 COMMITTED_MANIFEST = Path("eval/golden/v1.0.0/manifest.json")
 DATASET = Path("eval/data/golden/v1.0.0")
 RECORDED_SAMPLE_ID = "SYN-CLEAN-0034"
+RECORDED_DOCUMENT = Path("eval/cassettes/smoke/SYN-CLEAN-0034.png")
 MAX_DOCUMENT_BYTES = 10_000_000
 
 
@@ -235,7 +235,7 @@ def select_samples(
 
 def _read_document(dataset: Path, sample: GoldenSample, *, recorded: bool) -> bytes:
     if recorded:
-        body = render_invoice(sample.label)
+        body = RECORDED_DOCUMENT.read_bytes()
     else:
         relative = Path(sample.document_path)
         if relative.is_absolute() or len(relative.parts) != 2 or relative.parts[0] != "documents":
