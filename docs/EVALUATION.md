@@ -68,14 +68,50 @@ or interrupted build cannot publish a complete manifest with unverified bytes.
 ## Scoring boundaries
 
 The [Compose runner](../eval/runners/README.md) collects API, worker, and ledger
-evidence for the suite; metric definitions and the CI gate follow in later
-Phase 5 steps. Extraction scoring uses all fields with known labels. Routing,
-exception recall, false escalation, and straight-through processing use only
-the 450 ERP-backed samples; the 50 Voxel51 invoices are extraction-only.
+evidence for the suite. [`eval/metrics.py`](../eval/metrics.py) scores the eight
+primary measures; diagnostics and the CI gate follow in later Phase 5 steps.
+Extraction scoring uses all fields with known labels. Exact duplicate uploads
+are excluded from extraction F1 because they do not invoke extraction. Wrong
+observed values count one false positive and one false negative; unknown gold
+labels are skipped. Money F1 covers subtotal, tax, total, line unit price, and
+line total. Routing, exception recall, false escalation, and straight-through
+processing use only the 450 ERP-backed samples; the 50 Voxel51 invoices are
+extraction-only.
 Duplicate samples must run after their parent in each split. Anomalies may
 produce additional secondary findings, so the injected code is the required
 minimum detection label. Hard negatives test extraction robustness, not an
 extra business exception.
+
+Exception recall requires each sample's injected code in `classification.completed`;
+an exact duplicate is detected by the upload's content-hash duplicate signal.
+The denominator is 150 anomalies. False escalation counts a clean synthetic
+invoice that does not reach audited auto-approval, over 300 clean synthetic
+invoices. Routing accuracy expects audited auto-approval for clean invoices,
+ingest rejection for exact duplicates, and human review for other anomalies,
+over all 450 routing cases. STP is the audited auto-approval share of the 300
+clean synthetic invoices; that denominator keeps the 70% target attainable.
+
+Cost per invoice sums observed extraction, embedding, and triage gateway cost
+for each selected invoice. Duplicate uploads cost zero for their own attempt.
+If any invoked model call lacks cost evidence, the metric is unavailable and
+coverage shows how many invoices are complete. P95 latency uses the elapsed
+time between `ingest.accepted` and `approval.auto_granted`, from three distinct
+live runs over the same selection. It is unavailable when a run lacks an
+auto-approval, a timestamp, or independent run IDs. P95 uses the nearest-rank
+method over audited auto-approved invoices from the three runs. The versioned
+target and direction for each metric travel in the output. A one-run development
+score can guide iteration, but only a full live 500-invoice report has
+`complete_suite=true`; recorded cassette runs are smoke evidence, not model
+quality measurements. Every metric reports its numerator, denominator or
+evidence coverage so a missing value cannot be mistaken for zero.
+
+```bash
+uv run python -m eval.metrics \
+  --input eval/data/runs/live-1.json \
+  --input eval/data/runs/live-2.json \
+  --input eval/data/runs/live-3.json \
+  --output eval/data/metrics/golden-v1.0.0.json
+```
 
 The synthetic documents use one line item and repeated template structure;
 those constraints limit claims about real invoice diversity. The published

@@ -44,6 +44,10 @@ WITH scoped AS (
     SELECT l.invoice_id, l.payload->'triage'->>'cost_usd'
     FROM public.ledger l JOIN scoped s ON s.id = l.invoice_id
     WHERE l.event_type = 'triage.prepared'
+    UNION ALL
+    SELECT l.invoice_id, l.payload->>'gateway_cost_usd'
+    FROM public.ledger l JOIN scoped s ON s.id = l.invoice_id
+    WHERE l.event_type = 'similarity.completed'
 ), valid_costs AS (
     SELECT invoice_id,
            CASE WHEN cost_text ~ '^[0-9]+([.][0-9]+)?$'

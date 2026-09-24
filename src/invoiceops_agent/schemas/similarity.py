@@ -58,6 +58,10 @@ class SimilarityResult(SimilarityModel):
     summary_version: str = SUMMARY_VERSION
     model_version: str = Field(min_length=1, max_length=160)
     gateway_model: str = Field(min_length=1, max_length=160)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    gateway_latency_ms: float | None = Field(default=None, ge=0)
+    gateway_cost_usd: Decimal | None = Field(default=None, ge=0)
     config: SimilarityConfig
 
     @model_validator(mode="after")

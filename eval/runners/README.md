@@ -70,4 +70,6 @@ Reports default to ignored `eval/data/runs/` and contain one row per sample:
 the upload result, upload/worker active latencies, worker route/error type,
 invoice detail, and full auditor
 provenance page. Worker errors still produce an evidence report and a nonzero
-exit status. The next steps compute metrics and diagnostics from this report.
+exit status. Score one to three reports with [`eval/metrics.py`](../metrics.py)
+as described in [the evaluation spec](../../docs/EVALUATION.md). Diagnostics
+and the release gate follow in later steps.
