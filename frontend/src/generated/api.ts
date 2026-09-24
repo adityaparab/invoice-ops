@@ -124,6 +124,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/runs/{run_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Ledger */
+        get: operations["get_run_ledger_v1_runs__run_id__ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/runs/{run_id}/progress": {
         parameters: {
             query?: never;
@@ -155,6 +172,29 @@ export interface components {
             sla_overdue: number;
             /** Under 24 Hours */
             under_24_hours: number;
+        };
+        /** AuditRunPage */
+        AuditRunPage: {
+            /** Events */
+            events: components["schemas"]["LedgerEvent"][];
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            next_cursor: components["schemas"]["RunCursor"] | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
+            /** Trace Id */
+            trace_id: string;
         };
         /** DailyVolume */
         DailyVolume: {
@@ -415,6 +455,49 @@ export interface components {
             status: "QUEUED";
         };
         JsonValue: unknown;
+        /** LedgerEvent */
+        LedgerEvent: {
+            /** Actor Id */
+            actor_id: string;
+            /**
+             * Actor Type
+             * @enum {string}
+             */
+            actor_type: "SYSTEM" | "AGENT" | "HUMAN" | "POLICY";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event Type */
+            event_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /** Node */
+            node: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sequence */
+            sequence: number;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+            versions: components["schemas"]["VersionPins"];
+        };
         /** LivenessResponse */
         LivenessResponse: {
             /**
@@ -493,6 +576,16 @@ export interface components {
              */
             status: "ready";
         };
+        /** RunCursor */
+        RunCursor: {
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sequence */
+            sequence: number;
+        };
         /** RunProgress */
         RunProgress: {
             /** Active Node */
@@ -531,6 +624,17 @@ export interface components {
              * @enum {string}
              */
             status: "QUEUED" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
+        };
+        /** VersionPins */
+        VersionPins: {
+            /** Graph Version */
+            graph_version: string;
+            /** Model Version */
+            model_version: string;
+            /** Policy Version */
+            policy_version: string;
+            /** Prompt Version */
+            prompt_version: string;
         };
     };
     responses: never;
@@ -1050,6 +1154,76 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_run_ledger_v1_runs__run_id__ledger_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                after_sequence?: number | null;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditRunPage"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
