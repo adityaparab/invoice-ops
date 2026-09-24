@@ -12,7 +12,7 @@ from invoiceops_agent.schemas.extraction import (
     ExtractionResult,
     ExtractionSuccess,
 )
-from invoiceops_agent.schemas.gate import GateResult
+from invoiceops_agent.schemas.gate import GateOutcome
 from invoiceops_agent.schemas.matching import ERPSnapshot, MatchResult
 from invoiceops_agent.schemas.policy import PolicyResult
 from invoiceops_agent.schemas.similarity import SimilarityResult
@@ -32,7 +32,7 @@ class InvoiceServices(Protocol):
         self, state: InvoiceGraphState
     ) -> tuple[SimilarityResult | None, TaxonomyResult, PolicyResult]: ...
 
-    async def gate(self, state: InvoiceGraphState) -> GateResult: ...
+    async def gate(self, state: InvoiceGraphState) -> GateOutcome: ...
 
     async def triage(self, state: InvoiceGraphState) -> dict[str, JsonValue]: ...
 

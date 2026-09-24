@@ -25,18 +25,23 @@ from invoiceops_agent.schemas.extraction import (
     ExtractionResult,
     InvoiceExtraction,
 )
-from invoiceops_agent.schemas.gate import GateConfig, GateResult
+from invoiceops_agent.schemas.gate import (
+    CompositeGateConfig,
+    CompositeGateResult,
+    GateOutcome,
+)
 from invoiceops_agent.schemas.matching import ERPSnapshot, MatchRequest, MatchResult
 from invoiceops_agent.schemas.policy import PolicyRequest, PolicyResult
 from invoiceops_agent.schemas.similarity import SimilarityRequest, SimilarityResult
 from invoiceops_agent.schemas.validation import ValidationRequest, ValidationResult
 from invoiceops_agent.tools.erp_repository import ERPRepository
-from invoiceops_agent.tools.gate import evaluate_provisional_gate
+from invoiceops_agent.tools.gate import evaluate_composite_gate
 from invoiceops_agent.tools.policy import po_age_exceeded
 
 logger = logging.getLogger(__name__)
 type ConnectionFactory = Callable[[], AbstractAsyncContextManager[psycopg.AsyncConnection[DictRow]]]
 _extraction_adapter: TypeAdapter[ExtractionResult] = TypeAdapter(ExtractionResult)
+_gate_adapter: TypeAdapter[GateOutcome] = TypeAdapter(GateOutcome)
 
 
 class ReplayEvidenceError(Exception):
@@ -137,7 +142,7 @@ class LiveInvoiceServices:
         policy: PolicyNode,
         audit: AuditSink,
         audit_writer: AuditWriter,
-        gate_config: GateConfig | None = None,
+        gate_config: CompositeGateConfig | None = None,
     ) -> None:
         self._connection = connection
         self._extraction = extraction
@@ -150,7 +155,7 @@ class LiveInvoiceServices:
         self._events = EventCache(connection)
         self._transitions = WorkflowTransitions(connection, audit_writer)
         self._policy_config = policy.config
-        self._gate_config = gate_config if gate_config is not None else GateConfig()
+        self._gate_config = gate_config if gate_config is not None else CompositeGateConfig()
 
     async def extract(self, state: InvoiceGraphState) -> ExtractionResult:
         cached = await self._events.read(state, "extraction.completed", "extraction.escalated")
@@ -279,22 +284,23 @@ class LiveInvoiceServices:
         self._require_digest(decision.input_sha256, policy_request, "Policy")
         return similarity, taxonomy, decision
 
-    async def gate(self, state: InvoiceGraphState) -> GateResult:
+    async def gate(self, state: InvoiceGraphState) -> GateOutcome:
+        request = self._gate_request(state)
+        policy = PolicyResult.model_validate(state.policy)
+        self._require_digest(policy.input_sha256, request, "Gate policy inputs")
         cached = await self._events.read(state, "gate.completed")
         if cached is not None:
-            result = GateResult.model_validate(cached)
+            result = _gate_adapter.validate_python(cached)
             self._require_digest(
                 result.extraction_sha256, self._required_extraction(state), "Gate extraction"
             )
-            self._require_digest(
-                result.policy_sha256, PolicyResult.model_validate(state.policy), "Gate policy"
-            )
+            self._require_digest(result.policy_sha256, policy, "Gate policy")
+            if isinstance(result, CompositeGateResult):
+                self._require_digest(
+                    result.match_sha256, self._required_match(state), "Gate matching"
+                )
             return result
-        result = evaluate_provisional_gate(
-            self._required_extraction(state),
-            PolicyResult.model_validate(state.policy),
-            self._gate_config,
-        )
+        result = evaluate_composite_gate(request, policy, self._gate_config)
         await self._audit.append(
             AppendEvent(
                 run_id=state.run_id,
@@ -405,6 +411,24 @@ class LiveInvoiceServices:
         if state.match is None:
             raise ReplayEvidenceError("Matching is unavailable for workflow node")
         return MatchResult.model_validate(state.match)
+
+    @staticmethod
+    def _gate_request(state: InvoiceGraphState) -> PolicyRequest:
+        if state.taxonomy is None:
+            raise ReplayEvidenceError("Taxonomy is unavailable for confidence gating")
+        return PolicyRequest(
+            run_id=state.run_id,
+            invoice_id=state.invoice_id,
+            trace_id=state.trace_id,
+            as_of=state.as_of,
+            extraction=LiveInvoiceServices._required_extraction(state),
+            validation=LiveInvoiceServices._required_validation(state),
+            match=LiveInvoiceServices._required_match(state),
+            taxonomy=TaxonomyResult.model_validate(state.taxonomy),
+            snapshot=ERPSnapshot.model_validate(state.snapshot)
+            if state.snapshot is not None
+            else None,
+        )
 
     @staticmethod
     def _require_digest(expected: str, value: BaseModel, label: str) -> None:

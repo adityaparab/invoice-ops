@@ -25,9 +25,9 @@ The worker reads `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`,
 read a LiteLLM proxy configuration file. `LITELLM_EMBED_MODEL` must name a route that returns one
 384-dimensional vector. If `LITELLM_EXTRACT_MODEL` is empty, extraction uses `LITELLM_MODEL`.
 
-The interim gate defaults to review. An operator may set
-`INVOICEOPS_AUTO_APPROVAL_ENABLED=true` only for a controlled environment; it still requires a
-policy-eligible invoice and at least 0.99 confidence on every observed field. Step 2.7 replaces
-this with the versioned composite gate. Exception triage currently prepares deterministic evidence
-and pauses at HumanReview. The review API and four-eyes control arrive in Phase 3; the graph's
-typed resume command is exercised by offline and Postgres restart tests.
+The [composite gate](CONFIDENCE_GATE.md) now combines observed field confidence, normalized
+three-way match delta, and policy severity at a versioned threshold. A policy finding that requires
+review still overrides the score. Set `INVOICEOPS_AUTO_APPROVAL_ENABLED=false` to disable automatic
+approval during an operational hold. Exception triage prepares deterministic evidence and pauses at
+HumanReview. The review API and four-eyes control arrive in Phase 3; the graph's typed resume
+command is exercised by offline and Postgres restart tests.
