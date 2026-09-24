@@ -4,8 +4,9 @@ Vite, React, TypeScript, Mantine, TanStack Query, and React Router form the
 single-page application shell. The Exception Review screen is connected to the
 queue, detail, and decision endpoints. Dan's dashboard uses the manager-only
 summary endpoint. Maria's Intake screen uploads invoices and shows current
-status. The Agent Run screen follows audited workflow events; Audit and Evals
-Evals follows in plan step 3.10.
+status. The Agent Run screen follows audited workflow events, Priya's Audit
+screen reads the immutable ledger, and Evals reads committed reports under
+`eval/reports/`.
 
 ```sh
 cd frontend
@@ -67,3 +68,9 @@ ledger. Its timeline and ledger table show each event's actor, node, correction
 link, payload, and version pins. The export button fetches all pages into a
 run-scoped JSON file. [Audit read and export semantics](../docs/AUDIT_SCREEN.md)
 describe the consistency boundary.
+
+Priya and the Platform Engineer can inspect versioned evaluation metrics and
+experiment decisions. The current extraction baseline shows exact field F1
+strings and recorded counts; missing per-anomaly confusion and τ sweep data
+are clearly marked until the golden-set harness writes them. See
+[Evals report semantics](../docs/EVALS_SCREEN.md).

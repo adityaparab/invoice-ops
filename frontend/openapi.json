@@ -34,6 +34,46 @@
         "title": "AgingCounts",
         "type": "object"
       },
+      "AnomalyConfusion": {
+        "additionalProperties": false,
+        "properties": {
+          "anomaly_code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Anomaly Code",
+            "type": "string"
+          },
+          "fn": {
+            "minimum": 0.0,
+            "title": "Fn",
+            "type": "integer"
+          },
+          "fp": {
+            "minimum": 0.0,
+            "title": "Fp",
+            "type": "integer"
+          },
+          "tn": {
+            "minimum": 0.0,
+            "title": "Tn",
+            "type": "integer"
+          },
+          "tp": {
+            "minimum": 0.0,
+            "title": "Tp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "anomaly_code",
+          "tp",
+          "fp",
+          "fn",
+          "tn"
+        ],
+        "title": "AnomalyConfusion",
+        "type": "object"
+      },
       "AuditRunPage": {
         "additionalProperties": false,
         "properties": {
@@ -378,6 +418,126 @@
         "title": "DependencyStatuses",
         "type": "object"
       },
+      "EvalDashboard": {
+        "additionalProperties": false,
+        "properties": {
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentEntry"
+            },
+            "maxItems": 200,
+            "title": "Experiments",
+            "type": "array"
+          },
+          "read_at": {
+            "format": "date-time",
+            "title": "Read At",
+            "type": "string"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/EvalReport"
+            },
+            "maxItems": 50,
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reports",
+          "experiments",
+          "read_at"
+        ],
+        "title": "EvalDashboard",
+        "type": "object"
+      },
+      "EvalReport": {
+        "additionalProperties": false,
+        "properties": {
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Caveats",
+            "type": "array"
+          },
+          "dataset_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Dataset Version",
+            "type": "string"
+          },
+          "measured_at": {
+            "format": "date-time",
+            "title": "Measured At",
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRow"
+            },
+            "maxItems": 500,
+            "title": "Metrics",
+            "type": "array"
+          },
+          "model_versions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Model Versions",
+            "type": "array"
+          },
+          "per_anomaly_confusion": {
+            "items": {
+              "$ref": "#/components/schemas/AnomalyConfusion"
+            },
+            "maxItems": 100,
+            "title": "Per Anomaly Confusion",
+            "type": "array"
+          },
+          "report_id": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,99}$",
+            "title": "Report Id",
+            "type": "string"
+          },
+          "report_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Report Version",
+            "type": "string"
+          },
+          "tau_sweep": {
+            "items": {
+              "$ref": "#/components/schemas/TauSweepPoint"
+            },
+            "maxItems": 101,
+            "title": "Tau Sweep",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_id",
+          "report_version",
+          "title",
+          "dataset_version",
+          "measured_at",
+          "model_versions",
+          "metrics",
+          "per_anomaly_confusion",
+          "tau_sweep",
+          "caveats"
+        ],
+        "title": "EvalReport",
+        "type": "object"
+      },
       "ExceptionCount": {
         "additionalProperties": false,
         "properties": {
@@ -398,6 +558,61 @@
           "count"
         ],
         "title": "ExceptionCount",
+        "type": "object"
+      },
+      "ExperimentEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "change": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Change",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "decision": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Decision",
+            "type": "string"
+          },
+          "hypothesis": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,99}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "observation": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Observation",
+            "type": "string"
+          },
+          "report_id": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,99}$",
+            "title": "Report Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "report_id",
+          "date",
+          "hypothesis",
+          "change",
+          "observation",
+          "decision"
+        ],
+        "title": "ExperimentEntry",
         "type": "object"
       },
       "InvoiceDetail": {
@@ -896,6 +1111,100 @@
         "title": "LivenessResponse",
         "type": "object"
       },
+      "MetricRow": {
+        "additionalProperties": false,
+        "properties": {
+          "fn": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fn"
+          },
+          "fp": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fp"
+          },
+          "key": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "sample_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Count"
+          },
+          "scope": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Scope",
+            "type": "string"
+          },
+          "tp": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tp"
+          },
+          "unit": {
+            "enum": [
+              "rate",
+              "usd",
+              "ms",
+              "count"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "scope",
+          "value",
+          "unit"
+        ],
+        "title": "MetricRow",
+        "type": "object"
+      },
       "NodeProgress": {
         "additionalProperties": false,
         "properties": {
@@ -1203,6 +1512,35 @@
         "title": "RunProgress",
         "type": "object"
       },
+      "TauSweepPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "exception_recall": {
+            "title": "Exception Recall",
+            "type": "string"
+          },
+          "false_escalation_rate": {
+            "title": "False Escalation Rate",
+            "type": "string"
+          },
+          "stp_rate": {
+            "title": "Stp Rate",
+            "type": "string"
+          },
+          "threshold": {
+            "title": "Threshold",
+            "type": "string"
+          }
+        },
+        "required": [
+          "threshold",
+          "exception_recall",
+          "false_escalation_rate",
+          "stp_rate"
+        ],
+        "title": "TauSweepPoint",
+        "type": "object"
+      },
       "VersionPins": {
         "additionalProperties": false,
         "properties": {
@@ -1396,6 +1734,62 @@
         "summary": "Get Dashboard",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/v1/evals/reports": {
+      "get": {
+        "operationId": "get_eval_reports_v1_evals_reports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalDashboard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "PersonaToken": []
+          }
+        ],
+        "summary": "Get Eval Reports",
+        "tags": [
+          "evals"
         ]
       }
     },

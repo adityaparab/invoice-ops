@@ -23,6 +23,9 @@ const AgentRun = lazy(() => import("../features/runs/AgentRun").then(
 const Audit = lazy(() => import("../features/audit/Audit").then(
   (module) => ({ default: module.Audit }),
 ));
+const Evals = lazy(() => import("../features/evals/Evals").then(
+  (module) => ({ default: module.Evals }),
+));
 
 function HealthStatus() {
   const health = useQuery({
@@ -86,6 +89,7 @@ function GuardedScreen({ route }: { route: AppRoute }) {
   if (route.path === "/intake") return <Suspense fallback={<Text>Loading intake…</Text>}><Intake /></Suspense>;
   if (route.path === "/runs") return <Suspense fallback={<Text>Loading run…</Text>}><AgentRun /></Suspense>;
   if (route.path === "/audit") return <Suspense fallback={<Text>Loading audit…</Text>}><Audit /></Suspense>;
+  if (route.path === "/evals") return <Suspense fallback={<Text>Loading evals…</Text>}><Evals /></Suspense>;
   return <ScreenPlaceholder route={route} />;
 }
 
