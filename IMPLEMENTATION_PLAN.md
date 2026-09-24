@@ -144,7 +144,7 @@
 - [x] 5.1 Golden dataset builder: 500 invoices = 350 clean (Voxel51 re-labeled + synthetic; 30 hard negatives with rotation/skew/stamps/faint print) + 150 anomalous (10 seeded codes, weighted prevalences); versioned (`golden/v1.0.0`), seed-pinned, held-out split
 - [x] 5.2 `eval/runners/run_pipeline.py` — drives the real Compose stack through the API (not mocks); `--recorded` cassette mode for smoke
 - [x] 5.3 `metrics.py`: exception recall (≥0.98), false-escalation (≤0.05), field F1 (≥0.95; money fields ≥0.97), routing accuracy (≥0.95), STP (≥0.70), cost (≤$0.04/inv), p95 latency (≤45s, N=3 runs)
-- [ ] 5.4 Diagnostics: per-anomaly confusion, per-field/per-tier F1, calibration curve, τ sweep ROC-style curve, LLM-judge triage rubric (judge via gateway, versioned)
+- [x] 5.4 Diagnostics: per-anomaly confusion, per-field/per-tier F1, calibration curve, τ sweep ROC-style curve, LLM-judge triage rubric (judge via gateway, versioned)
 - [ ] 5.5 Report per model class (local-dev vs OpenAI-prod) — one extra tag through the harness
 - [ ] 5.6 `ci_gate.py`: fail PR on any primary metric regressing >0.5% absolute vs main or below floor; PR comment with deltas
 - [ ] 5.7 Versioned reports committed to `eval/reports/`; start the experiment log (hypothesis/change/delta/decision)
@@ -196,7 +196,7 @@ checkbox here.
 | P2 — Match + policy            | Complete    | 2026-09-24   | Deterministic matching, taxonomy, similarity, policy, durable graph, composite gate, and audited retry/DLQ |
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
 | P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
-| P5 — Eval harness + CI gate    | In progress | —            | Golden v1.0.0 dataset built; runner, metrics, diagnostics, reports, and gate remain |
+| P5 — Eval harness + CI gate    | In progress | —            | Golden dataset, Compose runner, primary metrics, and diagnostics implemented; model-class reports, CI gate, and experiment report remain |
 | P6 — ADK variant + ADR         | Not started | —            |                                                           |
 | P7 — Polish                    | Not started | —            |                                                           |
 
@@ -255,3 +255,4 @@ checkbox here.
 | 2026-09-24 | Step 5.1 builds golden/v1.0.0 from 50 newly selected Voxel51 extraction-only images and 450 ERP-backed synthetic images. It pins 350 clean and 150 anomalous cases, 30 visual hard negatives, ten published anomaly counts, a 100/400 development/held-out split, source and document checksums, and a 399-order ERP snapshot. The builder verifies committed manifests byte-for-byte. |
 | 2026-09-24 | Step 5.2 adds an API-driven Compose runner with preflighted document hashes, idempotent uploads, restricted-role golden ERP seeding, a bounded batch worker, and auditor readback. A committed three-call cassette smoke ran in a fresh isolated Compose project and paused at human review with nine ordered ledger events; no live model call was made. |
 | 2026-09-24 | Step 5.3 adds eight primary golden metrics with explicit denominators and coverage. It requires exact injected-code detection, scores only known extraction labels, includes embedding cost in immutable similarity evidence and dashboard totals, and uses three independent live runs for audited auto-approval p95. Recorded smoke and partial selections remain visibly ineligible for release claims; live suite measurements follow after an embedding model route is configured. |
+| 2026-09-24 | Step 5.4 adds per-anomaly confusion, per-field/per-tier extraction F1, score calibration bins, and a policy-preserving τ sweep. A versioned advisory triage rubric calls the existing gateway via an eval-only agent and the optional `LITELLM_JUDGE_MODEL` name; judge output is source- and evidence-bound, with unavailable results kept separate from zero scores. No live model-quality measurement is claimed. |

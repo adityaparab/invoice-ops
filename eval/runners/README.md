@@ -71,5 +71,6 @@ the upload result, upload/worker active latencies, worker route/error type,
 invoice detail, and full auditor
 provenance page. Worker errors still produce an evidence report and a nonzero
 exit status. Score one to three reports with [`eval/metrics.py`](../metrics.py)
-as described in [the evaluation spec](../../docs/EVALUATION.md). Diagnostics
-and the release gate follow in later steps.
+and inspect one report with [`eval/diagnostics.py`](../diagnostics.py), as
+described in [the evaluation spec](../../docs/EVALUATION.md). The release gate
+follows in a later step.
