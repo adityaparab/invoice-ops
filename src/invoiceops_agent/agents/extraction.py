@@ -3,8 +3,10 @@
 import asyncio
 import base64
 import logging
+from functools import partial
 from time import perf_counter
 from typing import Protocol
+from uuid import UUID
 
 from pydantic import BaseModel, ValidationError
 
@@ -50,6 +52,7 @@ from invoiceops_agent.schemas.extraction import (
     ModelInvocation,
     ModelUsage,
 )
+from invoiceops_agent.schemas.ocr import OCRIdentifiers
 from invoiceops_agent.tools.document_errors import (
     DocumentError,
     DocumentUnavailable,
@@ -57,6 +60,7 @@ from invoiceops_agent.tools.document_errors import (
 )
 from invoiceops_agent.tools.document_preflight import PREFLIGHT_VERSION, DocumentPreflight
 from invoiceops_agent.tools.ingestion_schemas import RawDocument
+from invoiceops_agent.tools.ocr_identifiers import OCR_VERSION, reconcile_identifiers
 from invoiceops_agent.tools.raw_document_reader import DocumentReader
 
 logger = logging.getLogger(__name__)
@@ -68,6 +72,12 @@ class ExtractionGateway(Protocol):
     async def complete[T: BaseModel](
         self, request: GatewayRequest, response_model: type[T]
     ) -> GatewayResult[T]: ...
+
+
+class IdentifierOCR(Protocol):
+    async def read(
+        self, document: RawDocument, *, run_id: UUID, trace_id: str
+    ) -> OCRIdentifiers: ...
 
 
 def _context(request: ExtractionRequest, *, repair: bool = False) -> RequestContext:
@@ -132,11 +142,13 @@ class ExtractionAgent:
         preflight: DocumentPreflight,
         gateway: ExtractionGateway,
         audit: AuditSink,
+        identifier_ocr: IdentifierOCR | None = None,
     ) -> None:
         self._reader = reader
         self._preflight = preflight
         self._gateway = gateway
         self._audit = audit
+        self._identifier_ocr = identifier_ocr
 
     async def extract(self, request: ExtractionRequest) -> ExtractionResult:
         started = perf_counter()
@@ -149,12 +161,21 @@ class ExtractionAgent:
         except (GatewayConfigurationError, ValidationError, OSError):
             raise ExtractionConfigurationError(request) from None
         try:
-            result = await self._extract(request, policy, prompts)
+            result, ocr, applied = await self._extract(request, policy, prompts)
             if result.calls:
                 versions = VersionOverrides(
                     model_version=result.calls[-1].model_version,
                     prompt_version=result.calls[-1].prompt_version,
+                    policy_version=OCR_VERSION if self._identifier_ocr is not None else None,
                 )
+            payload: dict[str, object] = {
+                "content_hash": request.content_hash,
+                "preflight_version": PREFLIGHT_VERSION,
+                "result": result.model_dump(mode="json"),
+            }
+            if ocr is not None:
+                payload["identifier_ocr"] = ocr.model_dump(mode="json")
+                payload["identifier_ocr_applied_fields"] = list(applied)
             command = AppendEvent(
                 run_id=request.run_id,
                 invoice_id=request.invoice_id,
@@ -165,11 +186,7 @@ class ExtractionAgent:
                 actor_id="invoiceops-extraction",
                 node="Extract",
                 versions=versions,
-                payload={
-                    "content_hash": request.content_hash,
-                    "preflight_version": PREFLIGHT_VERSION,
-                    "result": result.model_dump(mode="json"),
-                },
+                payload=payload,
             )
             try:
                 await self._audit.append(command, trace_id=request.trace_id)
@@ -199,7 +216,7 @@ class ExtractionAgent:
 
     async def _extract(
         self, request: ExtractionRequest, policy: AliasPolicy, prompts: ExtractionPrompts
-    ) -> ExtractionResult:
+    ) -> tuple[ExtractionResult, OCRIdentifiers | None, tuple[str, ...]]:
         calls: list[ModelInvocation] = []
         try:
             if (
@@ -231,11 +248,11 @@ class ExtractionAgent:
                 ),
             )
         except DocumentUnavailable:
-            return _escalation(request, calls, "DOCUMENT_UNAVAILABLE")
+            return _escalation(request, calls, "DOCUMENT_UNAVAILABLE"), None, ()
         except UnsupportedDocumentFeature:
-            return _escalation(request, calls, "UNSUPPORTED_DOCUMENT")
+            return _escalation(request, calls, "UNSUPPORTED_DOCUMENT"), None, ()
         except DocumentError:
-            return _escalation(request, calls, "INVALID_DOCUMENT")
+            return _escalation(request, calls, "INVALID_DOCUMENT"), None, ()
         for repair in (False, True):
             model_request = _model_request(request, document, prompts, repair=repair)
             try:
@@ -259,7 +276,7 @@ class ExtractionAgent:
                 reason: EscalationReason = (
                     "MALFORMED_MODEL_OUTPUT" if malformed else _gateway_reason(error)
                 )
-                return _escalation(request, calls, reason)
+                return _escalation(request, calls, reason), None, ()
             calls.append(
                 ModelInvocation(
                     model_version=result.provenance.model_version,
@@ -272,11 +289,34 @@ class ExtractionAgent:
                     cost_usd=result.cost_usd,
                 )
             )
-            return ExtractionSuccess(
-                run_id=request.run_id,
-                invoice_id=request.invoice_id,
-                trace_id=request.trace_id,
-                calls=tuple(calls),
-                extraction=result.value,
+            identifier_ocr = self._identifier_ocr
+            observations = None
+            if identifier_ocr is not None:
+                observations = await traced_call(
+                    "tool",
+                    "identifier_ocr",
+                    request,
+                    partial(
+                        identifier_ocr.read,
+                        document,
+                        run_id=request.run_id,
+                        trace_id=request.trace_id,
+                    ),
+                )
+            corrected, applied = (
+                reconcile_identifiers(result.value, observations)
+                if observations is not None
+                else (result.value, ())
+            )
+            return (
+                ExtractionSuccess(
+                    run_id=request.run_id,
+                    invoice_id=request.invoice_id,
+                    trace_id=request.trace_id,
+                    calls=tuple(calls),
+                    extraction=corrected,
+                ),
+                observations,
+                applied,
             )
         raise AssertionError("Two bounded extraction passes must produce an outcome")

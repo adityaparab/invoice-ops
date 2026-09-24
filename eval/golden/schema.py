@@ -33,7 +33,7 @@ class LineLabel(FrozenModel):
     quantity: str
     unit_price: str | None = None
     tax_rate: str | None = None
-    line_total: str
+    line_total: str | None = None
 
 
 class InvoiceLabel(FrozenModel):
@@ -69,8 +69,8 @@ class GoldenSample(FrozenModel):
 
 
 class GoldenManifest(FrozenModel):
-    version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
-    generator_version: Literal["golden-builder@v1"] = "golden-builder@v1"
+    version: Literal["golden/v1.0.0", "golden/v1.0.1"] = "golden/v1.0.1"
+    generator_version: Literal["golden-builder@v1", "golden-builder@v2"] = "golden-builder@v2"
     seed: int
     source_revision: str
     source_metadata_sha256: str

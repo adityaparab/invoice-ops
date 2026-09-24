@@ -92,7 +92,7 @@ def _writer(attempt: RunAttempt, clock: Clock) -> LedgerWriter:
             graph_version=attempt.graph_version,
             model_version="not-applicable@v1",
             prompt_version="not-applicable@v1",
-            policy_version="invoice-retry@v1",
+            policy_version="invoice-retry@v2",
             _env_file=None,
         ),
         clock=clock,

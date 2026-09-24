@@ -10,12 +10,13 @@ import pytest
 from eval.golden.schema import GoldenSample
 from eval.runners.build_smoke_cassettes import OUTPUT, record
 from eval.runners.run_pipeline import (
+    RECORDED_DOCUMENT,
     Compose,
     PipelineRunError,
     load_manifest,
     preflight_documents,
     run_pipeline,
-    schedule_run_waves,
+    schedule_sample_batches,
     select_samples,
 )
 
@@ -95,6 +96,47 @@ def test_recorded_mode_reconstructs_one_development_document_and_uses_real_bound
     assert api.uploaded == [selected[0].sample_id]
 
 
+def test_live_runner_uploads_only_the_batch_it_is_ready_to_process() -> None:
+    manifest, digest = load_manifest()
+    selected = select_samples(manifest, split="development", limit=3)
+    documents = {sample.sample_id: RECORDED_DOCUMENT.read_bytes() for sample in selected}
+    events: list[str] = []
+
+    class OrderedAPI(FakeAPI):
+        def upload(self, sample: GoldenSample, body: bytes) -> IngestionResult:
+            events.append(f"upload:{sample.sample_id}")
+            super().upload(sample, body)
+            index = len(self.uploaded)
+            return IngestionResult(invoice_id=UUID(int=index + 100), run_id=UUID(int=index + 200))
+
+    class OrderedWorker(FakeWorker):
+        def process(
+            self, run_ids: tuple[UUID, ...], *, recorded: bool
+        ) -> dict[UUID, dict[str, str]]:
+            events.append("process")
+            return super().process(run_ids, recorded=recorded)
+
+    run_pipeline(
+        manifest,
+        digest,
+        selected,
+        documents,
+        OrderedAPI(),
+        OrderedWorker(expected_recorded=False),
+        recorded=False,
+        model_class="local-dev",
+        batch_size=1,
+    )
+    assert events == [
+        f"upload:{selected[0].sample_id}",
+        "process",
+        f"upload:{selected[1].sample_id}",
+        "process",
+        f"upload:{selected[2].sample_id}",
+        "process",
+    ]
+
+
 def test_model_class_is_required_before_live_pipeline_side_effects() -> None:
     manifest, digest = load_manifest()
     selected = select_samples(manifest, recorded=True)
@@ -132,17 +174,15 @@ def test_selected_duplicate_cannot_lose_its_parent() -> None:
         select_samples(misordered, split=duplicate.split, limit=1)
 
 
-def test_near_duplicate_parent_finishes_in_an_earlier_worker_wave() -> None:
+def test_near_duplicate_parent_finishes_in_an_earlier_arrival_batch() -> None:
     manifest, _ = load_manifest()
     child = next(sample for sample in manifest.samples if sample.anomaly_codes == ("DUP_NEAR",))
     parent = next(sample for sample in manifest.samples if sample.sample_id == child.parent_id)
-    uploads = (
-        (parent, IngestionResult(invoice_id=UUID(int=1), run_id=UUID(int=2)), 1.0),
-        (child, IngestionResult(invoice_id=UUID(int=3), run_id=UUID(int=4)), 1.0),
-    )
-    assert schedule_run_waves(uploads) == ((UUID(int=2),), (UUID(int=4),))
+    assert schedule_sample_batches((child, parent), 1) == ((parent,), (child,))
     with pytest.raises(PipelineRunError, match="dependencies"):
-        schedule_run_waves(uploads[1:])
+        schedule_sample_batches((child,), 1)
+    with pytest.raises(PipelineRunError, match="batch size"):
+        schedule_sample_batches((parent,), 0)
 
 
 def test_parallel_compose_worker_merges_exactly_one_result_per_run(

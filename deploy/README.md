@@ -1,12 +1,15 @@
 # Local platform
 
-The Compose stack uses digest-pinned, multiarchitecture images. Python runs as a non-root user;
+The Compose stack uses pinned images. MinIO is built locally from the official
+release binary after verifying its published SHA-256 against a checked-in digest;
+the small base image is digest-pinned. Python runs as a non-root user;
 the application image includes production dependencies, the installed package, and migration assets.
 
 From the repository root:
 
 ```bash
 cp .env.example .env
+bash scripts/prepare_minio_image.sh
 docker compose up -d --build --wait
 curl --fail http://localhost:8000/healthz
 curl --fail http://localhost:8000/readyz
@@ -19,6 +22,14 @@ is healthy. It applies Alembic migrations and provisions the `invoiceops_app` lo
 healthy Postgres and MinIO. API readiness checks query Postgres and the MinIO readiness endpoint.
 The seed entry point inserts the seed-pinned synthetic ERP fixture and treats an exact rerun as a
 no-op.
+
+The MinIO preparation command needs Docker and the authenticated `gh` CLI. It
+downloads only the pinned `RELEASE.2025-09-07T16-13-09Z` binary for the Docker
+engine's architecture, verifies both the official checksum and the checked-in
+digest, and builds `invoiceops-minio:RELEASE.2025-09-07T16-13-09Z`. Run it once
+before the first Compose start or integration tests on a new machine. CI runs
+the same command. This avoids an unavailable Quay registry image while keeping
+the server release fixed.
 
 The database owner credentials (`POSTGRES_USER` and `POSTGRES_PASSWORD`) configure Postgres and
 the migration connection only. The API receives a separate runtime DSN for `invoiceops_app`, which

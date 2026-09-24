@@ -89,6 +89,47 @@ async def test_malformed_model_output_preserves_observed_cost_and_budget_evidenc
 
 
 @pytest.mark.asyncio
+async def test_invalid_sdk_envelope_preserves_response_cost() -> None:
+    payload = fixture_response().json()
+    payload["choices"] = "invalid"
+    transport = httpx2.MockTransport(
+        lambda _: httpx2.Response(200, headers={"x-litellm-response-cost": "0.002"}, json=payload)
+    )
+    async with GatewayClient(settings(), transport=transport) as client:
+        with pytest.raises(InvalidGatewayResponse) as captured:
+            await client.complete(request(), SyntheticExtraction)
+    assert captured.value.cost_usd == Decimal("0.002")
+
+
+@pytest.mark.asyncio
+async def test_invalid_embedding_envelope_preserves_response_cost() -> None:
+    transport = httpx2.MockTransport(
+        lambda _: httpx2.Response(
+            200,
+            headers={"x-litellm-response-cost": "0.003"},
+            json={
+                "object": "list",
+                "model": "synthetic-embed",
+                "data": [{"object": "embedding", "index": 1, "embedding": [0.1, 0.2]}],
+                "usage": {"prompt_tokens": 2, "total_tokens": 2},
+            },
+        )
+    )
+    context = request()
+    async with GatewayClient(settings(), transport=transport) as client:
+        with pytest.raises(InvalidGatewayResponse) as captured:
+            await client.embed(
+                EmbeddingRequest(
+                    run_id=context.run_id,
+                    trace_id=context.trace_id,
+                    prompt_version="embed@v1",
+                    inputs=("synthetic",),
+                )
+            )
+    assert captured.value.cost_usd == Decimal("0.003")
+
+
+@pytest.mark.asyncio
 async def test_alias_cassette_replays_with_the_configured_model_name() -> None:
     configured = settings(
         aliases={
@@ -405,6 +446,40 @@ async def test_infrastructure_fallback_stays_within_sensitivity_tier() -> None:
     assert result.provenance.model_version == "restricted-fallback"
     assert telemetry.events[0].route_index == 1
     assert clock.delays == [0.5]
+
+
+@pytest.mark.asyncio
+async def test_default_deadline_reserves_time_for_fallback_after_slow_primary() -> None:
+    clock = FakeClock()
+    seen: list[str] = []
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        model = json.loads(call.content)["model"]
+        seen.append(model)
+        if model == "slow-primary":
+            clock.now += 40
+            raise httpx2.ConnectError("synthetic provider unavailable", request=call)
+        return fixture_response()
+
+    configured = settings(
+        aliases={
+            "extract-vision": {
+                "model_version": "slow-primary",
+                "model_name": "slow-primary",
+                "fallback_model_name": "responsive-fallback",
+            }
+        }
+    )
+    assert configured.request_timeout_seconds >= 40
+    async with GatewayClient(
+        configured,
+        transport=httpx2.MockTransport(handle),
+        clock=clock,
+        sleep=clock.sleep,
+    ) as client:
+        result = await client.complete(request(), SyntheticExtraction)
+    assert seen == ["slow-primary"] * 2 + ["responsive-fallback"]
+    assert result.provenance.model_version == "responsive-fallback"
 
 
 @pytest.mark.asyncio

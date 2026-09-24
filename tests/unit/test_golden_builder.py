@@ -8,6 +8,7 @@ from random import Random
 from uuid import UUID
 
 import pytest
+from eval.datasets.voxel51 import CorpusSample
 from eval.golden.builder import (
     ANOMALY_WEIGHTS,
     EFFECTS,
@@ -15,6 +16,7 @@ from eval.golden.builder import (
     _near_duplicate,
     _synthetic_case,
     _upstream_money,
+    relabel_voxel,
     render_invoice,
 )
 from eval.golden.schema import AnomalyCode, BaselineReport, GoldenERP, GoldenManifest, InvoiceLabel
@@ -141,12 +143,38 @@ def test_invalid_upstream_money_is_rejected() -> None:
         _upstream_money("not-money")
 
 
+def test_voxel_gross_row_annotation_is_not_labeled_as_net_line_total() -> None:
+    source = CorpusSample.model_validate(
+        {
+            "_id": {"$oid": "a" * 24},
+            "filepath": "data/synthetic.jpg",
+            "json_annotation": json.dumps(
+                {
+                    "invoice": {
+                        "seller_name": "Synthetic Seller",
+                        "invoice_number": "SYN-001",
+                        "invoice_date": "09/24/2026",
+                    },
+                    "items": [
+                        {"description": "Synthetic line", "quantity": "2", "total_price": "12.00"}
+                    ],
+                    "subtotal": {"tax": "2.00"},
+                    "payment_instructions": {},
+                }
+            ),
+        }
+    )
+    label = relabel_voxel(source)
+    assert label.line_items[0].line_total is None
+    assert label.tax_amount == "2.00"
+
+
 def test_committed_manifest_has_no_baseline_or_split_leakage() -> None:
     root = Path(__file__).resolve().parents[2]
     manifest = GoldenManifest.model_validate_json(
-        (root / "eval/golden/v1.0.0/manifest.json").read_bytes()
+        (root / "eval/golden/v1.0.1/manifest.json").read_bytes()
     )
-    erp = GoldenERP.model_validate_json((root / "eval/golden/v1.0.0/erp.json").read_bytes())
+    erp = GoldenERP.model_validate_json((root / "eval/golden/v1.0.1/erp.json").read_bytes())
     baseline = BaselineReport.model_validate(
         json.loads((root / "eval/reports/voxel51-v1.json").read_text())
     )
@@ -180,12 +208,41 @@ def test_committed_manifest_has_no_baseline_or_split_leakage() -> None:
     )
 
 
+def test_corrected_manifest_preserves_documents_and_splits() -> None:
+    root = Path(__file__).resolve().parents[2] / "eval/golden"
+    assert (root / "v1.0.0/erp.json").read_bytes() == (root / "v1.0.1/erp.json").read_bytes()
+    old = GoldenManifest.model_validate_json((root / "v1.0.0/manifest.json").read_bytes())
+    new = GoldenManifest.model_validate_json((root / "v1.0.1/manifest.json").read_bytes())
+    old_by_id = {sample.sample_id: sample for sample in old.samples}
+    new_by_id = {sample.sample_id: sample for sample in new.samples}
+    assert old_by_id.keys() == new_by_id.keys()
+    for sample_id, before in old_by_id.items():
+        after = new_by_id[sample_id]
+        assert before.document_sha256 == after.document_sha256
+        assert before.split == after.split
+        assert before.anomaly_codes == after.anomaly_codes
+        assert before.source_sha256 == after.source_sha256
+        if before.origin == "synthetic":
+            assert before.label == after.label
+        else:
+            assert (
+                before.label.model_copy(update={"line_items": after.label.line_items})
+                == after.label
+            )
+            assert len(before.label.line_items) == len(after.label.line_items)
+            for old_line, new_line in zip(
+                before.label.line_items, after.label.line_items, strict=True
+            ):
+                assert new_line.line_total is None
+                assert old_line.model_copy(update={"line_total": None}) == new_line
+
+
 def test_every_synthetic_clean_label_passes_deterministic_checks() -> None:
     root = Path(__file__).resolve().parents[2]
     manifest = GoldenManifest.model_validate_json(
-        (root / "eval/golden/v1.0.0/manifest.json").read_bytes()
+        (root / "eval/golden/v1.0.1/manifest.json").read_bytes()
     )
-    erp = GoldenERP.model_validate_json((root / "eval/golden/v1.0.0/erp.json").read_bytes())
+    erp = GoldenERP.model_validate_json((root / "eval/golden/v1.0.1/erp.json").read_bytes())
     orders = {order.po_number: order for order in erp.purchase_orders}
     vendors = {vendor.id: vendor for vendor in erp.vendors}
     receipts = {receipt.purchase_order_id: receipt for receipt in erp.goods_receipts}
@@ -229,9 +286,9 @@ def test_every_synthetic_clean_label_passes_deterministic_checks() -> None:
 def test_every_injected_code_is_supported_by_taxonomy_evidence() -> None:
     root = Path(__file__).resolve().parents[2]
     manifest = GoldenManifest.model_validate_json(
-        (root / "eval/golden/v1.0.0/manifest.json").read_bytes()
+        (root / "eval/golden/v1.0.1/manifest.json").read_bytes()
     )
-    erp = GoldenERP.model_validate_json((root / "eval/golden/v1.0.0/erp.json").read_bytes())
+    erp = GoldenERP.model_validate_json((root / "eval/golden/v1.0.1/erp.json").read_bytes())
     orders = {order.po_number: order for order in erp.purchase_orders}
     vendors = {vendor.id: vendor for vendor in erp.vendors}
     receipts = {receipt.purchase_order_id: receipt for receipt in erp.goods_receipts}

@@ -9,6 +9,9 @@ RUN uv sync --locked --no-dev --no-editable
 
 FROM ghcr.io/astral-sh/uv:0.11.25-python3.12-trixie-slim@sha256:1b9ee30381d729b07044688631ba4473c72db5c048a5f2a504c40186e65efb86 AS runtime
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system --gid 10001 invoiceops \
     && useradd --system --uid 10001 --gid invoiceops --no-log-init --create-home invoiceops
 WORKDIR /app

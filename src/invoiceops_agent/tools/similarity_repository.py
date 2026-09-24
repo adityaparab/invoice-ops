@@ -38,10 +38,17 @@ class SimilarityRepository:
         vector: EmbeddingVector,
         model_version: str,
         config: SimilarityConfig,
+        *,
+        invoice_number: str | None,
+        po_number: str | None,
     ) -> SimilarityCandidate | None:
-        """Serialize decisions per model so concurrent invoices see prior inserts."""
+        """Compare only matching invoice and PO identities under one model lock."""
         started = perf_counter()
         literal = _vector_literal(vector)
+        invoice_identity = (
+            invoice_number.strip() if invoice_number and invoice_number.strip() else None
+        )
+        po_identity = po_number.strip() if po_number and po_number.strip() else None
         try:
             async with asyncio.timeout(10):
                 await connection.execute(
@@ -51,9 +58,10 @@ class SimilarityRepository:
                     "WITH comparable AS MATERIALIZED ("
                     "SELECT id, embedding <=> %s::vector AS distance "
                     "FROM public.invoices WHERE id <> %s AND embedding IS NOT NULL "
-                    "AND embedding_model_version = %s) "
+                    "AND embedding_model_version = %s "
+                    "AND invoice_number = %s AND po_number = %s) "
                     "SELECT id, distance FROM comparable ORDER BY distance, id LIMIT 1",
-                    (literal, invoice_id, model_version),
+                    (literal, invoice_id, model_version, invoice_identity, po_identity),
                 )
                 row = await cursor.fetchone()
                 candidate = (
@@ -63,8 +71,9 @@ class SimilarityRepository:
                 )
                 updated = await connection.execute(
                     "UPDATE public.invoices SET embedding = %s::vector, "
-                    "embedding_model_version = %s WHERE id = %s RETURNING id",
-                    (literal, model_version, invoice_id),
+                    "embedding_model_version = %s, invoice_number = %s, po_number = %s "
+                    "WHERE id = %s RETURNING id",
+                    (literal, model_version, invoice_identity, po_identity, invoice_id),
                 )
                 if await updated.fetchone() is None:
                     raise InvoiceNotFound("Invoice for similarity decision is missing")

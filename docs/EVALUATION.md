@@ -1,9 +1,13 @@
 # Golden evaluation dataset
 
 Step 5.1 publishes `golden/v1.0.0`, a seed-pinned set of 500 synthetic invoice images and
-their typed labels. The builder makes no model calls. [The committed manifest](../eval/golden/v1.0.0/manifest.json)
+their typed labels. Step 5.8 corrects gross Voxel51 row labels in
+[`golden/v1.0.1`](../eval/golden/v1.0.1/manifest.json). All 500 sample IDs, image hashes,
+splits, anomaly assignments, and ERP records remain identical. Voxel51 only annotates
+gross row amounts, so its net `line_total` labels are now unknown. The builder makes no
+model calls. [The committed manifest](../eval/golden/v1.0.1/manifest.json)
 records each document checksum, its split, origin, extraction labels, quality tier, and
-expected anomaly code. [The ERP snapshot](../eval/golden/v1.0.0/erp.json) supplies the
+expected anomaly code. [The ERP snapshot](../eval/golden/v1.0.1/erp.json) supplies the
 purchase orders and receipts for the synthetic routing cases. Document PNGs live in
 ignored `eval/data/` and are recreated from the locked toolchain.
 
@@ -20,6 +24,13 @@ and anomaly code. Exact and near-duplicate pairs remain in the same split. The
 32-image Voxel51 extraction baseline is excluded by source ID, path, and source
 hash; it is never part of either golden split. The development split may guide
 prompt or threshold work; the held-out split is reserved for release evaluation.
+
+The `identifier-ocr@v1` correction was calibrated only on the 90 synthetic
+development documents: anchored bank text was exact in 90/90 and PO text in
+89/90 before the 70/100 confidence cutoff. The one wrong PO was below that
+cutoff. These observations justify a development experiment, not an accuracy
+claim about real invoices or the held-out split. The OCR candidate and its
+application are preserved in each extraction audit event.
 
 The source images are synthetic. [Voxel51's dataset card](https://huggingface.co/datasets/Voxel51/high-quality-invoice-images-for-ocr)
 declares ODbL and attributes the original Kaggle corpus and FiftyOne port. This
@@ -58,9 +69,9 @@ uv run python -m eval.golden.prepare
 ```
 
 The command downloads 50 public source JPEGs, normalizes them to metadata-free
-PNGs, renders the 450 synthetic PNGs, and writes `eval/data/golden/v1.0.0/`.
+PNGs, renders the 450 synthetic PNGs, and writes `eval/data/golden/v1.0.1/`.
 It then verifies the generated manifests byte-for-byte against the committed
-copies in `eval/golden/v1.0.0/`. Existing artifact bytes are never overwritten.
+copies in `eval/golden/v1.0.1/`. Existing artifact bytes are never overwritten.
 The pinned Python dependencies include Pillow; the manifest records its and
 zlib's versions. Source downloads have size and elapsed-time bounds. A failed
 or interrupted build cannot publish a complete manifest with unverified bytes.
@@ -102,6 +113,11 @@ headers are present and valid. Billed malformed responses and conservative
 triage fallbacks keep their observed cost in the ledger. Missing headers stay
 unavailable rather than becoming zero.
 
+The live runner uploads up to `--workers` invoices, processes that batch, and only then
+uploads the next. Duplicate children wait for their parent batch. This bounded arrival
+schedule measures service latency without adding an artificial wait from uploading the
+entire corpus ahead of the workers.
+
 P95 latency uses the elapsed time between `ingest.accepted` and
 `approval.auto_granted`, from three distinct
 live runs over the same selection. It is unavailable when a run lacks an
@@ -118,7 +134,7 @@ uv run python -m eval.metrics \
   --input eval/data/runs/live-1.json \
   --input eval/data/runs/live-2.json \
   --input eval/data/runs/live-3.json \
-  --output eval/data/metrics/golden-v1.0.0.json
+  --output eval/data/metrics/golden-v1.0.1.json
 ```
 
 ## Diagnostics and triage rubric
@@ -192,7 +208,7 @@ split and label eligibility keep that limitation visible in every report.
 ## CI regression gate
 
 On each pull request, the gate compares the committed
-`eval/reports/golden-v1.0.0-openai-prod.json` report with the same path at the
+`eval/reports/golden-v1.0.1-openai-prod.json` report with the same path at the
 PR's base commit. Both reports must be tagged `openai-prod`, cover the same
 golden manifest, contain all eight observed primary metrics, and represent
 three independent live runs of all 500 invoices. It rejects a candidate below
@@ -211,7 +227,7 @@ model-quality gate. To compare complete reports locally:
 ```bash
 uv run python -m eval.ci_gate \
   --baseline eval/data/metrics/main-openai-prod.json \
-  --candidate eval/reports/golden-v1.0.0-openai-prod.json \
+  --candidate eval/reports/golden-v1.0.1-openai-prod.json \
   --comment-file eval/data/runs/ci-gate.md \
   --output eval/data/runs/ci-gate.json
 ```
@@ -249,4 +265,35 @@ false escalation was 1.0000; 48 near-duplicate and 26 bank-change false
 positives explain much of the review volume. Three repeated-citation failures
 made cost incomplete, and p95 requires two more independent runs. The triage
 citation bug is fixed in the same step. Step 5.8 addresses the remaining
-development failures before a full live release baseline is considered.
+development failures in the full live release baseline below.
+
+## First full live baseline
+
+The [primary report](../eval/reports/golden-v1.0.1-openai-prod.json) covers all
+500 golden invoices in three independent live Compose runs. Each run used a fresh
+Postgres and MinIO volume, eight workers, the same application build, and the
+configured LiteLLM URL and key with the `gpt5nano`, `gpt4omini`, and
+`gemini-embedding` model-name routes. None had a worker error; all 500 invoices
+in each run had complete billed-cost evidence. The
+[diagnostic report](../eval/reports/diagnostics-golden-v1.0.1-openai-prod.json)
+scores the first run's per-code, per-field, calibration, and threshold detail;
+the [Evals-screen report](../eval/reports/pipeline-eval-openai-prod-release-v1.json)
+combines that diagnostic with the three-run primary score. The raw run reports
+remain in ignored `eval/data/runs/`.
+
+| Primary measure | First-run result | Floor |
+| --- | ---: | ---: |
+| Exception recall | 149/150 = 0.9933 | ≥0.98 |
+| Clean false escalation | 10/300 = 0.0333 | ≤0.05 |
+| Field F1 | 0.9732 | ≥0.95 |
+| Money-field F1 | 0.9913 | ≥0.97 |
+| Routing accuracy | 440/450 = 0.9778 | ≥0.95 |
+| Straight-through approval | 290/300 = 0.9667 | ≥0.70 |
+| Billed cost per invoice | $0.00122339726, 500/500 covered | ≤$0.04 |
+| Audited auto-approval p95 | 30.872508 seconds, 875 observations across three runs | ≤45 seconds |
+
+The second and third runs detected 149/150 and 150/150 anomalies respectively;
+their clean false-escalation counts were 8/300 and 7/300. The primary report
+uses the first run for quality and cost measures and pools audited latencies
+from all three. These are measurements on synthetic and re-labeled public
+invoices under the stated model routes, not estimates for real vendor traffic.

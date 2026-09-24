@@ -36,7 +36,7 @@ class ModelClassComparison(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
     version: Literal["model-class-comparison@v1"] = "model-class-comparison@v1"
-    dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
+    dataset_version: Literal["golden/v1.0.0", "golden/v1.0.1"] = "golden/v1.0.1"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     scored_at: AwareDatetime
     complete_comparison: bool
@@ -113,6 +113,7 @@ def compare_model_classes(
         else ("At least one class lacks a complete three-run, 500-invoice live measurement.",)
     )
     return ModelClassComparison(
+        dataset_version=local.dataset_version,
         manifest_sha256=local.manifest_sha256,
         scored_at=max(local.scored_at, production.scored_at),
         complete_comparison=complete,

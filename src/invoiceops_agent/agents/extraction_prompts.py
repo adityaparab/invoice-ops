@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from importlib.resources import files
 
-PROMPT_VERSION = "extract@v1"
-REPAIR_PROMPT_VERSION = "extract@v1+repair@v1"
+PROMPT_VERSION = "extract@v4"
+REPAIR_PROMPT_VERSION = "extract@v4+repair@v1"
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class ExtractionPrompts:
 def _read_prompts() -> ExtractionPrompts:
     root = files("invoiceops_agent.prompts")
     return ExtractionPrompts(
-        base=root.joinpath("extract_v1.md").read_text(encoding="utf-8"),
+        base=root.joinpath("extract_v4.md").read_text(encoding="utf-8"),
         repair=root.joinpath("extract_repair_v1.md").read_text(encoding="utf-8"),
     )
 

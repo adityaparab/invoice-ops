@@ -34,7 +34,7 @@ def test_code_confusion_fields_calibration_and_tau_sweep() -> None:
     clean = _sample()
     anomaly = _sample(code="PRICE_MM")
     duplicate = _sample(code="DUP_EXACT")
-    clean_record = _with_gate(_record(clean, route="ARCHIVE"), "0.90", "AUTO_APPROVE_ELIGIBLE")
+    clean_record = _with_gate(_record(clean, route="AUTO_APPROVE"), "0.90", "AUTO_APPROVE_ELIGIBLE")
     anomaly_record = _with_gate(
         _record(anomaly, route="REVIEW", code="PRICE_MM"),
         "0.80",

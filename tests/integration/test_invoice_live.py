@@ -256,7 +256,7 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
     ]
     gate_event = next(event for event in page.events if event.event_type == "gate.completed")
     audited_gate = CompositeGateResult.model_validate(gate_event.payload)
-    assert gate_event.versions.policy_version == "composite-gate@v1"
+    assert gate_event.versions.policy_version == "composite-gate@v2"
     assert audited_gate.score == 1
     assert audited_gate.route == ("AUTO_APPROVE" if auto_approval else "REVIEW")
     if not auto_approval:

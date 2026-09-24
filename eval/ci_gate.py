@@ -43,7 +43,7 @@ class GateResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
     version: Literal["ci-gate@v1"] = "ci-gate@v1"
-    dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
+    dataset_version: Literal["golden/v1.0.0", "golden/v1.0.1"] = "golden/v1.0.1"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     model_class: ModelClass
     baseline_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -134,6 +134,7 @@ def compare_reports(
             )
         )
     return GateResult(
+        dataset_version=candidate.dataset_version,
         manifest_sha256=candidate.manifest_sha256,
         model_class=candidate.model_class,
         baseline_sha256=baseline_sha256,
@@ -187,7 +188,7 @@ def main() -> int:
     parser.add_argument(
         "--model-class", choices=("local-dev", "openai-prod"), default="openai-prod"
     )
-    parser.add_argument("--manifest", type=Path, default=Path("eval/golden/v1.0.0/manifest.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("eval/golden/v1.0.1/manifest.json"))
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:

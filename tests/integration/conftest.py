@@ -20,10 +20,7 @@ POSTGRES_IMAGE = (
     "pgvector/pgvector:0.8.6-pg16"
     "@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b"
 )
-MINIO_IMAGE = (
-    "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"
-    "@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e"
-)
+MINIO_IMAGE = "invoiceops-minio:RELEASE.2025-09-07T16-13-09Z"
 # These credentials exist only in disposable containers; no application secrets are used.
 TEST_USER = "invoiceops_test"
 TEST_PASSWORD = "synthetic-test-password"

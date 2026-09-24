@@ -1,0 +1,957 @@
+{
+  "report_id": "golden-openai-prod-development-v07",
+  "report_version": "pipeline-eval@v1",
+  "title": "OpenAI production model route: 100-case development v0.7",
+  "dataset_version": "golden/v1.0.1",
+  "measured_at": "2026-09-24T13:25:17.979965Z",
+  "model_versions": [
+    "gemini-embedding",
+    "gpt4omini",
+    "gpt5nano"
+  ],
+  "metrics": [
+    {
+      "key": "exception_recall",
+      "label": "Exception recall",
+      "scope": "primary",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 30,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "false_escalation_rate",
+      "label": "False escalation rate",
+      "scope": "primary",
+      "value": "0",
+      "unit": "rate",
+      "sample_count": 60,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "field_f1",
+      "label": "Field f1",
+      "scope": "primary",
+      "value": "0.965301873698820263705759889",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "money_field_f1",
+      "label": "Money field f1",
+      "scope": "primary",
+      "value": "0.9886363636363636363636363636",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "routing_accuracy",
+      "label": "Routing accuracy",
+      "scope": "primary",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 90,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "stp_rate",
+      "label": "Stp rate",
+      "scope": "primary",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 60,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "cost_per_invoice_usd",
+      "label": "Cost per invoice usd",
+      "scope": "primary",
+      "value": "0.0012457488",
+      "unit": "usd",
+      "sample_count": 100,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "vendor_name-f1",
+      "label": "Vendor name F1",
+      "scope": "tier A",
+      "value": "0.9456521739130434782608695652",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 10
+    },
+    {
+      "key": "vendor_tax_id-f1",
+      "label": "Vendor tax id F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "bank_account_iban-f1",
+      "label": "Bank account iban F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "invoice_number-f1",
+      "label": "Invoice number F1",
+      "scope": "tier A",
+      "value": "0.9347826086956521739130434783",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 86,
+      "fp": 1,
+      "fn": 11
+    },
+    {
+      "key": "po_number-f1",
+      "label": "Po number F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "currency-f1",
+      "label": "Currency F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "invoice_date-f1",
+      "label": "Invoice date F1",
+      "scope": "tier A",
+      "value": "0.9456521739130434782608695652",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 10
+    },
+    {
+      "key": "due_date-f1",
+      "label": "Due date F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "subtotal-f1",
+      "label": "Subtotal F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "tax_amount-f1",
+      "label": "Tax amount F1",
+      "scope": "tier A",
+      "value": "0.9456521739130434782608695652",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 10
+    },
+    {
+      "key": "total_amount-f1",
+      "label": "Total amount F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "line_description-f1",
+      "label": "Line description F1",
+      "scope": "tier A",
+      "value": "0.8571428571428571428571428571",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 29
+    },
+    {
+      "key": "line_quantity-f1",
+      "label": "Line quantity F1",
+      "scope": "tier A",
+      "value": "0.8571428571428571428571428571",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 29
+    },
+    {
+      "key": "line_unit_price-f1",
+      "label": "Line unit price F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "line_tax_rate-f1",
+      "label": "Line tax rate F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "line_line_total-f1",
+      "label": "Line line total F1",
+      "scope": "tier A",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 97,
+      "tp": 87,
+      "fp": 0,
+      "fn": 0
+    }
+  ],
+  "per_anomaly_confusion": [
+    {
+      "anomaly_code": "DUP_EXACT",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "DUP_NEAR",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "PRICE_MM",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "QTY_MM",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "MISSING_PO",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "BANK_CHANGE",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "CCY_MM",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "TAX_ERR",
+      "tp": 3,
+      "fp": 3,
+      "fn": 0,
+      "tn": 84
+    },
+    {
+      "anomaly_code": "MATH_ERR",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    },
+    {
+      "anomaly_code": "STALE_PO",
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 87
+    }
+  ],
+  "tau_sweep": [
+    {
+      "threshold": "0",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.01",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.02",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.03",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.04",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.05",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.06",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.07",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.08",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.09",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.1",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.11",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.12",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.13",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.14",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.15",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.16",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.17",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.18",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.19",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.2",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.21",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.22",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.23",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.24",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.25",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.26",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.27",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.28",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.29",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.3",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.31",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.32",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.33",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.34",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.35",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.36",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.37",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.38",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.39",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.4",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.41",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.42",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.43",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.44",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.45",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.46",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.47",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.48",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.49",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.5",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.51",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.52",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.53",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.54",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.55",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.56",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.57",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.58",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.59",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.6",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.61",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.62",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.63",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.64",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.65",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.66",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.67",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.68",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.69",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.7",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.71",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.72",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.73",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.74",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.75",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.76",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.77",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.78",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.79",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.8",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.81",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.82",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.83",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.84",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.85",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.86",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.87",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.88",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.89",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.9",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.91",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.92",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.93",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.94",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.95",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0",
+      "stp_rate": "1"
+    },
+    {
+      "threshold": "0.96",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0.06666666666666666666666666667",
+      "stp_rate": "0.9333333333333333333333333333"
+    },
+    {
+      "threshold": "0.97",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0.1",
+      "stp_rate": "0.9"
+    },
+    {
+      "threshold": "0.98",
+      "exception_recall": "0.9666666666666666666666666667",
+      "false_escalation_rate": "0.3166666666666666666666666667",
+      "stp_rate": "0.6833333333333333333333333333"
+    },
+    {
+      "threshold": "0.99",
+      "exception_recall": "0.9666666666666666666666666667",
+      "false_escalation_rate": "0.3166666666666666666666666667",
+      "stp_rate": "0.6833333333333333333333333333"
+    },
+    {
+      "threshold": "1",
+      "exception_recall": "1",
+      "false_escalation_rate": "0.5166666666666666666666666667",
+      "stp_rate": "0.4833333333333333333333333333"
+    }
+  ],
+  "caveats": [
+    "Selected samples do not cover the full 500-invoice golden suite.",
+    "P95 requires three independent live runs with auditable auto-approve timestamps.",
+    "Composite score is a ranking signal, not a calibrated probability.",
+    "Threshold sweep measures routing safety; primary recall requires injected codes.",
+    "Partial selections are diagnostic only.",
+    "The versioned triage judge was not run for this report.",
+    "Development or partial measurement; release floors were not validated.",
+    "Unavailable primary measures: p95_latency_seconds."
+  ]
+}

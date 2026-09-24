@@ -34,7 +34,7 @@ class PipelineReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     version: Literal["pipeline-run@v1", "pipeline-run@v2"] = "pipeline-run@v2"
-    dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
+    dataset_version: Literal["golden/v1.0.0", "golden/v1.0.1"] = "golden/v1.0.1"
     mode: Literal["live", "recorded"]
     model_class: ModelClass | None = None
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")

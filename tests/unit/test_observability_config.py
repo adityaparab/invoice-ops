@@ -29,7 +29,15 @@ def test_optional_observability_services_are_pinned_and_isolated() -> None:
     for name in observability:
         service = services[name]
         assert service["profiles"] == ["observability"]
-        assert "@sha256:" in service["image"]
+        if name == "langfuse-minio":
+            assert service["image"] == services["minio"]["image"]
+            assert service["pull_policy"] == "never"
+        else:
+            assert "@sha256:" in service["image"]
+    minio_dockerfile = (ROOT / "deploy/minio/Dockerfile").read_text(encoding="utf-8")
+    minio_preparation = (ROOT / "scripts/prepare_minio_image.sh").read_text(encoding="utf-8")
+    assert "@sha256:" in minio_dockerfile
+    assert "expected_sha256=" in minio_preparation
     assert "litellm" not in services
     assert not list((ROOT / "deploy" / "litellm").glob("*.yaml"))
     worker_env = services["invoice-worker"]["environment"]

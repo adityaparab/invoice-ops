@@ -18,6 +18,12 @@ Fallback starts only after bounded connection, timeout, 408/429, or 5xx retries 
 route. Quota/billing denial, guard rejection, invalid model output, and other business failures
 escalate without fallback. The total deadline covers every route. Successful provenance and traces
 pin the route that actually answered. See [ADR 0010](../adr/0010-public-cache-and-gateway-hardening.md).
+The internal logical-call deadline is 120 seconds, with each provider attempt
+bounded to 40 seconds. This gives a slow primary more time to answer. Retry
+stops early when another attempt would leave less than one full attempt for a
+named fallback; routes without fallback retain up to three attempts. These are
+application retry limits, not additional
+LiteLLM proxy configuration or environment variables.
 
 Semantic caching requires `semantic_cache=True`, `sensitivity="public"`, a `public_` scenario,
 text-only content, and an injected cache store. No invoice workflow request opts in. The gateway
@@ -38,6 +44,9 @@ is an advisory signal scoped to a gateway client, not a hard spend limit: missin
 infrastructure failures, and another worker's calls cannot be counted. Enforce hard key or team
 budgets in the operator's LiteLLM deployment. The optional Prometheus stack has a rule named
 `InvoiceOpsObservedRunBudgetExceeded` for the event.
+Response cost is read before SDK envelope parsing, so a billed invalid envelope
+retains its observed cost in the failure audit. A response without usable cost
+headers remains unknown and cannot satisfy the evaluation cost-coverage gate.
 
 The workflow reads only `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`, and
 task-specific `LITELLM_*_MODEL` names from `.env`. `GatewaySettings` is an explicitly constructed

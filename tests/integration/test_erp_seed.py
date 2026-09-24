@@ -17,7 +17,7 @@ from invoiceops_agent.tools.erp_generator import generate_fixture
 from invoiceops_agent.tools.erp_seed import ERPSeedConflict, seed_fixture, seed_golden_fixture
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
-GOLDEN_ERP_PATH = Path(__file__).resolve().parents[2] / "eval/golden/v1.0.0/erp.json"
+GOLDEN_ERP_PATH = Path(__file__).resolve().parents[2] / "eval/golden/v1.0.1/erp.json"
 
 
 async def test_seed_is_atomic_repeatable_and_detects_drift(

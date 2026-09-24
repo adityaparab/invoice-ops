@@ -19,7 +19,7 @@ class SimilarityModel(BaseModel):
 
 
 class SimilarityConfig(SimilarityModel):
-    version: str = Field(default="near-duplicate@v1", pattern=r"^[A-Za-z0-9@_.:-]{1,128}$")
+    version: str = Field(default="near-duplicate@v2", pattern=r"^[A-Za-z0-9@_.:-]{1,128}$")
     minimum_cosine_similarity: ExactDecimal = Field(default=Decimal("0.95"), ge=0, le=1)
 
 

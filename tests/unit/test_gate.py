@@ -4,6 +4,7 @@ from decimal import Decimal, localcontext
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
+from tests.unit.matching_support import matching_request, snapshot_for
 from tests.unit.policy_support import policy_request
 
 from invoiceops_agent.schemas.gate import (
@@ -17,6 +18,7 @@ from invoiceops_agent.tools.gate import (
     evaluate_provisional_gate,
     normalized_match_delta,
 )
+from invoiceops_agent.tools.matching import match_invoice
 from invoiceops_agent.tools.policy import evaluate_policy
 
 pytestmark = pytest.mark.unit
@@ -89,7 +91,7 @@ def test_policy_block_and_operator_disable_override_high_score() -> None:
 
 def test_match_delta_is_bounded_and_unknown_comparison_abstains() -> None:
     request = policy_request()
-    check = request.match.numeric_checks[0]
+    check = next(item for item in request.match.numeric_checks if item.rule == "equal")
     changed = check.model_copy(
         update={
             "expected": Decimal(100),
@@ -121,6 +123,17 @@ def test_match_delta_is_bounded_and_unknown_comparison_abstains() -> None:
         )
         == 1
     )
+
+
+def test_valid_partial_receipt_shortfall_does_not_reduce_match_confidence() -> None:
+    snapshot = snapshot_for("PARTIALLY_RECEIVED")
+    match = match_invoice(matching_request(snapshot, received_only=True))
+    assert match.status == "PASS"
+    assert any(
+        check.rule == "at_most" and check.difference is not None and check.difference < 0
+        for check in match.numeric_checks
+    )
+    assert normalized_match_delta(match, Decimal(1)) == 0
 
 
 def test_versioned_weights_reject_floats_and_bad_sum() -> None:

@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=Path("eval/data/golden/v1.0.0"))
+    parser.add_argument("--output", type=Path, default=Path("eval/data/golden/v1.0.1"))
     parser.add_argument(
         "--metadata", type=Path, default=Path("eval/data/golden-source/samples.json")
     )
     parser.add_argument("--seed", type=int, default=20260827)
-    parser.add_argument("--report-dir", type=Path, default=Path("eval/golden/v1.0.0"))
+    parser.add_argument("--report-dir", type=Path, default=Path("eval/golden/v1.0.1"))
     args = parser.parse_args()
     configure_logging()
     logging.getLogger("httpx").setLevel(logging.WARNING)

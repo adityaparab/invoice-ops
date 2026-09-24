@@ -1,0 +1,38 @@
+{
+  "alias": "extract-vision",
+  "scenario": "extract_malformed_schema_repair",
+  "prompt_version": "extract@v2+repair@v1",
+  "request_sha256": "6ca6b782199ae35521cb7e6964c07f39e4a9a110089e601d2a6c49a0481a261a",
+  "format_version": 2,
+  "outcomes": [
+    {
+      "kind": "response",
+      "status_code": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "id": "chatcmpl-synthetic-extraction",
+        "object": "chat.completion",
+        "created": 1790164800,
+        "model": "synthetic-extraction-model-v1",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+              "role": "assistant",
+              "content": "invalid-json",
+              "refusal": null
+            }
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 1000,
+          "completion_tokens": 200,
+          "total_tokens": 1200
+        }
+      }
+    }
+  ]
+}

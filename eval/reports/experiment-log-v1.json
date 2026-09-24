@@ -18,6 +18,33 @@
       "change": "Ran the live Compose pipeline with gpt4omini for extraction and triage, gemini-embedding at 384 dimensions, JSON-object responses, and triage@v2; published the exact primary and diagnostic outputs.",
       "observation": "Exception recall was 0.9667, false escalation 1.0000, field F1 0.9310, money F1 0.9571, routing accuracy 0.3000, and STP 0.0000. Cost and p95 were unavailable: three runs dead-lettered after duplicate triage citations and only one live repetition exists. DUP_NEAR had 48 false positives; BANK_CHANGE had 26. Clean IBAN OCR frequently dropped a zero, and even otherwise eligible clean cases scored below the 0.95 confidence threshold.",
       "decision": "Treat v0.1 as a development baseline only. Fix repeated citation IDs, tighten near-duplicate identity checks, improve bank-field extraction, and tune the confidence gate on development evidence before a held-out, three-run release baseline. Keep the CI quality gate dormant until all eight full-suite measures are observed and pass floors."
+    },
+    {
+      "id": "golden-openai-prod-development-v06-2026-09-24",
+      "report_id": "golden-openai-prod-development-v06",
+      "date": "2026-09-24",
+      "hypothesis": "Identity-constrained similarity, a directional match-delta gate, literal amount and tax-rate transcription, and bounded identifier OCR can resolve the measured development failures without weakening a quality floor.",
+      "change": "Corrected 50 Voxel51 gross-versus-net labels in golden/v1.0.1 without changing any image, split, anomaly, or ERP record; versioned similarity and gate policies; added extract@v2-v4 and identifier-ocr@v1; aligned gateway, graph, and running-lease deadlines; reran the real 100-case development split with GPT-5 nano, GPT-4o mini, and a named Gemini embedding route.",
+      "observation": "The complete v0.6 run had 30/30 injected anomalies detected, 0/60 clean false escalations, 90/90 correct routes, 60/60 clean auto-approvals, field F1 0.9785, money F1 0.9944, and cost evidence for 100/100 at $0.0012015817 per invoice. One-run audited auto-approval p95 was 31.1 seconds. Earlier v0.4 missed one printed TAX_ERR rate; v0.5 corrected recall but three public-image workers hit the shorter graph deadline. V0.6 had no worker errors.",
+      "decision": "Proceed to three independent 500-invoice live runs. Development metrics and a single-run latency are diagnostic only; activate the CI quality gate only if the complete release report observes and passes all eight primary floors."
+    },
+    {
+      "id": "golden-openai-prod-development-v07-2026-09-24",
+      "report_id": "golden-openai-prod-development-v07",
+      "date": "2026-09-24",
+      "hypothesis": "A longer bounded provider attempt will reduce duplicate extraction calls without changing business decisions, while preserving one full fallback attempt inside the 120-second logical-call deadline.",
+      "change": "The first complete 500-case run at eight workers passed seven observed quality and cost floors but had one-run auto-approval p95 of 53.2 seconds: 19 clean cases required two or three extraction attempts after a 30-second attempt bound. Increased the application attempt bound to 40 seconds and stopped primary retries when another would consume the named fallback's remaining slot. Repeated the 100-case development split at eight workers with unchanged models and prompts.",
+      "observation": "The v0.7 development run again had 30/30 exception recall, 0/60 clean reviews, 90/90 correct routes, 60/60 auto-approvals, field F1 0.9653, money F1 0.9886, and 100/100 cost coverage. All 60 clean extractions used one gateway attempt; their one-run audited p95 was 32.4 seconds. The first full run was diagnostic only because its latency exceeded the 45-second floor and p95 requires three runs.",
+      "decision": "Repeat three independent 500-case live runs on the corrected runtime. Publish the release baseline and activate CI only if the pooled audited p95 and every other primary metric pass their unchanged floors."
+    },
+    {
+      "id": "golden-openai-prod-release-v1-2026-09-24",
+      "report_id": "golden-openai-prod-release-v1",
+      "date": "2026-09-24",
+      "hypothesis": "The corrected extraction, deterministic routing, bounded retries, and cost capture will meet all eight unchanged release floors over the full 500-case golden set and three independent live runs.",
+      "change": "Ran the golden/v1.0.1 corpus three times in fresh Compose stacks at eight workers with the same GPT-5 nano extraction, GPT-4o mini triage, and Gemini embedding model routes. Preserved billed cost before parsing invalid gateway envelopes. Published a complete three-run primary report and a first-run diagnostic report for the CI gate and Evals screen.",
+      "observation": "All three runs completed 500/500 cases without worker errors and with billed cost evidence for 500/500 cases each. The first run had 149/150 exception recall, 10/300 clean false escalations, 440/450 correct routes, 290/300 clean auto-approvals, field F1 0.9732, money F1 0.9913, and $0.00122339726 per invoice. The second and third runs had 149/150 and 150/150 exception recall respectively. Pooled audited auto-approval p95 was 30.872508 seconds over 875 of 900 eligible clean arrivals. All eight release floors passed.",
+      "decision": "Accept this as the first full OpenAI-production-route live baseline and activate the CI quality gate. Keep the raw run evidence locally and the compact primary, diagnostic, and Evals-screen reports versioned in the repository."
     }
   ]
 }

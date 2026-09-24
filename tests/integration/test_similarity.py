@@ -70,12 +70,23 @@ def _seed_second(
     )
 
 
-def _request(invoice_id: UUID, run_id: UUID) -> SimilarityRequest:
+def _request(
+    invoice_id: UUID, run_id: UUID, *, invoice_number: str | None = None
+) -> SimilarityRequest:
+    extraction = matching_request(snapshot_for()).extraction
+    if invoice_number is not None:
+        extraction = extraction.model_copy(
+            update={
+                "invoice_number": extraction.invoice_number.model_copy(
+                    update={"value": invoice_number}
+                )
+            }
+        )
     return SimilarityRequest(
         run_id=run_id,
         invoice_id=invoice_id,
         trace_id="f" * 32,
-        extraction=matching_request(snapshot_for()).extraction,
+        extraction=extraction,
     )
 
 
@@ -123,6 +134,29 @@ async def test_pgvector_near_duplicate_and_model_isolation(
     assert decision.gateway_cost_usd == Decimal("0.002")
     assert decision.input_tokens == 10
     assert SimilarityResult.model_validate(page.events[0].payload) == decision
+
+
+async def test_similar_template_with_different_invoice_identity_is_not_duplicate(
+    migrated_database: psycopg.Connection[tuple[object, ...]], ledger_runtime_dsn: str
+) -> None:
+    _seed_second(migrated_database, SECOND_INVOICE, SECOND_RUN, "b")
+    vector = (1.0, *(0.0 for _ in range(383)))
+    agent = NearDuplicateAgent(
+        FakeEmbeddingGateway(vector), lambda: runtime_connection(ledger_runtime_dsn), writer()
+    )
+    assert (await agent.detect(_request(INVOICE_ID, RUN_ID))).status == "NO_MATCH"
+    result = await agent.detect(_request(SECOND_INVOICE, SECOND_RUN, invoice_number="OTHER-INV"))
+    assert result.status == "NO_MATCH"
+    async with runtime_connection(ledger_runtime_dsn) as connection:
+        row = await (
+            await connection.execute(
+                "SELECT invoice_number, po_number FROM invoices WHERE id = %s", (SECOND_INVOICE,)
+            )
+        ).fetchone()
+    assert row == {
+        "invoice_number": "OTHER-INV",
+        "po_number": matching_request(snapshot_for()).extraction.po_number.value,
+    }
 
 
 async def test_invalid_embedding_does_not_write_or_audit(

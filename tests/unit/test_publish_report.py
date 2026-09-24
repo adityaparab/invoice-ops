@@ -14,7 +14,7 @@ pytestmark = pytest.mark.unit
 def _sources() -> tuple[PrimaryMetricsReport, DiagnosticReport]:
     sample = _sample()
     pipelines = tuple(
-        _report((_record(sample, route="ARCHIVE", run_number=index),), offset_minutes=index)
+        _report((_record(sample, route="AUTO_APPROVE", run_number=index),), offset_minutes=index)
         for index in range(3)
     )
     return (
@@ -33,7 +33,7 @@ def test_partial_publication_preserves_latency_units_and_missing_measurements() 
     )
     by_key = {row.key: row for row in report.metrics}
     assert report.report_version == "pipeline-eval@v1"
-    assert report.dataset_version == "golden/v1.0.0"
+    assert report.dataset_version == "golden/v1.0.1"
     assert by_key["p95_latency_ms"].value == 5000
     assert by_key["p95_latency_ms"].unit == "ms"
     assert "exception_recall" not in by_key

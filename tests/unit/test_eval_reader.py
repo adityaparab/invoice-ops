@@ -19,25 +19,32 @@ async def test_committed_reports_distinguish_measured_development_evidence() -> 
     reader = FileEvalReader(ApiSettings(eval_reports_dir=ROOT / "eval/reports"), clock=lambda: NOW)
     dashboard = await reader.dashboard()
     assert dashboard.read_at == NOW
-    assert len(dashboard.reports) == 2
-    development = dashboard.reports[0]
+    reports = {report.report_id: report for report in dashboard.reports}
+    assert len(reports) >= 3
+    development = reports["golden-openai-prod-development-v01"]
     assert development.report_id == "golden-openai-prod-development-v01"
     assert development.report_version == "pipeline-eval@v1"
     assert any(row.key == "exception_recall" and row.value > 0 for row in development.metrics)
     assert all(row.key != "cost_per_invoice_usd" for row in development.metrics)
     assert len(development.per_anomaly_confusion) == 10
     assert any("partial" in caveat.lower() for caveat in development.caveats)
-    report = dashboard.reports[1]
+    improved = reports["golden-openai-prod-development-v06"]
+    assert next(row for row in improved.metrics if row.key == "exception_recall").value == 1
+    assert next(row for row in improved.metrics if row.key == "cost_per_invoice_usd").value > 0
+    assert any("partial" in caveat.lower() for caveat in improved.caveats)
+    report = reports["extraction-baseline-v1"]
     assert report.report_version == "extraction-baseline@v1"
     assert report.metrics[0].key == "micro-f1"
     assert report.metrics[0].value == Decimal("0.7226")
     assert report.metrics[0].sample_count == 512
     assert report.per_anomaly_confusion == []
     assert report.tau_sweep == []
-    assert len(dashboard.experiments) == 2
-    assert {row.report_id for row in dashboard.experiments} == {
+    assert len(dashboard.experiments) >= 3
+    assert {row.report_id for row in dashboard.experiments} <= set(reports)
+    assert {row.report_id for row in dashboard.experiments} >= {
         report.report_id,
         development.report_id,
+        improved.report_id,
     }
     assert '"value":"0.7226"' in dashboard.model_dump_json()
 

@@ -89,7 +89,7 @@ class PrimaryMetricsReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
     version: Literal["primary-metrics@v1", "primary-metrics@v2"] = "primary-metrics@v2"
-    dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
+    dataset_version: Literal["golden/v1.0.0", "golden/v1.0.1"] = "golden/v1.0.1"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     mode: Literal["live", "recorded"]
     model_class: ModelClass | None = None
@@ -255,8 +255,8 @@ def _cost_amount(value: object) -> Decimal | None:
 def _auto_approved(record: RunRecord) -> bool:
     events = {event.event_type for event in record.provenance.events}
     return (
-        record.route == "ARCHIVE"
-        and record.detail.invoice.status == "ARCHIVED"
+        record.route == "AUTO_APPROVE"
+        and record.detail.invoice.status == "APPROVED"
         and "approval.auto_granted" in events
         and not any(event.startswith("review.") for event in events)
     )
@@ -499,6 +499,7 @@ def score_primary_metrics(
         )
     return PrimaryMetricsReport(
         version="primary-metrics@v2" if first.model_class else "primary-metrics@v1",
+        dataset_version=manifest.version,
         manifest_sha256=manifest_sha256,
         mode=first.mode,
         model_class=first.model_class,
@@ -539,7 +540,7 @@ def score_primary_metrics(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("eval/golden/v1.0.0/manifest.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("eval/golden/v1.0.1/manifest.json"))
     parser.add_argument("--input", type=Path, action="append", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()

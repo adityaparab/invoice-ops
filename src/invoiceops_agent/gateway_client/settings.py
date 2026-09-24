@@ -67,8 +67,8 @@ class GatewaySettings(BaseModel):
     base_url: HttpUrl
     api_key: SecretStr
     aliases: dict[ModelAlias, AliasPolicy] = Field(min_length=1)
-    request_timeout_seconds: float = Field(default=30, gt=0, le=300, allow_inf_nan=False)
-    total_timeout_seconds: float = Field(default=60, gt=0, le=600, allow_inf_nan=False)
+    request_timeout_seconds: float = Field(default=40, gt=0, le=300, allow_inf_nan=False)
+    total_timeout_seconds: float = Field(default=120, gt=0, le=600, allow_inf_nan=False)
     max_attempts: int = Field(default=3, ge=1, le=6)
     backoff_seconds: float = Field(default=0.5, ge=0, le=30, allow_inf_nan=False)
     max_retry_delay_seconds: float = Field(default=10, gt=0, le=120, allow_inf_nan=False)
