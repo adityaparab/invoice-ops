@@ -3,6 +3,7 @@
 import hashlib
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 import pytest
@@ -11,10 +12,16 @@ from eval.metrics import MetricEvidenceError, _field_counts, score_primary_metri
 from eval.runners.build_smoke_cassettes import _extraction
 from eval.runners.run_pipeline import load_manifest
 from eval.runners.schema import PipelineReport, RunRecord
+from pydantic import JsonValue
 
-from invoiceops_agent.api.schemas.invoice_read import InvoiceDetail, InvoiceSummary
+from invoiceops_agent.api.schemas.invoice_read import (
+    InvoiceDetail,
+    InvoiceStatus,
+    InvoiceSummary,
+    RunStatus,
+)
 from invoiceops_agent.api.schemas.provenance import InvoiceProvenancePage
-from invoiceops_agent.ledger.schemas import LedgerEvent
+from invoiceops_agent.ledger.schemas import LedgerEvent, VersionPins
 from invoiceops_agent.tools.ingestion_schemas import IngestionResult
 
 pytestmark = pytest.mark.unit
@@ -34,7 +41,7 @@ def _sample(*, code: str | None = None) -> GoldenSample:
 def _record(
     sample: GoldenSample,
     *,
-    route: str,
+    route: Literal["ARCHIVE", "REVIEW", "REJECT"],
     code: str | None = None,
     elapsed_seconds: int = 5,
     embedding_cost: str | None = "0.002",
@@ -44,7 +51,7 @@ def _record(
     identity = hashlib.sha256(f"{sample.sample_id}:{run_number}".encode()).digest()
     invoice_id = UUID(bytes=identity[:16])
     run_id = UUID(bytes=identity[16:])
-    evidence: dict[str, dict[str, object]] = {}
+    evidence: dict[str, dict[str, JsonValue]] = {}
     if not duplicate:
         evidence = {
             "extraction.completed": {
@@ -59,16 +66,35 @@ def _record(
         }
         if route == "REVIEW":
             evidence["triage.prepared"] = {"triage": {"cost_usd": "0.003"}}
-    status = "ARCHIVED" if route == "ARCHIVE" else "NEEDS_REVIEW"
-    events = [LedgerEvent.model_construct(event_type="ingest.accepted", created_at=START)]
-    if route == "ARCHIVE":
-        events.append(
-            LedgerEvent.model_construct(
-                event_type="approval.auto_granted",
-                created_at=START + timedelta(seconds=elapsed_seconds),
-            )
+    status: InvoiceStatus = "ARCHIVED" if route == "ARCHIVE" else "NEEDS_REVIEW"
+    run_status: RunStatus = "COMPLETED" if route == "ARCHIVE" else "PAUSED"
+    versions = VersionPins(
+        graph_version="synthetic-graph@v1",
+        model_version="synthetic-model@v1",
+        prompt_version="synthetic-prompt@v1",
+        policy_version="synthetic-policy@v1",
+    )
+
+    def event(sequence: int, event_type: str, created_at: datetime) -> LedgerEvent:
+        return LedgerEvent(
+            id=UUID(int=sequence),
+            run_id=run_id,
+            invoice_id=invoice_id,
+            sequence=sequence,
+            event_type=event_type,
+            actor_type="SYSTEM",
+            actor_id="synthetic-metrics-test",
+            payload={},
+            node=None,
+            supersedes_id=None,
+            versions=versions,
+            created_at=created_at,
         )
-    return RunRecord.model_construct(
+
+    events = [event(1, "ingest.accepted", START)]
+    if route == "ARCHIVE":
+        events.append(event(2, "approval.auto_granted", START + timedelta(seconds=elapsed_seconds)))
+    return RunRecord(
         sample_id=sample.sample_id,
         split=sample.split,
         expected_codes=sample.anomaly_codes,
@@ -79,19 +105,39 @@ def _record(
         replayed_before_worker=False,
         route=route,
         worker_error_type=None,
-        detail=InvoiceDetail.model_construct(
-            invoice=InvoiceSummary.model_construct(id=invoice_id, status=status),
+        detail=InvoiceDetail(
+            invoice=InvoiceSummary(
+                id=invoice_id,
+                run_id=run_id,
+                status=status,
+                run_status=run_status,
+                source="UPLOAD",
+                content_type="image/png",
+                created_at=START,
+            ),
+            exception=None,
             evidence=evidence,
+            read_at=START,
         ),
-        provenance=InvoiceProvenancePage.model_construct(events=events),
+        provenance=InvoiceProvenancePage(
+            invoice_id=invoice_id,
+            status=status,
+            source="UPLOAD",
+            created_at=START,
+            events=events,
+            next_cursor=None,
+        ),
     )
 
 
 def _report(
-    records: tuple[RunRecord, ...], *, offset_minutes: int, mode: str = "live"
+    records: tuple[RunRecord, ...],
+    *,
+    offset_minutes: int,
+    mode: Literal["live", "recorded"] = "live",
 ) -> PipelineReport:
     started = START + timedelta(minutes=offset_minutes)
-    return PipelineReport.model_construct(
+    return PipelineReport(
         mode=mode,
         manifest_sha256=MANIFEST_SHA,
         started_at=started,
