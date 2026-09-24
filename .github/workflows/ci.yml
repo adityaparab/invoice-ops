@@ -225,7 +225,7 @@ jobs:
           assert sample["detail"]["invoice"]["run_status"] == "PAUSED"
           assert sample["worker_error_type"] is None
           assert sample["replayed_before_worker"] is False
-          assert [event["event_type"] for event in sample["provenance"]["events"] == [
+          assert [event["event_type"] for event in sample["provenance"]["events"]] == [
               "ingest.accepted", "extraction.completed", "validation.completed",
               "matching.completed", "similarity.completed", "classification.completed",
               "policy.completed", "gate.completed", "triage.prepared",
