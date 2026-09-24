@@ -68,12 +68,13 @@ class FakeAPI:
 
 
 class FakeWorker:
-    def __init__(self) -> None:
+    def __init__(self, *, expected_recorded: bool = True) -> None:
         self.run_ids: tuple[UUID, ...] = ()
+        self.expected_recorded = expected_recorded
 
     def process(self, run_ids: tuple[UUID, ...], *, recorded: bool) -> dict[UUID, dict[str, str]]:
         self.run_ids = run_ids
-        assert recorded
+        assert recorded == self.expected_recorded
         return {run_id: {"run_id": str(run_id), "route": "ARCHIVE"} for run_id in run_ids}
 
 
@@ -89,6 +90,27 @@ def test_recorded_mode_reconstructs_one_development_document_and_uses_real_bound
     assert not report.samples[0].replayed_before_worker
     assert worker.run_ids == (UUID(int=1),)
     assert api.uploaded == [selected[0].sample_id]
+
+
+def test_model_class_is_required_before_live_pipeline_side_effects() -> None:
+    manifest, digest = load_manifest()
+    selected = select_samples(manifest, recorded=True)
+    documents = preflight_documents(Path("unused"), selected, recorded=True)
+    api, worker = FakeAPI(), FakeWorker()
+    with pytest.raises(PipelineRunError, match="model class"):
+        run_pipeline(manifest, digest, selected, documents, api, worker, recorded=False)
+    assert api.uploaded == [] and worker.run_ids == ()
+    live = run_pipeline(
+        manifest,
+        digest,
+        selected,
+        documents,
+        api,
+        FakeWorker(expected_recorded=False),
+        recorded=False,
+        model_class="local-dev",
+    )
+    assert live.version == "pipeline-run@v2" and live.model_class == "local-dev"
 
 
 def test_selected_duplicate_cannot_lose_its_parent() -> None:

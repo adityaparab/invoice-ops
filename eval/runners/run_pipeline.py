@@ -17,7 +17,7 @@ from pydantic import Field, SecretStr, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from eval.golden.schema import GoldenManifest, GoldenSample
-from eval.runners.schema import PipelineReport, RunRecord, utc_now
+from eval.runners.schema import ModelClass, PipelineReport, RunRecord, utc_now
 from invoiceops_agent.agents.near_duplicate_settings import LiteLLMWorkflowSettings
 from invoiceops_agent.api.schemas.invoice_read import InvoiceDetail
 from invoiceops_agent.api.schemas.provenance import InvoiceProvenancePage
@@ -273,7 +273,10 @@ def run_pipeline(
     worker: Worker,
     *,
     recorded: bool,
+    model_class: ModelClass | None = None,
 ) -> PipelineReport:
+    if recorded != (model_class is None):
+        raise PipelineRunError("Live runs require a model class; recorded smoke cannot claim one")
     started = utc_now()
     api.ready()
     uploads: list[tuple[GoldenSample, IngestionResult, float]] = []
@@ -326,6 +329,7 @@ def run_pipeline(
         )
     return PipelineReport(
         mode="recorded" if recorded else "live",
+        model_class=model_class,
         manifest_sha256=manifest_sha256,
         started_at=started,
         completed_at=utc_now(),
@@ -339,6 +343,7 @@ def main() -> int:
     parser.add_argument("--split", choices=("all", "development", "held_out"), default="all")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--recorded", action="store_true")
+    parser.add_argument("--model-class", choices=("local-dev", "openai-prod"))
     parser.add_argument("--no-start", action="store_true")
     parser.add_argument("--project-name")
     parser.add_argument("--worker-timeout", type=int, default=18000)
@@ -346,6 +351,10 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:
+        if args.recorded and args.model_class is not None:
+            raise PipelineRunError("Recorded smoke cannot claim a model class")
+        if not args.recorded and args.model_class is None:
+            raise PipelineRunError("Live evaluation requires --model-class")
         settings = EvalSettings()
         try:
             if args.recorded:
@@ -375,9 +384,12 @@ def main() -> int:
                 api,
                 compose,
                 recorded=args.recorded,
+                model_class=args.model_class,
             )
         output = args.output or Path(
-            f"eval/data/runs/golden-v1.0.0-{report.started_at.strftime('%Y%m%dT%H%M%SZ')}.json"
+            "eval/data/runs/golden-v1.0.0-"
+            f"{report.model_class or 'recorded'}-"
+            f"{report.started_at.strftime('%Y%m%dT%H%M%SZ')}.json"
         )
         output.parent.mkdir(parents=True, exist_ok=True)
         write_new_artifact(output, (report.model_dump_json(indent=2) + "\n").encode())

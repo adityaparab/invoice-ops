@@ -149,6 +149,34 @@ uv run python -m eval.diagnostics \
   --output eval/data/diagnostics/live-1.json
 ```
 
+## Model-class reports
+
+Step 5.5 requires an explicit `local-dev` or `openai-prod` tag on every new
+live pipeline run. This is an operator-declared experiment label. Configure
+the direct LiteLLM URL, key, and model-name variables for the intended class
+before each run; the tag does not silently reroute a model. Each pipeline,
+primary-metric, diagnostic, and triage-judge report carries that class. The
+primary report also lists the gateway model versions pinned by audited model
+events. Historical v1 reports without a class remain readable but cannot
+claim a complete class measurement.
+
+Score three independent live runs for each class with `eval.metrics`, then
+compare the resulting metric reports:
+
+```bash
+uv run python -m eval.model_classes \
+  --local eval/data/metrics/local-dev.json \
+  --production eval/data/metrics/openai-prod.json \
+  --output eval/data/metrics/model-class-comparison.json
+```
+
+The comparison pins both source report checksums, requires the same golden
+manifest and selected sample count, preserves unavailable values, and shows
+`openai-prod minus local-dev` for each primary metric. It marks itself complete
+only when both classes have full 500-invoice, three-run live reports with all
+eight primary measurements observed. No class-level results are inferred from
+the recorded smoke.
+
 The synthetic documents use one line item and repeated template structure;
 those constraints limit claims about real invoice diversity. The published
 split and label eligibility keep that limitation visible in every report.

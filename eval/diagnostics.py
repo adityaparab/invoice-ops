@@ -14,7 +14,7 @@ from eval.golden.schema import AnomalyCode, GoldenManifest, GoldenSample
 from eval.judge_triage import TriageJudgeReport, triage_requests
 from eval.metrics import FieldCounts, MetricEvidenceError, _codes, _extraction, score_fields
 from eval.metrics import score_primary_metrics as validate_primary_report
-from eval.runners.schema import PipelineReport, RunRecord
+from eval.runners.schema import ModelClass, PipelineReport, RunRecord
 from invoiceops_agent.artifacts import write_new_artifact
 from invoiceops_agent.schemas.common import model_digest
 from invoiceops_agent.schemas.eval_judge import TriageJudgeResult
@@ -81,10 +81,11 @@ class JudgeSummary(DiagnosticModel):
 
 
 class DiagnosticReport(DiagnosticModel):
-    version: Literal["golden-diagnostics@v1"] = "golden-diagnostics@v1"
+    version: Literal["golden-diagnostics@v1", "golden-diagnostics@v2"] = "golden-diagnostics@v2"
     dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     mode: Literal["live", "recorded"]
+    model_class: ModelClass | None = None
     sample_count: int = Field(ge=1, le=500)
     anomaly_confusion: tuple[AnomalyConfusion, ...]
     field_by_tier: tuple[FieldDiagnostic, ...]
@@ -242,6 +243,7 @@ def _judge_summary(
         return None
     if (
         judge_report.manifest_sha256 != manifest_sha256
+        or judge_report.model_class != pipeline.model_class
         or judge_report.source_report_sha256 != pipeline_sha256
     ):
         raise MetricEvidenceError("Judge report does not belong to this pipeline report")
@@ -298,8 +300,10 @@ def score_diagnostics(
     elif judge.scored_count < judge.eligible_count:
         caveats.append("Triage judge coverage is incomplete.")
     return DiagnosticReport(
+        version="golden-diagnostics@v2" if pipeline.model_class else "golden-diagnostics@v1",
         manifest_sha256=manifest_sha256,
         mode=pipeline.mode,
+        model_class=pipeline.model_class,
         sample_count=len(samples),
         anomaly_confusion=confusion(samples, records),
         field_by_tier=field_by_tier(samples, records),

@@ -139,6 +139,7 @@ def _report(
     started = START + timedelta(minutes=offset_minutes)
     return PipelineReport(
         mode=mode,
+        model_class="local-dev" if mode == "live" else None,
         manifest_sha256=MANIFEST_SHA,
         started_at=started,
         completed_at=started + timedelta(minutes=1),
@@ -179,6 +180,7 @@ def test_primary_rates_cost_and_three_run_event_latency() -> None:
     }
     scored = score_primary_metrics(MANIFEST, MANIFEST_SHA, reports)
     assert not scored.complete_suite
+    assert scored.model_class == "local-dev"
     assert scored.sample_count == 3
     assert scored.metrics[0].evidence_count == 2
     assert next(metric for metric in scored.metrics if metric.key == "field_f1").sample_count == 2

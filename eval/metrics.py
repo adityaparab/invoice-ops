@@ -15,7 +15,7 @@ from typing import Literal, NamedTuple
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from eval.golden.schema import GoldenManifest, GoldenSample, InvoiceLabel
-from eval.runners.schema import PipelineReport, RunRecord
+from eval.runners.schema import ModelClass, PipelineReport, RunRecord
 from invoiceops_agent.artifacts import write_new_artifact
 from invoiceops_agent.schemas.extraction import InvoiceExtraction
 
@@ -88,10 +88,12 @@ class PrimaryMetric(BaseModel):
 class PrimaryMetricsReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
-    version: Literal["primary-metrics@v1"] = "primary-metrics@v1"
+    version: Literal["primary-metrics@v1", "primary-metrics@v2"] = "primary-metrics@v2"
     dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     mode: Literal["live", "recorded"]
+    model_class: ModelClass | None = None
+    model_versions: tuple[str, ...] = Field(default=(), max_length=50)
     report_count: int = Field(ge=1, le=3)
     sample_count: int = Field(ge=1, le=500)
     complete_suite: bool
@@ -345,6 +347,7 @@ def score_primary_metrics(
         report.manifest_sha256 != manifest_sha256
         or report.dataset_version != manifest.version
         or report.mode != first.mode
+        or report.model_class != first.model_class
         or {record.sample_id for record in report.samples} != selected
         or len(report.samples) != len(selected)
         for report in reports
@@ -484,6 +487,8 @@ def score_primary_metrics(
         caveats.append(
             "Recorded cassettes are pipeline smoke evidence, not model quality evidence."
         )
+    if first.mode == "live" and first.model_class is None:
+        caveats.append("Historical live report has no declared model class.")
     if len(selected) != len(ids):
         caveats.append("Selected samples do not cover the full 500-invoice golden suite.")
     if len(observed_costs) != len(first.samples):
@@ -493,13 +498,33 @@ def score_primary_metrics(
             "P95 requires three independent live runs with auditable auto-approve timestamps."
         )
     return PrimaryMetricsReport(
+        version="primary-metrics@v2" if first.model_class else "primary-metrics@v1",
         manifest_sha256=manifest_sha256,
         mode=first.mode,
+        model_class=first.model_class,
+        model_versions=tuple(
+            sorted(
+                {
+                    event.versions.model_version
+                    for report in reports
+                    for record in report.samples
+                    for event in record.provenance.events
+                    if event.event_type
+                    in {
+                        "extraction.completed",
+                        "extraction.escalated",
+                        "similarity.completed",
+                        "triage.prepared",
+                    }
+                }
+            )
+        ),
         report_count=len(reports),
         sample_count=len(selected),
         complete_suite=(
             len(selected) == len(ids)
             and first.mode == "live"
+            and first.model_class is not None
             and all(
                 not record.worker_error_type and not record.replayed_before_worker
                 for report in reports

@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
-from eval.runners.schema import PipelineReport, RunRecord
+from eval.runners.schema import ModelClass, PipelineReport, RunRecord
 from invoiceops_agent.agents.eval_judge import EvalJudgeAgent, JudgeGateway
 from invoiceops_agent.agents.eval_judge_settings import LiteLLMJudgeSettings
 from invoiceops_agent.artifacts import write_new_artifact
@@ -26,8 +26,9 @@ CODE_LIST = TypeAdapter(tuple[ExceptionCode, ...])
 class TriageJudgeReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
-    version: Literal["triage-judge-report@v1"] = "triage-judge-report@v1"
+    version: Literal["triage-judge-report@v1", "triage-judge-report@v2"] = "triage-judge-report@v2"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    model_class: ModelClass | None = None
     source_report_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     scored_at: AwareDatetime
     eligible_count: int = Field(ge=0, le=500)
@@ -91,7 +92,9 @@ async def judge_pipeline(
 
     results = await asyncio.gather(*(bounded(request) for request in requests))
     return TriageJudgeReport(
+        version="triage-judge-report@v2" if pipeline.model_class else "triage-judge-report@v1",
         manifest_sha256=pipeline.manifest_sha256,
+        model_class=pipeline.model_class,
         source_report_sha256=source_report_sha256,
         scored_at=datetime.now(UTC),
         eligible_count=eligible_count,

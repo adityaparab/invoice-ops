@@ -104,6 +104,7 @@ def test_judge_report_requires_exact_audited_triage_and_source_hash() -> None:
     )
     judge = TriageJudgeReport(
         manifest_sha256=MANIFEST_SHA,
+        model_class="local-dev",
         source_report_sha256="b" * 64,
         scored_at=START,
         eligible_count=1,

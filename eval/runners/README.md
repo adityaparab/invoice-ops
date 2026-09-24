@@ -46,7 +46,7 @@ Set an actual 384-dimensional embedding route through the existing
 it. Then run:
 
 ```bash
-uv run python -m eval.runners.run_pipeline --split all
+uv run python -m eval.runners.run_pipeline --split all --model-class local-dev
 ```
 
 Use `--split development` or `--split held_out` to run one split, and `--limit N`
@@ -58,6 +58,10 @@ uploads require HTTP 201. Idempotency keys pin dataset version and sample ID,
 so rerunning the same dataset does not create a second invoice. A live report
 marks previously processed runs and exits nonzero so their near-zero replay
 times cannot be mistaken for fresh latency measurements.
+Every live run requires an explicit `--model-class local-dev` or
+`--model-class openai-prod` tag. The tag describes the operator's selected
+LiteLLM model names; the immutable ledger still records actual model versions.
+Recorded cassette smoke has no model class and cannot claim live quality.
 
 The runner starts Compose by default and seeds its 399 golden purchase orders
 and receipts beside the existing base ERP fixture. `--no-start` uses an already
