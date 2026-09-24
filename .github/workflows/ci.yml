@@ -220,15 +220,19 @@ jobs:
           report = json.load(open("eval/data/runs/ci-recorded-smoke.json"))
           sample = report["samples"][0]
           assert report["mode"] == "recorded" and len(report["samples"]) == 1
-          assert sample["route"] == "REVIEW"
-          assert sample["detail"]["invoice"]["status"] == "NEEDS_REVIEW"
-          assert sample["detail"]["invoice"]["run_status"] == "PAUSED"
+          assert sample["route"] == "AUTO_APPROVE"
+          assert sample["detail"]["invoice"]["status"] == "APPROVED"
+          assert sample["detail"]["invoice"]["run_status"] == "COMPLETED"
           assert sample["worker_error_type"] is None
           assert sample["replayed_before_worker"] is False
+          ocr = sample["detail"]["evidence"]["extraction.completed"]["identifier_ocr"]
+          assert ocr["status"] == "COMPLETE"
+          assert ocr["engine_version"].startswith("tesseract ")
           assert [event["event_type"] for event in sample["provenance"]["events"]] == [
               "ingest.accepted", "extraction.completed", "validation.completed",
               "matching.completed", "similarity.completed", "classification.completed",
-              "policy.completed", "gate.completed", "triage.prepared",
+              "policy.completed", "gate.completed", "approval.auto_granted",
+              "workflow.archived",
           ]
           PY
 
@@ -252,7 +256,7 @@ jobs:
       UV_PYTHON: "3.12"
       BASE_SHA: ${{ github.event.pull_request.base.sha }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
-      REPORT_PATH: eval/reports/golden-v1.0.0-openai-prod.json
+      REPORT_PATH: eval/reports/golden-v1.0.1-openai-prod.json
     steps:
       - name: Check out repository and main baseline
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -88,7 +88,13 @@ class NearDuplicateAgent:
                 "similarity_repository",
                 request,
                 lambda: SimilarityRepository.detect_and_store(
-                    connection, request.invoice_id, vector, model_version, self._config
+                    connection,
+                    request.invoice_id,
+                    vector,
+                    model_version,
+                    self._config,
+                    invoice_number=request.extraction.invoice_number.value,
+                    po_number=request.extraction.po_number.value,
                 ),
             )
             result = SimilarityResult(

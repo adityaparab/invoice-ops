@@ -52,7 +52,6 @@ from invoiceops_agent.schemas.erp import (
 from invoiceops_agent.tools.erp_generator import generate_fixture
 
 logger = logging.getLogger(__name__)
-VERSION = "golden-builder@v1"
 SEED = 20260827
 VOXEL_COUNT = 50
 SYNTHETIC_CLEAN_COUNT = 300
@@ -104,28 +103,30 @@ def _upstream_money(value: str) -> str:
 
 
 def relabel_voxel(sample: CorpusSample) -> InvoiceLabel:
-    """Map only annotated values; absent PO, IBAN, currency, and price stay unknown."""
+    """Keep gross row totals out of the net line-total contract."""
     if sample.json_annotation is None:
         raise GoldenBuildError("Unannotated source sample")
     source = Annotation.model_validate_json(sample.json_annotation)
     invoice = source.invoice
     try:
         invoice_date = datetime.strptime(invoice["invoice_date"], "%m/%d/%Y").date()
-        lines = tuple(
-            LineLabel(
-                description=item["description"].strip(),
-                quantity=format(Decimal(item["quantity"]).normalize(), "f"),
-                line_total=_upstream_money(item["total_price"]),
+        lines: list[LineLabel] = []
+        for item in source.items:
+            # Preserve v1.0.0 source eligibility without scoring gross as net.
+            _upstream_money(item["total_price"])
+            lines.append(
+                LineLabel(
+                    description=item["description"].strip(),
+                    quantity=format(Decimal(item["quantity"]).normalize(), "f"),
+                )
             )
-            for item in source.items
-        )
         tax = source.subtotal.get("tax", "").strip()
         return InvoiceLabel(
             vendor_name=invoice["seller_name"].strip(),
             invoice_number=invoice["invoice_number"].strip(),
             invoice_date=invoice_date,
             tax_amount=_upstream_money(tax) if tax else None,
-            line_items=lines,
+            line_items=tuple(lines),
         )
     except (KeyError, InvalidOperation, ValueError) as error:
         raise GoldenBuildError("Invalid upstream extraction label") from error

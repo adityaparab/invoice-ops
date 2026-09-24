@@ -54,7 +54,7 @@ async def seed(path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--fixture", type=Path, default=Path("eval/golden/v1.0.0/erp.json"))
+    parser.add_argument("--fixture", type=Path, default=Path("eval/golden/v1.0.1/erp.json"))
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     try:

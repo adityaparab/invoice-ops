@@ -6,11 +6,12 @@ from uuid import UUID
 
 import psycopg
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 from tests.unit.test_invoice_graph import _state
 
 from invoiceops_agent.graph.errors import GraphExecutionError
 from invoiceops_agent.graph.retry import RetryConfig, is_infrastructure_error
+from invoiceops_agent.graph.settings import GraphSettings
 from invoiceops_agent.graph.state import InvoiceGraphState
 from invoiceops_agent.graph.worker import RetryWorker, RunAttempt
 
@@ -132,3 +133,8 @@ def test_retry_config_and_classification() -> None:
     assert not is_infrastructure_error(ValueError("business"))
     with pytest.raises(ValidationError, match="Maximum retry delay"):
         RetryConfig(initial_delay_seconds=Decimal(3), max_delay_seconds=Decimal(2))
+
+
+def test_running_lease_outlasts_the_graph_deadline() -> None:
+    graph = GraphSettings(checkpoint_dsn=SecretStr("postgresql://host/db"))
+    assert RetryConfig().running_lease_seconds >= graph.invoice_graph_timeout_seconds + 30

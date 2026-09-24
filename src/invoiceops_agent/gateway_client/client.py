@@ -222,8 +222,17 @@ class GatewayClient:
                     extra_headers=headers,
                     timeout=request_timeout,
                 )
-                completion = raw.parse()
                 observed_cost = _cost(raw.headers)
+                try:
+                    completion = raw.parse()
+                except (
+                    APIResponseValidationError,
+                    json.JSONDecodeError,
+                    ValidationError,
+                    ValueError,
+                    TypeError,
+                ):
+                    raise InvalidGatewayResponse(request, cost_usd=observed_cost) from None
                 if len(completion.choices) != 1 or completion.usage is None:
                     raise InvalidGatewayResponse(request, cost_usd=observed_cost)
                 choice = completion.choices[0]
@@ -245,7 +254,7 @@ class GatewayClient:
                     total_tokens=completion.usage.total_tokens,
                 )
                 if usage.output_tokens > guarded.output_tokens:
-                    raise TokenBudgetExceeded(request)
+                    raise TokenBudgetExceeded(request, cost_usd=observed_cost)
                 return _Response(value, usage, completion.model, observed_cost)
 
             return operation
@@ -442,7 +451,17 @@ class GatewayClient:
                     ),
                     timeout=request_timeout,
                 )
-                completion = raw.parse()
+                observed_cost = _cost(raw.headers)
+                try:
+                    completion = raw.parse()
+                except (
+                    APIResponseValidationError,
+                    json.JSONDecodeError,
+                    ValidationError,
+                    ValueError,
+                    TypeError,
+                ):
+                    raise InvalidGatewayResponse(request, cost_usd=observed_cost) from None
                 ordered = sorted(completion.data, key=lambda item: item.index)
                 vectors = tuple(tuple(item.embedding) for item in ordered)
                 if (
@@ -452,14 +471,14 @@ class GatewayClient:
                     or any(len(vector) != len(vectors[0]) for vector in vectors)
                     or any(not math.isfinite(value) for vector in vectors for value in vector)
                 ):
-                    raise InvalidGatewayResponse(request)
+                    raise InvalidGatewayResponse(request, cost_usd=observed_cost)
                 usage = TokenUsage(
                     input_tokens=completion.usage.prompt_tokens,
                     output_tokens=0,
                     total_tokens=completion.usage.total_tokens,
                 )
                 return _Response(
-                    EmbeddingValue(vectors=vectors), usage, completion.model, _cost(raw.headers)
+                    EmbeddingValue(vectors=vectors), usage, completion.model, observed_cost
                 )
 
             return operation
@@ -547,6 +566,12 @@ class GatewayClient:
                             )
                         )
                         if delay > self._settings.max_retry_delay_seconds:
+                            break
+                        if (
+                            index < len(routes) - 1
+                            and deadline - self._clock()
+                            <= self._settings.request_timeout_seconds + delay
+                        ):
                             break
                         if delay >= deadline - self._clock():
                             raise GatewayDeadlineExceeded(context, attempts=attempts) from None

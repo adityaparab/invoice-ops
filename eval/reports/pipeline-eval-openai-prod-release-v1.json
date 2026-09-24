@@ -1,0 +1,1140 @@
+{
+  "report_id": "golden-openai-prod-release-v1",
+  "report_version": "pipeline-eval@v1",
+  "title": "OpenAI production route: 500-case three-run live baseline",
+  "dataset_version": "golden/v1.0.1",
+  "measured_at": "2026-09-24T16:37:42.001515Z",
+  "model_versions": [
+    "gemini-embedding",
+    "gemini25flash",
+    "gpt4omini",
+    "gpt5nano"
+  ],
+  "metrics": [
+    {
+      "key": "exception_recall",
+      "label": "Exception recall",
+      "scope": "primary",
+      "value": "0.9933333333333333333333333333",
+      "unit": "rate",
+      "sample_count": 150,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "false_escalation_rate",
+      "label": "False escalation rate",
+      "scope": "primary",
+      "value": "0.03333333333333333333333333333",
+      "unit": "rate",
+      "sample_count": 300,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "field_f1",
+      "label": "Field f1",
+      "scope": "primary",
+      "value": "0.9731779631800317175756739985",
+      "unit": "rate",
+      "sample_count": 480,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "money_field_f1",
+      "label": "Money field f1",
+      "scope": "primary",
+      "value": "0.9912963811268896014658726523",
+      "unit": "rate",
+      "sample_count": 480,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "routing_accuracy",
+      "label": "Routing accuracy",
+      "scope": "primary",
+      "value": "0.9777777777777777777777777778",
+      "unit": "rate",
+      "sample_count": 450,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "stp_rate",
+      "label": "Stp rate",
+      "scope": "primary",
+      "value": "0.9666666666666666666666666667",
+      "unit": "rate",
+      "sample_count": 300,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "cost_per_invoice_usd",
+      "label": "Cost per invoice usd",
+      "scope": "primary",
+      "value": "0.00122339726",
+      "unit": "usd",
+      "sample_count": 500,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "p95_latency_ms",
+      "label": "P95 latency seconds",
+      "scope": "primary",
+      "value": "30872.508",
+      "unit": "ms",
+      "sample_count": 900,
+      "tp": null,
+      "fp": null,
+      "fn": null
+    },
+    {
+      "key": "vendor_name-f1",
+      "label": "Vendor name F1",
+      "scope": "tier A",
+      "value": "0.9638554216867469879518072289",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 440,
+      "fp": 2,
+      "fn": 31
+    },
+    {
+      "key": "vendor_tax_id-f1",
+      "label": "Vendor tax id F1",
+      "scope": "tier A",
+      "value": "0.9976303317535545023696682464",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 421,
+      "fp": 0,
+      "fn": 2
+    },
+    {
+      "key": "bank_account_iban-f1",
+      "label": "Bank account iban F1",
+      "scope": "tier A",
+      "value": "0.9940688018979833926453143535",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 419,
+      "fp": 1,
+      "fn": 4
+    },
+    {
+      "key": "invoice_number-f1",
+      "label": "Invoice number F1",
+      "scope": "tier A",
+      "value": "0.9660460021905805038335158817",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 441,
+      "fp": 1,
+      "fn": 30
+    },
+    {
+      "key": "po_number-f1",
+      "label": "Po number F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "currency-f1",
+      "label": "Currency F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "invoice_date-f1",
+      "label": "Invoice date F1",
+      "scope": "tier A",
+      "value": "0.959385290889132821075740944",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 437,
+      "fp": 3,
+      "fn": 34
+    },
+    {
+      "key": "due_date-f1",
+      "label": "Due date F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "subtotal-f1",
+      "label": "Subtotal F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "tax_amount-f1",
+      "label": "Tax amount F1",
+      "scope": "tier A",
+      "value": "0.9660460021905805038335158817",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 441,
+      "fp": 1,
+      "fn": 30
+    },
+    {
+      "key": "total_amount-f1",
+      "label": "Total amount F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "line_description-f1",
+      "label": "Line description F1",
+      "scope": "tier A",
+      "value": "0.8853974121996303142329020333",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 479,
+      "fp": 7,
+      "fn": 117
+    },
+    {
+      "key": "line_quantity-f1",
+      "label": "Line quantity F1",
+      "scope": "tier A",
+      "value": "0.8983364140480591497227356747",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 486,
+      "fp": 0,
+      "fn": 110
+    },
+    {
+      "key": "line_unit_price-f1",
+      "label": "Line unit price F1",
+      "scope": "tier A",
+      "value": "0.9964497041420118343195266272",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 421,
+      "fp": 1,
+      "fn": 2
+    },
+    {
+      "key": "line_tax_rate-f1",
+      "label": "Line tax rate F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "line_line_total-f1",
+      "label": "Line line total F1",
+      "scope": "tier A",
+      "value": "0.9988165680473372781065088757",
+      "unit": "rate",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "vendor_name-f1",
+      "label": "Vendor name F1",
+      "scope": "tier B",
+      "value": "0.9411764705882352941176470588",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "vendor_tax_id-f1",
+      "label": "Vendor tax id F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "bank_account_iban-f1",
+      "label": "Bank account iban F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "invoice_number-f1",
+      "label": "Invoice number F1",
+      "scope": "tier B",
+      "value": "0.9411764705882352941176470588",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "po_number-f1",
+      "label": "Po number F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "currency-f1",
+      "label": "Currency F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "invoice_date-f1",
+      "label": "Invoice date F1",
+      "scope": "tier B",
+      "value": "0.9411764705882352941176470588",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "due_date-f1",
+      "label": "Due date F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "subtotal-f1",
+      "label": "Subtotal F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "tax_amount-f1",
+      "label": "Tax amount F1",
+      "scope": "tier B",
+      "value": "0.9411764705882352941176470588",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "total_amount-f1",
+      "label": "Total amount F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "line_description-f1",
+      "label": "Line description F1",
+      "scope": "tier B",
+      "value": "0.9411764705882352941176470588",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "line_quantity-f1",
+      "label": "Line quantity F1",
+      "scope": "tier B",
+      "value": "0.9411764705882352941176470588",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    {
+      "key": "line_unit_price-f1",
+      "label": "Line unit price F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "line_tax_rate-f1",
+      "label": "Line tax rate F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    },
+    {
+      "key": "line_line_total-f1",
+      "label": "Line line total F1",
+      "scope": "tier B",
+      "value": "1",
+      "unit": "rate",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0
+    }
+  ],
+  "per_anomaly_confusion": [
+    {
+      "anomaly_code": "DUP_EXACT",
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "tn": 430
+    },
+    {
+      "anomaly_code": "DUP_NEAR",
+      "tp": 15,
+      "fp": 0,
+      "fn": 0,
+      "tn": 435
+    },
+    {
+      "anomaly_code": "PRICE_MM",
+      "tp": 22,
+      "fp": 0,
+      "fn": 0,
+      "tn": 428
+    },
+    {
+      "anomaly_code": "QTY_MM",
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "tn": 430
+    },
+    {
+      "anomaly_code": "MISSING_PO",
+      "tp": 16,
+      "fp": 0,
+      "fn": 0,
+      "tn": 434
+    },
+    {
+      "anomaly_code": "BANK_CHANGE",
+      "tp": 9,
+      "fp": 2,
+      "fn": 1,
+      "tn": 438
+    },
+    {
+      "anomaly_code": "CCY_MM",
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "tn": 440
+    },
+    {
+      "anomaly_code": "TAX_ERR",
+      "tp": 16,
+      "fp": 11,
+      "fn": 0,
+      "tn": 423
+    },
+    {
+      "anomaly_code": "MATH_ERR",
+      "tp": 11,
+      "fp": 1,
+      "fn": 0,
+      "tn": 438
+    },
+    {
+      "anomaly_code": "STALE_PO",
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "tn": 440
+    }
+  ],
+  "tau_sweep": [
+    {
+      "threshold": "0",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.01",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.02",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.03",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.04",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.05",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.06",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.07",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.08",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.09",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.1",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.11",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.12",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.13",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.14",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.15",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.16",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.17",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.18",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.19",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.2",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.21",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.22",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.23",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.24",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.25",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.26",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.27",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.28",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.29",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.3",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.31",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.32",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.33",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.34",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.35",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.36",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.37",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.38",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.39",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.4",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.41",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.42",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.43",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.44",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.45",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.46",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.47",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.48",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.49",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.5",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.51",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.52",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.53",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.54",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.55",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.56",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.57",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.58",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.59",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.6",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.61",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.62",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.63",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.64",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.65",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.66",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.67",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.68",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.69",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.7",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.71",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.72",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.73",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.74",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.75",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.76",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.77",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.78",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.79",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.8",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.81",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.82",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.83",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.84",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.85",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.86",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.87",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.88",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.89",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.9",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.91",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.92",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.93",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.02666666666666666666666666667",
+      "stp_rate": "0.9733333333333333333333333333"
+    },
+    {
+      "threshold": "0.94",
+      "exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.02666666666666666666666666667",
+      "stp_rate": "0.9733333333333333333333333333"
+    },
+    {
+      "threshold": "0.95",
+      "exception_recall": "0.88",
+      "false_escalation_rate": "0.03333333333333333333333333333",
+      "stp_rate": "0.9666666666666666666666666667"
+    },
+    {
+      "threshold": "0.96",
+      "exception_recall": "0.9",
+      "false_escalation_rate": "0.09",
+      "stp_rate": "0.91"
+    },
+    {
+      "threshold": "0.97",
+      "exception_recall": "0.9266666666666666666666666667",
+      "false_escalation_rate": "0.21",
+      "stp_rate": "0.79"
+    },
+    {
+      "threshold": "0.98",
+      "exception_recall": "0.9533333333333333333333333333",
+      "false_escalation_rate": "0.49",
+      "stp_rate": "0.51"
+    },
+    {
+      "threshold": "0.99",
+      "exception_recall": "0.9533333333333333333333333333",
+      "false_escalation_rate": "0.4933333333333333333333333333",
+      "stp_rate": "0.5066666666666666666666666667"
+    },
+    {
+      "threshold": "1",
+      "exception_recall": "0.9533333333333333333333333333",
+      "false_escalation_rate": "0.6233333333333333333333333333",
+      "stp_rate": "0.3766666666666666666666666667"
+    }
+  ],
+  "caveats": [
+    "Composite score is a ranking signal, not a calibrated probability.",
+    "Threshold sweep measures routing safety; primary recall requires injected codes.",
+    "The versioned triage judge was not run for this report."
+  ]
+}

@@ -31,7 +31,7 @@ class GateResult(BaseModel):
 class CompositeGateConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
-    version: Literal["composite-gate@v1"] = "composite-gate@v1"
+    version: Literal["composite-gate@v1", "composite-gate@v2"] = "composite-gate@v2"
     weight_field: ExactDecimal = Field(default=Decimal("0.50"), ge=0, le=1)
     weight_match: ExactDecimal = Field(default=Decimal("0.30"), ge=0, le=1)
     weight_policy: ExactDecimal = Field(default=Decimal("0.20"), ge=0, le=1)

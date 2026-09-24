@@ -26,8 +26,8 @@ from invoiceops_agent.artifacts import write_new_artifact
 from invoiceops_agent.tools.ingestion_schemas import IngestionResult
 
 logger = logging.getLogger(__name__)
-COMMITTED_MANIFEST = Path("eval/golden/v1.0.0/manifest.json")
-DATASET = Path("eval/data/golden/v1.0.0")
+COMMITTED_MANIFEST = Path("eval/golden/v1.0.1/manifest.json")
+DATASET = Path("eval/data/golden/v1.0.1")
 RECORDED_SAMPLE_ID = "SYN-CLEAN-0034"
 RECORDED_DOCUMENT = Path("eval/cassettes/smoke/SYN-CLEAN-0034.png")
 MAX_DOCUMENT_BYTES = 10_000_000
@@ -171,8 +171,9 @@ class Compose:
 
 
 class HTTPPipelineAPI:
-    def __init__(self, settings: EvalSettings) -> None:
+    def __init__(self, settings: EvalSettings, *, dataset_version: str) -> None:
         self._settings = settings
+        self._idempotency_prefix = dataset_version.replace("/", "-")
         self._client = httpx.Client(base_url=settings.api_base_url, timeout=30)
 
     def __enter__(self) -> "HTTPPipelineAPI":
@@ -190,7 +191,7 @@ class HTTPPipelineAPI:
             "/v1/invoices",
             headers={
                 "Authorization": f"Bearer {self._settings.service_token.get_secret_value()}",
-                "Idempotency-Key": f"golden-v1.0.0-{sample.sample_id}",
+                "Idempotency-Key": f"{self._idempotency_prefix}-{sample.sample_id}",
             },
             files={"file": (f"{sample.sample_id}.png", body, "image/png")},
         )
@@ -285,28 +286,31 @@ def preflight_documents(
     }
 
 
-def schedule_run_waves(
-    uploads: Sequence[tuple[GoldenSample, IngestionResult, float]],
-) -> tuple[tuple[UUID, ...], ...]:
-    """Finish parent invoices before their near-duplicate children are compared."""
-    completed = {sample.sample_id for sample, upload, _ in uploads if upload.duplicate}
-    pending = {
-        sample.sample_id: (sample, upload) for sample, upload, _ in uploads if not upload.duplicate
-    }
-    waves: list[tuple[UUID, ...]] = []
+def schedule_sample_batches(
+    selected: Sequence[GoldenSample], batch_size: int
+) -> tuple[tuple[GoldenSample, ...], ...]:
+    """Ingest one bounded arrival batch only after its parents have finished."""
+    if not 1 <= batch_size <= 16:
+        raise PipelineRunError("Arrival batch size must be between one and 16")
+    pending = {sample.sample_id: sample for sample in selected}
+    if len(pending) != len(selected):
+        raise PipelineRunError("Selected sample IDs are repeated")
+    completed: set[str] = set()
+    batches: list[tuple[GoldenSample, ...]] = []
     while pending:
         ready = tuple(
-            (sample_id, upload.run_id)
-            for sample_id, (sample, upload) in pending.items()
+            sample
+            for sample in pending.values()
             if sample.parent_id is None or sample.parent_id in completed
         )
-        if not ready or len({run_id for _, run_id in ready}) != len(ready):
-            raise PipelineRunError("Golden run dependencies are cyclic or share a run ID")
-        waves.append(tuple(run_id for _, run_id in ready))
-        completed.update(sample_id for sample_id, _ in ready)
-        for sample_id, _ in ready:
-            del pending[sample_id]
-    return tuple(waves)
+        if not ready:
+            raise PipelineRunError("Golden sample dependencies are cyclic or missing")
+        batch = ready[:batch_size]
+        batches.append(batch)
+        completed.update(sample.sample_id for sample in batch)
+        for sample in batch:
+            del pending[sample.sample_id]
+    return tuple(batches)
 
 
 def run_pipeline(
@@ -319,33 +323,39 @@ def run_pipeline(
     *,
     recorded: bool,
     model_class: ModelClass | None = None,
+    batch_size: int = 1,
 ) -> PipelineReport:
     if recorded != (model_class is None):
         raise PipelineRunError("Live runs require a model class; recorded smoke cannot claim one")
+    batches = schedule_sample_batches(selected, batch_size)
     started = utc_now()
     api.ready()
     uploads: list[tuple[GoldenSample, IngestionResult, float]] = []
-    for sample in selected:
-        upload_started = perf_counter()
-        upload = api.upload(sample, documents[sample.sample_id])
-        upload_duration_ms = (perf_counter() - upload_started) * 1000
-        if "DUP_EXACT" in sample.anomaly_codes and not upload.duplicate:
-            raise PipelineRunError("An exact-duplicate gold case was accepted as new")
-        if "DUP_EXACT" not in sample.anomaly_codes and upload.duplicate:
-            raise PipelineRunError("A non-duplicate gold case matched existing content")
-        uploads.append((sample, upload, upload_duration_ms))
-    waves = schedule_run_waves(uploads)
-    run_ids = tuple(run_id for wave in waves for run_id in wave)
-    already_processed = {
-        upload.run_id: api.detail(upload.invoice_id).invoice.run_status != "QUEUED"
-        for _, upload, _ in uploads
-        if not upload.duplicate
-    }
+    already_processed: dict[UUID, bool] = {}
     worker_results: dict[UUID, dict[str, str]] = {}
-    for wave in waves:
-        worker_results.update(worker.process(wave, recorded=recorded))
-    if set(worker_results) != set(run_ids):
-        raise PipelineRunError("Worker result set differs from uploaded run IDs")
+    for batch in batches:
+        pending_ids: list[UUID] = []
+        for sample in batch:
+            upload_started = perf_counter()
+            upload = api.upload(sample, documents[sample.sample_id])
+            upload_duration_ms = (perf_counter() - upload_started) * 1000
+            if "DUP_EXACT" in sample.anomaly_codes and not upload.duplicate:
+                raise PipelineRunError("An exact-duplicate gold case was accepted as new")
+            if "DUP_EXACT" not in sample.anomaly_codes and upload.duplicate:
+                raise PipelineRunError("A non-duplicate gold case matched existing content")
+            uploads.append((sample, upload, upload_duration_ms))
+            if not upload.duplicate:
+                if upload.run_id in already_processed:
+                    raise PipelineRunError("A non-duplicate gold case reused a run ID")
+                already_processed[upload.run_id] = (
+                    api.detail(upload.invoice_id).invoice.run_status != "QUEUED"
+                )
+                pending_ids.append(upload.run_id)
+        if pending_ids:
+            outcomes = worker.process(tuple(pending_ids), recorded=recorded)
+            if set(outcomes) != set(pending_ids):
+                raise PipelineRunError("Worker result set differs from uploaded run IDs")
+            worker_results.update(outcomes)
     records: list[RunRecord] = []
     for sample, upload, upload_duration_ms in uploads:
         worker_result = worker_results.get(upload.run_id, {})
@@ -374,6 +384,7 @@ def run_pipeline(
             )
         )
     return PipelineReport(
+        dataset_version=manifest.version,
         mode="recorded" if recorded else "live",
         model_class=model_class,
         manifest_sha256=manifest_sha256,
@@ -397,6 +408,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
         if args.recorded and args.model_class is not None:
             raise PipelineRunError("Recorded smoke cannot claim a model class")
@@ -426,7 +438,7 @@ def main() -> int:
         if not args.no_start:
             compose.start()
         compose.seed()
-        with HTTPPipelineAPI(settings) as api:
+        with HTTPPipelineAPI(settings, dataset_version=manifest.version) as api:
             report = run_pipeline(
                 manifest,
                 manifest_sha,
@@ -436,9 +448,10 @@ def main() -> int:
                 compose,
                 recorded=args.recorded,
                 model_class=args.model_class,
+                batch_size=args.workers,
             )
         output = args.output or Path(
-            "eval/data/runs/golden-v1.0.0-"
+            f"eval/data/runs/{report.dataset_version.replace('/', '-')}-"
             f"{report.model_class or 'recorded'}-"
             f"{report.started_at.strftime('%Y%m%dT%H%M%SZ')}.json"
         )

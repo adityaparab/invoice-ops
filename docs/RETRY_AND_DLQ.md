@@ -3,10 +3,12 @@
 The one-shot invoice worker records a run as `RUNNING` before graph execution and `COMPLETED` or
 `PAUSED` after a settled graph result. It retries an uncaught infrastructure failure up to three
 times with deterministic exponential delays of 0.5 and 1 second. The versioned
-`invoice-retry@v1` policy caps every delay at 5 seconds and treats a `RUNNING` lease older than 240
+`invoice-retry@v2` policy caps every delay at 5 seconds and treats a `RUNNING` lease older than 480
 seconds as recoverable after a process crash. The graph's synchronous checkpoint and committed
 ledger evidence make recovery safe. Gateway calls already have their own bounded transport retry;
 valid business findings and review outcomes never enter the worker retry loop.
+The lease outlasts the invoice graph's 420-second deadline so another worker cannot claim
+an active run while its bounded model calls finish.
 
 Only typed connection, timeout, checkpoint, document availability, gateway availability, and ledger
 storage failures are retryable. Validation failures, policy blocks, malformed evidence, and other

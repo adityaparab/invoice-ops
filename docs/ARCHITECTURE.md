@@ -140,8 +140,13 @@ provenance, typed errors, and offline test transport usage.
 
 The extraction agent reads the immutable `raw_ref` through a bounded async MinIO adapter, converts
 the document to a data URL, and invokes only the gateway's `extract-vision` alias. Its system prompt
-is a packaged `extract_v1.md` artifact identified as `extract@v1`; prompt text is never assembled in
+is a packaged `extract_v4.md` artifact identified as `extract@v4`; prompt text is never assembled in
 component code.
+
+The image path may reconcile printed bank and PO identifiers with the bounded
+`identifier-ocr@v1` tool before the audited extraction result reaches validation.
+The tool's candidate, confidence, and applied fields are recorded with the
+model observation. Matching and bank-change policy still run afterward.
 
 `InvoiceExtraction` represents vendor identity, IBAN, invoice/PO identifiers, currency, amounts,
 dates, and typed line items. Every scalar field carries a Decimal confidence in `[0, 1]`, and a null

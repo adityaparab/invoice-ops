@@ -196,6 +196,20 @@ def test_graph_timeout_is_bounded(timeout: float) -> None:
         )
 
 
+def test_invoice_graph_budget_covers_three_bounded_model_calls() -> None:
+    settings = GraphSettings(checkpoint_dsn=SecretStr("postgresql://host/db"))
+    assert settings.invoice_graph_timeout_seconds >= 3 * 120 + 30
+
+
+@pytest.mark.parametrize("timeout", [0, -1, 451, float("inf"), float("nan")])
+def test_invoice_graph_deadline_stays_below_the_running_lease(timeout: float) -> None:
+    with pytest.raises(ValidationError):
+        GraphSettings(
+            checkpoint_dsn=SecretStr("postgresql://host/db"),
+            invoice_graph_timeout_seconds=timeout,
+        )
+
+
 def test_restricted_serializer_round_trips_only_allowed_state() -> None:
     state = GraphState(run_id=RUN_ID, invoice_id=INVOICE_ID, trace_id=TRACE_ID)
     serializer = restricted_serializer()

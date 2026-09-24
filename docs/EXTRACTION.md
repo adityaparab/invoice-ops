@@ -71,12 +71,28 @@ unchanged bytes sent to the model.
 
 ## Prompts, repair, and failures
 
-The installed package includes `prompts/extract_v1.md` (`extract@v1`) and a fixed
+The installed package includes `prompts/extract_v4.md` (`extract@v4`) and a fixed
 `extract_repair_v1.md` supplement. Instructions prohibit following embedded document instructions,
-inventing unknowns, and correcting business facts. Model text is never interpolated into prompts.
+inventing unknowns, and correcting business facts. The v4 base prompt asks the vision model to
+preserve every bank-account character, including repeated digits and leading zeros, and to copy
+printed line totals and tax rates even when their arithmetic is wrong. Model text is never
+interpolated into prompts. The v1 through v3 prompts remain packaged for historical evidence.
+
+For image invoices, the live workflow also runs `identifier-ocr@v1` through a
+five-second, network-free Tesseract subprocess. It accepts a bank account or PO
+only from a uniquely labeled line with at least 70/100 word confidence and a
+bounded identifier shape. IBAN country and check-digit positions use their
+standard letter/digit classes; OCR `O` in the two check-digit positions becomes
+`0`. It can correct a non-null model transcription, but cannot fill a field the
+model did not identify. Corrected field confidence is capped at 0.95 and never
+raised above the model's original confidence. The extraction audit stores the
+OCR observations, applied field names, source hash, OCR policy version, and
+actual Tesseract version.
+PDFs and unavailable OCR leave the model output unchanged. This deterministic
+check does not inspect ERP values or decide whether a bank change is acceptable.
 
 Only `InvalidStructuredOutput` (invalid JSON or a violated output schema) receives one new logical
-model call. The second pass uses `extract@v1+repair@v1` and a separate cassette scenario ending in
+model call. The second pass uses `extract@v4+repair@v1` and a separate cassette scenario ending in
 `_schema_repair`. A second malformed result returns `MALFORMED_MODEL_OUTPUT`. Refusal, truncation,
 invalid envelopes, and valid business anomalies do not trigger schema repair. Gateway-owned
 infrastructure retries remain separately bounded; at most two logical model calls occur.

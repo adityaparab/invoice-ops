@@ -148,7 +148,7 @@
 - [x] 5.5 Report per model class (local-dev vs OpenAI-prod) — one extra tag through the harness
 - [x] 5.6 `ci_gate.py`: fail PR on any primary metric regressing >0.5% absolute vs main or below floor; PR comment with deltas
 - [x] 5.7 Versioned reports committed to `eval/reports/`; start the experiment log (hypothesis/change/delta/decision)
-- [ ] 5.8 Resolve measured development failures; publish the full 500-invoice, three-run live baseline and activate the CI quality gate
+- [x] 5.8 Resolve measured development failures; publish the full 500-invoice, three-run live baseline and activate the CI quality gate
 
 
 
@@ -197,7 +197,7 @@ checkbox here.
 | P2 — Match + policy            | Complete    | 2026-09-24   | Deterministic matching, taxonomy, similarity, policy, durable graph, composite gate, and audited retry/DLQ |
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
 | P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
-| P5 — Eval harness + CI gate    | In progress | —            | Development v0.1 measured and published; quality remediation and full live baseline remain in step 5.8 |
+| P5 — Eval harness + CI gate    | Complete    | 2026-09-24   | Three independent 500-case live runs passed all eight floors; audited p95 30.87s, complete cost evidence, and CI gate activated |
 | P6 — ADK variant + ADR         | Not started | —            |                                                           |
 | P7 — Polish                    | Not started | —            |                                                           |
 
@@ -260,3 +260,4 @@ checkbox here.
 | 2026-09-24 | Step 5.5 carries an explicit local-dev/OpenAI-prod experiment tag through v2 pipeline, metric, diagnostic, and judge reports. A typed class comparison pins source checksums, model-version evidence, all eight metric deltas, and completeness. Historical v1 evidence remains readable; no class measurements are invented before live evaluation. |
 | 2026-09-24 | Step 5.6 adds a fail-closed comparator for complete live 500-invoice, three-run primary reports, eight versioned floors, and 0.5-percentage-point or native-unit regression bounds. The PR workflow checks the committed candidate against the report at main, posts a `gh` comment with deltas, and bootstraps the first baseline against all floors. The live quality gate remains dormant until a measured report is committed in step 5.7; recorded smoke cannot activate it. |
 | 2026-09-24 | Step 5.7 publishes the first live development measurement as separate versioned primary, diagnostic, and dashboard reports. The 100-case v0.1 run exposes near-duplicate template matches, bank-field OCR errors, an overstrict confidence threshold, and three repeated-citation dead letters. The citation bug is reproduced and fixed; step 5.8 tracks quality remediation and a complete 500-case, three-run release baseline. No release floor is claimed from v0.1. |
+| 2026-09-24 | Step 5.8 completes Phase 5: versioned identity-aware similarity, a directional confidence gate, literal extraction prompts, bounded identifier OCR, corrected Voxel51 net-line labels, gateway deadline/cost fixes, and bounded golden arrivals resolve measured development failures. Three fresh-stack 500-case live runs with the same LiteLLM model-name routes completed without worker errors and with complete cost evidence. All eight primary floors passed; first-run recall was 149/150, false escalation 10/300, field F1 0.9732, money F1 0.9913, routing 440/450, STP 290/300, cost $0.00122339726 per invoice, and pooled audited auto-approval p95 30.872508s across 875 observations. The versioned report now activates the CI quality gate. |

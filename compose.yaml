@@ -132,7 +132,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./eval/golden/v1.0.0:/app/eval/golden/v1.0.0:ro
+      - ./eval/golden/v1.0.1:/app/eval/golden/v1.0.1:ro
       - ./eval/cassettes/smoke:/app/eval/cassettes/smoke:ro
     depends_on:
       storage-init:

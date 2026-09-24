@@ -1,0 +1,1201 @@
+{
+  "version": "golden-diagnostics@v2",
+  "dataset_version": "golden/v1.0.1",
+  "manifest_sha256": "329946ee4d1784a5ae605e114ce13c536ac4e952dcda16b62c63169dee5393f6",
+  "mode": "live",
+  "model_class": "openai-prod",
+  "sample_count": 500,
+  "anomaly_confusion": [
+    {
+      "code": "DUP_EXACT",
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "tn": 430
+    },
+    {
+      "code": "DUP_NEAR",
+      "tp": 15,
+      "fp": 0,
+      "fn": 0,
+      "tn": 435
+    },
+    {
+      "code": "PRICE_MM",
+      "tp": 22,
+      "fp": 0,
+      "fn": 0,
+      "tn": 428
+    },
+    {
+      "code": "QTY_MM",
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "tn": 430
+    },
+    {
+      "code": "MISSING_PO",
+      "tp": 16,
+      "fp": 0,
+      "fn": 0,
+      "tn": 434
+    },
+    {
+      "code": "BANK_CHANGE",
+      "tp": 9,
+      "fp": 2,
+      "fn": 1,
+      "tn": 438
+    },
+    {
+      "code": "CCY_MM",
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "tn": 440
+    },
+    {
+      "code": "TAX_ERR",
+      "tp": 16,
+      "fp": 11,
+      "fn": 0,
+      "tn": 423
+    },
+    {
+      "code": "MATH_ERR",
+      "tp": 11,
+      "fp": 1,
+      "fn": 0,
+      "tn": 438
+    },
+    {
+      "code": "STALE_PO",
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "tn": 440
+    }
+  ],
+  "field_by_tier": [
+    {
+      "field": "vendor_name",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 440,
+      "fp": 2,
+      "fn": 31,
+      "f1": "0.9638554216867469879518072289"
+    },
+    {
+      "field": "vendor_tax_id",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 421,
+      "fp": 0,
+      "fn": 2,
+      "f1": "0.9976303317535545023696682464"
+    },
+    {
+      "field": "bank_account_iban",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 419,
+      "fp": 1,
+      "fn": 4,
+      "f1": "0.9940688018979833926453143535"
+    },
+    {
+      "field": "invoice_number",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 441,
+      "fp": 1,
+      "fn": 30,
+      "f1": "0.9660460021905805038335158817"
+    },
+    {
+      "field": "po_number",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "currency",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "invoice_date",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 437,
+      "fp": 3,
+      "fn": 34,
+      "f1": "0.9593852908891328210757409440"
+    },
+    {
+      "field": "due_date",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "subtotal",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "tax_amount",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 441,
+      "fp": 1,
+      "fn": 30,
+      "f1": "0.9660460021905805038335158817"
+    },
+    {
+      "field": "total_amount",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "line_description",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 479,
+      "fp": 7,
+      "fn": 117,
+      "f1": "0.8853974121996303142329020333"
+    },
+    {
+      "field": "line_quantity",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 486,
+      "fp": 0,
+      "fn": 110,
+      "f1": "0.8983364140480591497227356747"
+    },
+    {
+      "field": "line_unit_price",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 421,
+      "fp": 1,
+      "fn": 2,
+      "f1": "0.9964497041420118343195266272"
+    },
+    {
+      "field": "line_tax_rate",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "line_line_total",
+      "tier": "A",
+      "sample_count": 471,
+      "tp": 422,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9988165680473372781065088757"
+    },
+    {
+      "field": "vendor_name",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9411764705882352941176470588"
+    },
+    {
+      "field": "vendor_tax_id",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "bank_account_iban",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "invoice_number",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9411764705882352941176470588"
+    },
+    {
+      "field": "po_number",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "currency",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "invoice_date",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9411764705882352941176470588"
+    },
+    {
+      "field": "due_date",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "subtotal",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "tax_amount",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9411764705882352941176470588"
+    },
+    {
+      "field": "total_amount",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "line_description",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9411764705882352941176470588"
+    },
+    {
+      "field": "line_quantity",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1,
+      "f1": "0.9411764705882352941176470588"
+    },
+    {
+      "field": "line_unit_price",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "line_tax_rate",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "line_line_total",
+      "tier": "B",
+      "sample_count": 9,
+      "tp": 7,
+      "fp": 0,
+      "fn": 0,
+      "f1": "1"
+    },
+    {
+      "field": "vendor_name",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "vendor_tax_id",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "bank_account_iban",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "invoice_number",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "po_number",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "currency",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "invoice_date",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "due_date",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "subtotal",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "tax_amount",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "total_amount",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "line_description",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "line_quantity",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "line_unit_price",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "line_tax_rate",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    },
+    {
+      "field": "line_line_total",
+      "tier": "C",
+      "sample_count": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "f1": null
+    }
+  ],
+  "calibration": [
+    {
+      "lower": "0",
+      "upper": "0.1",
+      "sample_count": 0,
+      "mean_score": null,
+      "observed_clean_rate": null
+    },
+    {
+      "lower": "0.1",
+      "upper": "0.2",
+      "sample_count": 0,
+      "mean_score": null,
+      "observed_clean_rate": null
+    },
+    {
+      "lower": "0.2",
+      "upper": "0.3",
+      "sample_count": 0,
+      "mean_score": null,
+      "observed_clean_rate": null
+    },
+    {
+      "lower": "0.3",
+      "upper": "0.4",
+      "sample_count": 0,
+      "mean_score": null,
+      "observed_clean_rate": null
+    },
+    {
+      "lower": "0.4",
+      "upper": "0.5",
+      "sample_count": 1,
+      "mean_score": "0.4048835629730254220842227828",
+      "observed_clean_rate": "1"
+    },
+    {
+      "lower": "0.5",
+      "upper": "0.6",
+      "sample_count": 11,
+      "mean_score": "0.570",
+      "observed_clean_rate": "0"
+    },
+    {
+      "lower": "0.6",
+      "upper": "0.7",
+      "sample_count": 5,
+      "mean_score": "0.6",
+      "observed_clean_rate": "0"
+    },
+    {
+      "lower": "0.7",
+      "upper": "0.8",
+      "sample_count": 6,
+      "mean_score": "0.7638597726763827567207607085",
+      "observed_clean_rate": "0"
+    },
+    {
+      "lower": "0.8",
+      "upper": "0.9",
+      "sample_count": 82,
+      "mean_score": "0.8681059491530830180723653793",
+      "observed_clean_rate": "0.01219512195121951219512195122"
+    },
+    {
+      "lower": "0.9",
+      "upper": "1",
+      "sample_count": 344,
+      "mean_score": "0.9751162790697674418604651163",
+      "observed_clean_rate": "0.8633720930232558139534883721"
+    }
+  ],
+  "tau_sweep": [
+    {
+      "threshold": "0",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.01",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.02",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.03",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.04",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.05",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.06",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.07",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.08",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.09",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.1",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.11",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.12",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.13",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.14",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.15",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.16",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.17",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.18",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.19",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.2",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.21",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.22",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.23",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.24",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.25",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.26",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.27",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.28",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.29",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.3",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.31",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.32",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.33",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.34",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.35",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.36",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.37",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.38",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.39",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.4",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.41",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.42",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.43",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.44",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.45",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.46",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.47",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.48",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.49",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.5",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.51",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.52",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.53",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.54",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.55",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.56",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.57",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.58",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.59",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.6",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.61",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.62",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.63",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.64",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.65",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.66",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.67",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.68",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.69",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.7",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.71",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.72",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.73",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.74",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.75",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.76",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.77",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.78",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.79",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.8",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.81",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.82",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.83",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.84",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.85",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.86",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.87",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.88",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.89",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.9",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.91",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.92",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.01666666666666666666666666667",
+      "stp_rate": "0.9833333333333333333333333333"
+    },
+    {
+      "threshold": "0.93",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.02666666666666666666666666667",
+      "stp_rate": "0.9733333333333333333333333333"
+    },
+    {
+      "threshold": "0.94",
+      "routed_exception_recall": "0.8733333333333333333333333333",
+      "false_escalation_rate": "0.02666666666666666666666666667",
+      "stp_rate": "0.9733333333333333333333333333"
+    },
+    {
+      "threshold": "0.95",
+      "routed_exception_recall": "0.88",
+      "false_escalation_rate": "0.03333333333333333333333333333",
+      "stp_rate": "0.9666666666666666666666666667"
+    },
+    {
+      "threshold": "0.96",
+      "routed_exception_recall": "0.9",
+      "false_escalation_rate": "0.09",
+      "stp_rate": "0.91"
+    },
+    {
+      "threshold": "0.97",
+      "routed_exception_recall": "0.9266666666666666666666666667",
+      "false_escalation_rate": "0.21",
+      "stp_rate": "0.79"
+    },
+    {
+      "threshold": "0.98",
+      "routed_exception_recall": "0.9533333333333333333333333333",
+      "false_escalation_rate": "0.49",
+      "stp_rate": "0.51"
+    },
+    {
+      "threshold": "0.99",
+      "routed_exception_recall": "0.9533333333333333333333333333",
+      "false_escalation_rate": "0.4933333333333333333333333333",
+      "stp_rate": "0.5066666666666666666666666667"
+    },
+    {
+      "threshold": "1",
+      "routed_exception_recall": "0.9533333333333333333333333333",
+      "false_escalation_rate": "0.6233333333333333333333333333",
+      "stp_rate": "0.3766666666666666666666666667"
+    }
+  ],
+  "judge": null,
+  "judge_report_sha256": null,
+  "caveats": [
+    "Composite score is a ranking signal, not a calibrated probability.",
+    "Threshold sweep measures routing safety; primary recall requires injected codes.",
+    "The versioned triage judge was not run for this report."
+  ]
+}

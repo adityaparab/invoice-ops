@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class InvoiceGraphRunner:
-    def __init__(self, graph: InvoiceGraph, lock: RunLock, *, timeout_seconds: float = 120) -> None:
+    def __init__(self, graph: InvoiceGraph, lock: RunLock, *, timeout_seconds: float = 420) -> None:
         self.graph = graph
         self.lock = lock
         self.timeout_seconds = timeout_seconds

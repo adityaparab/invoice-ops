@@ -1,0 +1,102 @@
+{
+  "version": "primary-metrics@v2",
+  "dataset_version": "golden/v1.0.1",
+  "manifest_sha256": "329946ee4d1784a5ae605e114ce13c536ac4e952dcda16b62c63169dee5393f6",
+  "mode": "live",
+  "model_class": "openai-prod",
+  "model_versions": [
+    "gemini-embedding",
+    "gpt4omini",
+    "gpt5nano"
+  ],
+  "report_count": 1,
+  "sample_count": 100,
+  "complete_suite": false,
+  "scored_at": "2026-09-24T13:25:17.979965Z",
+  "metrics": [
+    {
+      "key": "exception_recall",
+      "target": "0.98",
+      "direction": "min",
+      "value": "1",
+      "numerator": 30,
+      "denominator": 30,
+      "sample_count": 30,
+      "evidence_count": 30
+    },
+    {
+      "key": "false_escalation_rate",
+      "target": "0.05",
+      "direction": "max",
+      "value": "0",
+      "numerator": 0,
+      "denominator": 60,
+      "sample_count": 60,
+      "evidence_count": 60
+    },
+    {
+      "key": "field_f1",
+      "target": "0.95",
+      "direction": "min",
+      "value": "0.9653018736988202637057598890",
+      "numerator": 2782,
+      "denominator": 2882,
+      "sample_count": 97,
+      "evidence_count": 87
+    },
+    {
+      "key": "money_field_f1",
+      "target": "0.97",
+      "direction": "min",
+      "value": "0.9886363636363636363636363636",
+      "numerator": 870,
+      "denominator": 880,
+      "sample_count": 97,
+      "evidence_count": 87
+    },
+    {
+      "key": "routing_accuracy",
+      "target": "0.95",
+      "direction": "min",
+      "value": "1",
+      "numerator": 90,
+      "denominator": 90,
+      "sample_count": 90,
+      "evidence_count": 90
+    },
+    {
+      "key": "stp_rate",
+      "target": "0.70",
+      "direction": "min",
+      "value": "1",
+      "numerator": 60,
+      "denominator": 60,
+      "sample_count": 60,
+      "evidence_count": 60
+    },
+    {
+      "key": "cost_per_invoice_usd",
+      "target": "0.04",
+      "direction": "max",
+      "value": "0.0012457488",
+      "numerator": null,
+      "denominator": null,
+      "sample_count": 100,
+      "evidence_count": 100
+    },
+    {
+      "key": "p95_latency_seconds",
+      "target": "45",
+      "direction": "max",
+      "value": null,
+      "numerator": null,
+      "denominator": null,
+      "sample_count": 60,
+      "evidence_count": 0
+    }
+  ],
+  "caveats": [
+    "Selected samples do not cover the full 500-invoice golden suite.",
+    "P95 requires three independent live runs with auditable auto-approve timestamps."
+  ]
+}

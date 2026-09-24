@@ -15,11 +15,11 @@ from invoiceops_agent.tools.document_errors import DocumentUnavailable
 class RetryConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
-    version: Literal["invoice-retry@v1"] = "invoice-retry@v1"
+    version: Literal["invoice-retry@v2"] = "invoice-retry@v2"
     max_attempts: int = Field(default=3, ge=1, le=10)
     initial_delay_seconds: Decimal = Field(default=Decimal("0.5"), ge=0, le=60)
     max_delay_seconds: Decimal = Field(default=Decimal("5"), ge=0, le=300)
-    running_lease_seconds: int = Field(default=240, ge=1, le=3600)
+    running_lease_seconds: int = Field(default=480, ge=1, le=3600)
 
     @model_validator(mode="after")
     def ordered_delays(self) -> Self:

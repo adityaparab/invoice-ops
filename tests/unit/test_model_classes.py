@@ -15,7 +15,7 @@ pytestmark = pytest.mark.unit
 
 def test_live_pipeline_requires_a_declared_model_class() -> None:
     sample = _sample()
-    live = _report((_record(sample, route="ARCHIVE"),), offset_minutes=0)
+    live = _report((_record(sample, route="AUTO_APPROVE"),), offset_minutes=0)
     missing = live.model_dump(mode="json")
     missing["model_class"] = None
     with pytest.raises(ValidationError, match="declared model class"):
@@ -26,7 +26,7 @@ def test_live_pipeline_requires_a_declared_model_class() -> None:
 
 def test_class_reports_keep_tags_and_partial_comparisons_explicit() -> None:
     sample = _sample()
-    local_pipeline = _report((_record(sample, route="ARCHIVE"),), offset_minutes=0)
+    local_pipeline = _report((_record(sample, route="AUTO_APPROVE"),), offset_minutes=0)
     prod_pipeline = PipelineReport.model_validate(
         {**local_pipeline.model_dump(mode="json"), "model_class": "openai-prod"}
     )
@@ -50,7 +50,7 @@ def test_class_reports_keep_tags_and_partial_comparisons_explicit() -> None:
 
 def test_comparison_rejects_wrong_class_and_changed_targets() -> None:
     sample = _sample()
-    pipeline = _report((_record(sample, route="ARCHIVE"),), offset_minutes=0)
+    pipeline = _report((_record(sample, route="AUTO_APPROVE"),), offset_minutes=0)
     local = score_primary_metrics(MANIFEST, MANIFEST_SHA, (pipeline,))
     with pytest.raises(ModelClassComparisonError, match="tagged"):
         compare_model_classes(local, local, local_sha256="a" * 64, prod_sha256="b" * 64)

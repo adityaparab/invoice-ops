@@ -82,7 +82,7 @@ class JudgeSummary(DiagnosticModel):
 
 class DiagnosticReport(DiagnosticModel):
     version: Literal["golden-diagnostics@v1", "golden-diagnostics@v2"] = "golden-diagnostics@v2"
-    dataset_version: Literal["golden/v1.0.0"] = "golden/v1.0.0"
+    dataset_version: Literal["golden/v1.0.0", "golden/v1.0.1"] = "golden/v1.0.1"
     manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     mode: Literal["live", "recorded"]
     model_class: ModelClass | None = None
@@ -301,6 +301,7 @@ def score_diagnostics(
         caveats.append("Triage judge coverage is incomplete.")
     return DiagnosticReport(
         version="golden-diagnostics@v2" if pipeline.model_class else "golden-diagnostics@v1",
+        dataset_version=manifest.version,
         manifest_sha256=manifest_sha256,
         mode=pipeline.mode,
         model_class=pipeline.model_class,
@@ -317,7 +318,7 @@ def score_diagnostics(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("eval/golden/v1.0.0/manifest.json"))
+    parser.add_argument("--manifest", type=Path, default=Path("eval/golden/v1.0.1/manifest.json"))
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--judge-report", type=Path)
     parser.add_argument("--output", type=Path, required=True)

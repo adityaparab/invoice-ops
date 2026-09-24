@@ -41,7 +41,7 @@ def _sample(*, code: str | None = None) -> GoldenSample:
 def _record(
     sample: GoldenSample,
     *,
-    route: Literal["ARCHIVE", "REVIEW", "REJECT"],
+    route: Literal["AUTO_APPROVE", "REVIEW", "REJECT"],
     code: str | None = None,
     elapsed_seconds: int = 5,
     embedding_cost: str | None = "0.002",
@@ -66,8 +66,8 @@ def _record(
         }
         if route == "REVIEW":
             evidence["triage.prepared"] = {"triage": {"cost_usd": "0.003"}}
-    status: InvoiceStatus = "ARCHIVED" if route == "ARCHIVE" else "NEEDS_REVIEW"
-    run_status: RunStatus = "COMPLETED" if route == "ARCHIVE" else "PAUSED"
+    status: InvoiceStatus = "APPROVED" if route == "AUTO_APPROVE" else "NEEDS_REVIEW"
+    run_status: RunStatus = "COMPLETED" if route == "AUTO_APPROVE" else "PAUSED"
     versions = VersionPins(
         graph_version="synthetic-graph@v1",
         model_version="synthetic-model@v1",
@@ -92,7 +92,7 @@ def _record(
         )
 
     events = [event(1, "ingest.accepted", START)]
-    if route == "ARCHIVE":
+    if route == "AUTO_APPROVE":
         events.append(event(2, "approval.auto_granted", START + timedelta(seconds=elapsed_seconds)))
     return RunRecord(
         sample_id=sample.sample_id,
@@ -159,7 +159,7 @@ def test_primary_rates_cost_and_three_run_event_latency() -> None:
     reports = tuple(
         _report(
             (
-                _record(clean, route="ARCHIVE", elapsed_seconds=latency, run_number=index),
+                _record(clean, route="AUTO_APPROVE", elapsed_seconds=latency, run_number=index),
                 _record(anomaly, route="REVIEW", code="PRICE_MM", run_number=index),
                 _record(duplicate, route="REJECT", run_number=index),
             ),
@@ -188,6 +188,14 @@ def test_primary_rates_cost_and_three_run_event_latency() -> None:
     assert next(metric for metric in scored.metrics if metric.key == "stp_rate").target == Decimal(
         "0.70"
     )
+
+
+def test_real_graph_auto_approve_route_counts_as_straight_through() -> None:
+    clean = _sample()
+    values = _metrics(_report((_record(clean, route="AUTO_APPROVE"),), offset_minutes=0))
+    assert values["false_escalation_rate"] == 0
+    assert values["routing_accuracy"] == 1
+    assert values["stp_rate"] == 1
 
 
 def test_missed_code_reviewed_clean_and_missing_cost_are_explicit() -> None:
@@ -229,7 +237,7 @@ def test_unknown_labels_are_skipped_and_wrong_values_count_fp_and_fn() -> None:
 
 def test_recorded_mode_and_mismatched_manifests_cannot_pose_as_full_measurement() -> None:
     sample = _sample()
-    report = _report((_record(sample, route="ARCHIVE"),), offset_minutes=0, mode="recorded")
+    report = _report((_record(sample, route="AUTO_APPROVE"),), offset_minutes=0, mode="recorded")
     scored = score_primary_metrics(MANIFEST, MANIFEST_SHA, (report,))
     assert not scored.complete_suite
     assert (

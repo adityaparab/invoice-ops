@@ -34,6 +34,7 @@ from invoiceops_agent.ledger.writer import LedgerWriter
 from invoiceops_agent.schemas.gate import CompositeGateConfig
 from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.document_settings import DocumentSettings
+from invoiceops_agent.tools.ocr_identifiers import TesseractIdentifierOCR
 from invoiceops_agent.tools.raw_document_reader import S3DocumentReader
 from invoiceops_agent.tools.raw_storage import s3_storage
 from invoiceops_agent.tools.semantic_cache import PostgresSemanticCache
@@ -177,6 +178,7 @@ async def invoice_runtime(
                 DocumentPreflight(document),
                 gateway,
                 audit,
+                TesseractIdentifierOCR(),
             ),
             validation=ValidateNode(audit),
             matching=Match3WayNode(audit),

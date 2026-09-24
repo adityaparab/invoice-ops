@@ -34,9 +34,9 @@ checksums when native zlib encoders differ. The full golden builder records
 its Pillow and zlib versions and rejects drift; recorded mode uses identical
 document bytes on every CI host.
 
-The current confidence gate routes this clean sample to human review, so the
-smoke expects a `PAUSED` run and `NEEDS_REVIEW` invoice with a `triage.prepared`
-event. Recorded mode is a pipeline smoke, not a model-quality measurement.
+The current confidence gate auto-approves this clean sample, so the smoke
+expects a completed run and audited `approval.auto_granted` event. Recorded
+mode is a pipeline smoke, not a model-quality measurement.
 
 ## Full live run
 
@@ -50,7 +50,8 @@ uv run python -m eval.runners.run_pipeline --split all --model-class local-dev
 ```
 
 `--workers 8` runs eight isolated Compose worker containers in parallel for
-independent invoices. Parent invoices always finish before their near-duplicate
+one bounded arrival batch at a time. The next batch is uploaded only after
+the current batch finishes. Parent invoices always finish before their near-duplicate
 children, so similarity decisions do not depend on scheduling. Use one worker
 for the recorded cassette smoke. The model class is a declared experiment tag;
 the actual model versions remain in the report's ledger events.

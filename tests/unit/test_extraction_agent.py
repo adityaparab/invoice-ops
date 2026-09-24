@@ -18,7 +18,7 @@ from tests.unit.extraction_support import (
     raw_document,
 )
 
-from invoiceops_agent.agents.extraction import ExtractionAgent
+from invoiceops_agent.agents.extraction import ExtractionAgent, IdentifierOCR
 from invoiceops_agent.agents.extraction_errors import ExtractionAuditFailed
 from invoiceops_agent.agents.extraction_prompts import PROMPT_VERSION, REPAIR_PROMPT_VERSION
 from invoiceops_agent.gateway_client import GatewayClient, GatewaySettings
@@ -27,13 +27,14 @@ from invoiceops_agent.ledger.errors import LedgerStorageError
 from invoiceops_agent.ledger.schemas import AppendEvent, LedgerEvent, VersionPins
 from invoiceops_agent.schemas.documents import DocumentReference
 from invoiceops_agent.schemas.extraction import ExtractionEscalation, ExtractionSuccess
+from invoiceops_agent.schemas.ocr import OCRIdentifier, OCRIdentifiers
 from invoiceops_agent.tools.document_errors import DocumentUnavailable
 from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.document_settings import DocumentSettings
 from invoiceops_agent.tools.ingestion_schemas import RawDocument
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
-CASSETTES = Path(__file__).parents[1] / "cassettes" / "extraction"
+CASSETTES = Path(__file__).parents[1] / "cassettes" / "extraction" / "v4"
 
 
 @dataclass
@@ -131,10 +132,17 @@ def model_response(content: str | None = None, *, refusal: bool = False) -> http
 
 
 def agent(
-    client: GatewayClient, audit: CaptureAudit, reader: MemoryReader | None = None
+    client: GatewayClient,
+    audit: CaptureAudit,
+    reader: MemoryReader | None = None,
+    identifier_ocr: IdentifierOCR | None = None,
 ) -> ExtractionAgent:
     return ExtractionAgent(
-        reader or MemoryReader(), DocumentPreflight(DocumentSettings()), client, audit
+        reader or MemoryReader(),
+        DocumentPreflight(DocumentSettings()),
+        client,
+        audit,
+        identifier_ocr,
     )
 
 
@@ -163,6 +171,39 @@ async def test_success_preserves_business_mismatches_and_audits_provenance() -> 
     assert result.calls[0].latency_ms is not None
     assert command.payload["content_hash"] == extraction_request().content_hash
     assert command.payload["preflight_version"] == "document-preflight@v1"
+
+
+async def test_success_audits_ocr_correction_before_downstream_decisions() -> None:
+    data = invoice_extraction().model_dump(mode="json")
+    data["bank_account_iban"] = {"value": "GB00SYNTH0020260827002", "confidence": "1"}
+    data["po_number"] = {"value": "WRONG-PO", "confidence": "1"}
+
+    class FakeOCR:
+        async def read(
+            self, document: RawDocument, *, run_id: UUID, trace_id: str
+        ) -> OCRIdentifiers:
+            assert document.content_hash == extraction_request().content_hash
+            return OCRIdentifiers(
+                status="COMPLETE",
+                bank_account_iban=OCRIdentifier(value="GB00SYNTH00202608270002", confidence=76),
+                po_number=OCRIdentifier(value="SYN-PO-1", confidence=90),
+            )
+
+    audit = CaptureAudit()
+    async with GatewayClient(
+        gateway_settings(),
+        transport=httpx2.MockTransport(lambda _: model_response(json.dumps(data))),
+    ) as client:
+        result = await agent(client, audit, identifier_ocr=FakeOCR()).extract(extraction_request())
+    assert isinstance(result, ExtractionSuccess)
+    assert result.extraction.bank_account_iban.value == "GB00SYNTH00202608270002"
+    assert result.extraction.po_number.value == "SYN-PO-1"
+    assert audit.commands[0].payload["identifier_ocr_applied_fields"] == [
+        "bank_account_iban",
+        "po_number",
+    ]
+    assert audit.commands[0].versions is not None
+    assert audit.commands[0].versions.policy_version == "identifier-ocr@v1"
 
 
 async def test_malformed_output_gets_one_fixed_repair_without_echoing_content(

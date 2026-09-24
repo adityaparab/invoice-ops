@@ -1,0 +1,38 @@
+{
+  "alias": "extract-vision",
+  "scenario": "extract_success",
+  "prompt_version": "extract@v2",
+  "request_sha256": "54987a840f3f60db8e32af2548c6e5a6c3d83d84c2f16f2092977862d8c3da5d",
+  "format_version": 2,
+  "outcomes": [
+    {
+      "kind": "response",
+      "status_code": 200,
+      "headers": {
+        "content-type": "application/json"
+      },
+      "response": {
+        "id": "chatcmpl-synthetic-extraction",
+        "object": "chat.completion",
+        "created": 1790164800,
+        "model": "synthetic-extraction-model-v1",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+              "role": "assistant",
+              "content": "{\"vendor_name\":{\"value\":\"Synthetic Supplier 001\",\"confidence\":\"0.9\"},\"vendor_tax_id\":{\"value\":null,\"confidence\":\"0\"},\"bank_account_iban\":{\"value\":null,\"confidence\":\"0\"},\"invoice_number\":{\"value\":\"SYN-001\",\"confidence\":\"0.9\"},\"po_number\":{\"value\":null,\"confidence\":\"0\"},\"currency\":{\"value\":\"USD\",\"confidence\":\"1\"},\"invoice_date\":{\"value\":\"2026-09-23\",\"confidence\":\"1\"},\"due_date\":{\"value\":null,\"confidence\":\"0\"},\"subtotal\":{\"value\":\"100\",\"confidence\":\"1\"},\"tax_amount\":{\"value\":\"20\",\"confidence\":\"1\"},\"total_amount\":{\"value\":\"120\",\"confidence\":\"1\"},\"line_items\":[{\"description\":{\"value\":\"Synthetic service\",\"confidence\":\"1\"},\"quantity\":{\"value\":\"2\",\"confidence\":\"1\"},\"unit_price\":{\"value\":\"50\",\"confidence\":\"1\"},\"tax_rate\":{\"value\":\"0.2\",\"confidence\":\"1\"},\"line_total\":{\"value\":\"100\",\"confidence\":\"1\"}}]}",
+              "refusal": null
+            }
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 1000,
+          "completion_tokens": 200,
+          "total_tokens": 1200
+        }
+      }
+    }
+  ]
+}

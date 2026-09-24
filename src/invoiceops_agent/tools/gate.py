@@ -49,13 +49,14 @@ def minimum_field_confidence(extraction: InvoiceExtraction) -> Decimal:
 
 
 def normalized_match_delta(match: MatchResult, denominator_floor: Decimal) -> Decimal:
-    """Largest absolute numeric gap divided by the larger compared magnitude."""
-    if not match.snapshot_found or not match.numeric_checks:
+    """Largest equality gap; directional upper bounds are enforced by matching policy."""
+    equal_checks = tuple(check for check in match.numeric_checks if check.rule == "equal")
+    if not match.snapshot_found or not equal_checks:
         return Decimal(1)
     largest = Decimal(0)
     with localcontext() as context:
         context.prec = 28
-        for check in match.numeric_checks:
+        for check in equal_checks:
             if (
                 check.status == "UNKNOWN"
                 or check.expected is None

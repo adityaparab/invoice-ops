@@ -37,5 +37,11 @@ The [triage agent](TRIAGE_AGENT.md) drafts cited recommendations through the `tr
 alias. It uses the deterministic exception taxonomy and policy evidence, and records its model and
 prompt pins with the review queue projection.
 
+The invoice graph has a 420-second default deadline and a 450-second configuration maximum.
+It covers the bounded extraction,
+embedding, and triage gateway calls plus checkpoint and audit work; the gateway still
+bounds each logical call to 120 seconds. A timeout marks the run failed for audited
+redrive rather than pretending a partial graph is complete.
+
 [Retry and dead-letter operation](RETRY_AND_DLQ.md) records run status, retries only uncaught
 infrastructure failures, and supports audited operator redrive.

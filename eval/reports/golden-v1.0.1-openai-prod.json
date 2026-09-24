@@ -1,0 +1,100 @@
+{
+  "version": "primary-metrics@v2",
+  "dataset_version": "golden/v1.0.1",
+  "manifest_sha256": "329946ee4d1784a5ae605e114ce13c536ac4e952dcda16b62c63169dee5393f6",
+  "mode": "live",
+  "model_class": "openai-prod",
+  "model_versions": [
+    "gemini-embedding",
+    "gemini25flash",
+    "gpt4omini",
+    "gpt5nano"
+  ],
+  "report_count": 3,
+  "sample_count": 500,
+  "complete_suite": true,
+  "scored_at": "2026-09-24T16:37:42.001515Z",
+  "metrics": [
+    {
+      "key": "exception_recall",
+      "target": "0.98",
+      "direction": "min",
+      "value": "0.9933333333333333333333333333",
+      "numerator": 149,
+      "denominator": 150,
+      "sample_count": 150,
+      "evidence_count": 150
+    },
+    {
+      "key": "false_escalation_rate",
+      "target": "0.05",
+      "direction": "max",
+      "value": "0.03333333333333333333333333333",
+      "numerator": 10,
+      "denominator": 300,
+      "sample_count": 300,
+      "evidence_count": 300
+    },
+    {
+      "key": "field_f1",
+      "target": "0.95",
+      "direction": "min",
+      "value": "0.9731779631800317175756739985",
+      "numerator": 14114,
+      "denominator": 14503,
+      "sample_count": 480,
+      "evidence_count": 450
+    },
+    {
+      "key": "money_field_f1",
+      "target": "0.97",
+      "direction": "min",
+      "value": "0.9912963811268896014658726523",
+      "numerator": 4328,
+      "denominator": 4366,
+      "sample_count": 480,
+      "evidence_count": 450
+    },
+    {
+      "key": "routing_accuracy",
+      "target": "0.95",
+      "direction": "min",
+      "value": "0.9777777777777777777777777778",
+      "numerator": 440,
+      "denominator": 450,
+      "sample_count": 450,
+      "evidence_count": 450
+    },
+    {
+      "key": "stp_rate",
+      "target": "0.70",
+      "direction": "min",
+      "value": "0.9666666666666666666666666667",
+      "numerator": 290,
+      "denominator": 300,
+      "sample_count": 300,
+      "evidence_count": 300
+    },
+    {
+      "key": "cost_per_invoice_usd",
+      "target": "0.04",
+      "direction": "max",
+      "value": "0.00122339726",
+      "numerator": null,
+      "denominator": null,
+      "sample_count": 500,
+      "evidence_count": 500
+    },
+    {
+      "key": "p95_latency_seconds",
+      "target": "45",
+      "direction": "max",
+      "value": "30.872508",
+      "numerator": null,
+      "denominator": null,
+      "sample_count": 900,
+      "evidence_count": 875
+    }
+  ],
+  "caveats": []
+}
