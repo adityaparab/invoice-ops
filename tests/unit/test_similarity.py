@@ -91,6 +91,8 @@ def test_workflow_gateway_uses_only_litellm_env_model_names(
         "embed": "synthetic-384",
         "triage-reasoner": "synthetic-triage",
     }
+    assert gateway.aliases["extract-vision"].response_format == "json_object"
+    assert gateway.aliases["triage-reasoner"].response_format == "json_object"
     assert gateway.aliases["extract-vision"].routes_for("restricted", "extract-vision") == (
         ("synthetic-vision", "synthetic-vision"),
         ("synthetic-restricted-fallback", "synthetic-restricted-fallback"),

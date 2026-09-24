@@ -1,5 +1,7 @@
 """Gather bounded, deterministic review facts without leaking raw invoice text."""
 
+from collections import Counter
+
 from invoiceops_agent.schemas.exceptions import TaxonomyResult
 from invoiceops_agent.schemas.matching import MatchResult
 from invoiceops_agent.schemas.policy import PolicyResult
@@ -24,7 +26,9 @@ def gather_triage_evidence(
     ]
     if taxonomy is not None:
         facts.append(TriageFact(ref="taxonomy:status", detail=taxonomy.status))
+        code_counts: Counter[str] = Counter()
         for tax_finding in taxonomy.findings:
+            code_counts[tax_finding.code] += 1
             suffix = (
                 f" line {tax_finding.evidence.line_number}"
                 if tax_finding.evidence.line_number
@@ -32,7 +36,11 @@ def gather_triage_evidence(
             )
             facts.append(
                 TriageFact(
-                    ref=f"taxonomy:{tax_finding.code}",
+                    ref=(
+                        f"taxonomy:{tax_finding.code}"
+                        if code_counts[tax_finding.code] == 1
+                        else f"taxonomy:{tax_finding.code}:{code_counts[tax_finding.code]}"
+                    ),
                     detail=f"{tax_finding.evidence.source}.{tax_finding.evidence.field}{suffix}",
                 )
             )

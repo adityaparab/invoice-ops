@@ -7,7 +7,7 @@ facts with stable references, such as `taxonomy:DUP_NEAR`, `policy:status`, and
 `match:numeric:3`. It excludes raw invoice text and bank values. The input
 fingerprint and `triage-evidence@v1` version make the package reproducible.
 
-The agent sends those facts with the packaged `triage@v1` prompt through the
+The agent sends those facts with the packaged `triage@v2` prompt through the
 single gateway client. The output is a typed advisory draft containing an
 action, summary, rationale, and exact evidence references. References outside
 the supplied package are rejected. A proposed `APPROVE` when the authoritative
@@ -22,7 +22,7 @@ endpoint; if empty, `LITELLM_MODEL` is used. The workflow reads only
 listed in `.env.example`. It does not read a proxy configuration file.
 
 The graph commits the exception row and `triage.prepared` AGENT ledger event in
-one transaction. The ledger pins `triage@v1`, the selected model name, and the
+one transaction. The ledger pins `triage@v2`, the selected model name, and the
 `exception-queue@v1` policy version; its payload includes the evidence digest,
 facts, draft or fallback reason, token counts, and gateway latency when known.
 On replay, the committed payload is returned without another model call.

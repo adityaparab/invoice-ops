@@ -9,6 +9,15 @@
       "change": "Established the first measured extraction baseline with the existing agent and versioned prompts.",
       "observation": "32 tier-A images yielded micro field F1 of 0.7226; one extraction escalated after malformed model output. Tiers B and C and held-out generalization were not measured.",
       "decision": "Keep this as a development baseline only. Do not use it as a release gate or infer performance on other tiers."
+    },
+    {
+      "id": "golden-openai-prod-development-v01-2026-09-24",
+      "report_id": "golden-openai-prod-development-v01",
+      "date": "2026-09-24",
+      "hypothesis": "The existing extraction, similarity, taxonomy, policy, and confidence gate can classify the pinned 100-case development split with enough coverage to identify release risks.",
+      "change": "Ran the live Compose pipeline with gpt4omini for extraction and triage, gemini-embedding at 384 dimensions, JSON-object responses, and triage@v2; published the exact primary and diagnostic outputs.",
+      "observation": "Exception recall was 0.9667, false escalation 1.0000, field F1 0.9310, money F1 0.9571, routing accuracy 0.3000, and STP 0.0000. Cost and p95 were unavailable: three runs dead-lettered after duplicate triage citations and only one live repetition exists. DUP_NEAR had 48 false positives; BANK_CHANGE had 26. Clean IBAN OCR frequently dropped a zero, and even otherwise eligible clean cases scored below the 0.95 confidence threshold.",
+      "decision": "Treat v0.1 as a development baseline only. Fix repeated citation IDs, tighten near-duplicate identity checks, improve bank-field extraction, and tune the confidence gate on development evidence before a held-out, three-run release baseline. Keep the CI quality gate dormant until all eight full-suite measures are observed and pass floors."
     }
   ]
 }

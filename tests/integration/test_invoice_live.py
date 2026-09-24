@@ -273,7 +273,7 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         assert page.events[-1].actor_type == "AGENT"
         assert page.events[-1].versions.policy_version == "exception-queue@v1"
         assert page.events[-1].versions.model_version == "synthetic-triage@v1"
-        assert page.events[-1].versions.prompt_version == "triage@v1"
+        assert page.events[-1].versions.prompt_version == "triage@v2"
         return
     assert exception is None
     transitions = WorkflowTransitions(lambda: runtime_connection(ledger_runtime_dsn), ledger_writer)

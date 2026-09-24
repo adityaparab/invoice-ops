@@ -1,6 +1,7 @@
 """The API runner preflights gold bytes and never needs network in unit tests."""
 
 import asyncio
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -9,10 +10,12 @@ import pytest
 from eval.golden.schema import GoldenSample
 from eval.runners.build_smoke_cassettes import OUTPUT, record
 from eval.runners.run_pipeline import (
+    Compose,
     PipelineRunError,
     load_manifest,
     preflight_documents,
     run_pipeline,
+    schedule_run_waves,
     select_samples,
 )
 
@@ -127,6 +130,49 @@ def test_selected_duplicate_cannot_lose_its_parent() -> None:
     )
     with pytest.raises(PipelineRunError, match="parent"):
         select_samples(misordered, split=duplicate.split, limit=1)
+
+
+def test_near_duplicate_parent_finishes_in_an_earlier_worker_wave() -> None:
+    manifest, _ = load_manifest()
+    child = next(sample for sample in manifest.samples if sample.anomaly_codes == ("DUP_NEAR",))
+    parent = next(sample for sample in manifest.samples if sample.sample_id == child.parent_id)
+    uploads = (
+        (parent, IngestionResult(invoice_id=UUID(int=1), run_id=UUID(int=2)), 1.0),
+        (child, IngestionResult(invoice_id=UUID(int=3), run_id=UUID(int=4)), 1.0),
+    )
+    assert schedule_run_waves(uploads) == ((UUID(int=2),), (UUID(int=4),))
+    with pytest.raises(PipelineRunError, match="dependencies"):
+        schedule_run_waves(uploads[1:])
+
+
+def test_parallel_compose_worker_merges_exactly_one_result_per_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    compose = Compose(workers=3)
+    chunks: list[tuple[UUID, ...]] = []
+
+    def fake_run(
+        args: tuple[str, ...] | list[str],
+        *,
+        input_text: str | None = None,
+        allow_worker_failure: bool = False,
+    ) -> str:
+        assert allow_worker_failure
+        assert input_text is not None
+        ids = tuple(UUID(line) for line in input_text.splitlines())
+        chunks.append(ids)
+        return "\n".join(json.dumps({"run_id": str(run_id), "route": "REVIEW"}) for run_id in ids)
+
+    monkeypatch.setattr(compose, "_run", fake_run)
+    run_ids = tuple(UUID(int=index) for index in range(1, 8))
+    outcomes = compose.process(run_ids, recorded=False)
+    assert set(outcomes) == set(run_ids)
+    assert all(row["route"] == "REVIEW" for row in outcomes.values())
+    assert set(chunks) == {
+        (run_ids[0], run_ids[3], run_ids[6]),
+        (run_ids[1], run_ids[4]),
+        (run_ids[2], run_ids[5]),
+    }
 
 
 def test_batch_rejects_invalid_or_repeated_ids() -> None:

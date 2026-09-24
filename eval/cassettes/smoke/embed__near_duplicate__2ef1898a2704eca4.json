@@ -2,7 +2,7 @@
   "alias": "embed",
   "scenario": "near_duplicate",
   "prompt_version": "near-duplicate-summary@v1",
-  "request_sha256": "ef7b05a05aff2a2711b8acc295a2993f18cdff28aa6d9615320114e6f283b2c2",
+  "request_sha256": "61a60fc1960230feab8076935006d35ab014adad1b0de9a26ec49af04b8f262f",
   "format_version": 2,
   "outcomes": [
     {

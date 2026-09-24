@@ -2,7 +2,7 @@
   "alias": "extract-vision",
   "scenario": "extraction",
   "prompt_version": "extract@v1",
-  "request_sha256": "04f4a5dc08cbbdc58b5000051de939713ed13861de5054b981e11719145ad74a",
+  "request_sha256": "6a5e10f6185635706345ec085619be2c89d1c8b31ccd1fddcb30a978e1af5ac6",
   "format_version": 2,
   "outcomes": [
     {

@@ -1,5 +1,6 @@
 """Offline cited triage drafts and fail-closed fallback behavior."""
 
+from decimal import Decimal
 from uuid import UUID
 
 import pytest
@@ -19,7 +20,7 @@ from invoiceops_agent.gateway_client.schemas import (
     TokenUsage,
 )
 from invoiceops_agent.schemas.common import model_digest
-from invoiceops_agent.schemas.exceptions import TaxonomyRequest
+from invoiceops_agent.schemas.exceptions import EvidenceRef, ExceptionFinding, TaxonomyRequest
 from invoiceops_agent.schemas.triage import (
     TriageDraft,
     TriageEvidence,
@@ -71,11 +72,12 @@ class FakeTriageGateway:
                 alias="triage-reasoner",
                 model="synthetic-triage@v1",
                 model_version="synthetic-triage@v1",
-                prompt_version="triage@v1",
+                prompt_version=request.prompt_version,
             ),
             usage=TokenUsage(input_tokens=30, output_tokens=12, total_tokens=42),
             attempts=1,
             latency_ms=3,
+            cost_usd=Decimal("0.001"),
         )
 
 
@@ -102,7 +104,7 @@ async def test_cited_draft_is_versioned_and_uses_only_structured_evidence() -> N
     assert result.status == "DRAFT"
     assert result.draft is not None and result.draft.recommended_action == "ESCALATE"
     assert result.model_version == "synthetic-triage@v1"
-    assert result.prompt_version == "triage@v1"
+    assert result.prompt_version == "triage@v2"
     assert result.input_tokens == 30 and result.output_tokens == 12
     assert gateway.requests[0].alias == "triage-reasoner"
     user_part = gateway.requests[0].messages[-1].content[0]
@@ -141,6 +143,7 @@ async def test_uncited_or_policy_conflicting_draft_falls_back(
     result = await TriageAgent(FakeTriageGateway(draft)).prepare(_request(blocked=blocked))
     assert result.status == "FALLBACK" and result.draft is None
     assert result.fallback_reason == reason
+    assert result.cost_usd == Decimal("0.001")
 
 
 async def test_gateway_failure_falls_back_to_human_review() -> None:
@@ -177,3 +180,35 @@ async def test_evidence_gathering_uses_taxonomy_refs_without_raw_invoice_text() 
         validation=None,
         extraction_escalated=False,
     )
+
+
+async def test_repeated_taxonomy_code_keeps_distinct_triage_citations() -> None:
+    taxonomy = classify_exceptions(
+        TaxonomyRequest(
+            run_id=RUN_ID, invoice_id=INVOICE_ID, trace_id=TRACE_ID, near_duplicate=True
+        )
+    )
+    taxonomy = taxonomy.model_copy(
+        update={
+            "findings": (
+                *taxonomy.findings,
+                ExceptionFinding(
+                    code="DUP_NEAR",
+                    evidence=EvidenceRef(
+                        source="SIMILARITY", field="another_candidate", source_index=1
+                    ),
+                ),
+            )
+        }
+    )
+    evidence = gather_triage_evidence(
+        taxonomy=taxonomy,
+        policy=None,
+        match=None,
+        validation=None,
+        extraction_escalated=False,
+    )
+    assert [fact.ref for fact in evidence.facts if fact.ref.startswith("taxonomy:DUP_NEAR")] == [
+        "taxonomy:DUP_NEAR",
+        "taxonomy:DUP_NEAR:2",
+    ]

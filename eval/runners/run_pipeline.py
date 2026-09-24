@@ -6,6 +6,7 @@ import json
 import logging
 import subprocess
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import perf_counter
 from typing import Literal, Protocol
@@ -81,11 +82,16 @@ class Worker(Protocol):
 
 
 class Compose:
-    def __init__(self, *, project_name: str | None = None, timeout_seconds: int = 18000) -> None:
+    def __init__(
+        self, *, project_name: str | None = None, timeout_seconds: int = 18000, workers: int = 1
+    ) -> None:
+        if not 1 <= workers <= 16:
+            raise ValueError("Compose worker count must be between one and 16")
         self._prefix = ["docker", "compose"]
         if project_name:
             self._prefix.extend(("--project-name", project_name))
         self._timeout_seconds = timeout_seconds
+        self._workers = workers
 
     def _run(
         self,
@@ -125,9 +131,9 @@ class Compose:
             )
         )
 
-    def process(self, run_ids: tuple[UUID, ...], *, recorded: bool) -> dict[UUID, dict[str, str]]:
-        if not run_ids:
-            return {}
+    def _process_chunk(
+        self, run_ids: tuple[UUID, ...], *, recorded: bool
+    ) -> dict[UUID, dict[str, str]]:
         args = ["--profile", "workflow", "run", "--rm", "-T"]
         if recorded:
             args.extend(("-e", "LITELLM_EMBED_MODEL=recorded-embed-model"))
@@ -147,6 +153,21 @@ class Compose:
         if len(rows) != len(run_ids) or set(by_id) != set(run_ids):
             raise PipelineRunError("Worker result IDs differ from submitted run IDs")
         return by_id
+
+    def process(self, run_ids: tuple[UUID, ...], *, recorded: bool) -> dict[UUID, dict[str, str]]:
+        if not run_ids:
+            return {}
+        count = min(self._workers, len(run_ids))
+        chunks = tuple(run_ids[index::count] for index in range(count))
+        with ThreadPoolExecutor(max_workers=count) as pool:
+            futures = tuple(
+                pool.submit(self._process_chunk, chunk, recorded=recorded) for chunk in chunks
+            )
+            batches = tuple(future.result() for future in futures)
+        combined = {run_id: row for batch in batches for run_id, row in batch.items()}
+        if len(combined) != len(run_ids) or set(combined) != set(run_ids):
+            raise PipelineRunError("Parallel worker results differ from submitted run IDs")
+        return combined
 
 
 class HTTPPipelineAPI:
@@ -264,6 +285,30 @@ def preflight_documents(
     }
 
 
+def schedule_run_waves(
+    uploads: Sequence[tuple[GoldenSample, IngestionResult, float]],
+) -> tuple[tuple[UUID, ...], ...]:
+    """Finish parent invoices before their near-duplicate children are compared."""
+    completed = {sample.sample_id for sample, upload, _ in uploads if upload.duplicate}
+    pending = {
+        sample.sample_id: (sample, upload) for sample, upload, _ in uploads if not upload.duplicate
+    }
+    waves: list[tuple[UUID, ...]] = []
+    while pending:
+        ready = tuple(
+            (sample_id, upload.run_id)
+            for sample_id, (sample, upload) in pending.items()
+            if sample.parent_id is None or sample.parent_id in completed
+        )
+        if not ready or len({run_id for _, run_id in ready}) != len(ready):
+            raise PipelineRunError("Golden run dependencies are cyclic or share a run ID")
+        waves.append(tuple(run_id for _, run_id in ready))
+        completed.update(sample_id for sample_id, _ in ready)
+        for sample_id, _ in ready:
+            del pending[sample_id]
+    return tuple(waves)
+
+
 def run_pipeline(
     manifest: GoldenManifest,
     manifest_sha256: str,
@@ -289,15 +334,16 @@ def run_pipeline(
         if "DUP_EXACT" not in sample.anomaly_codes and upload.duplicate:
             raise PipelineRunError("A non-duplicate gold case matched existing content")
         uploads.append((sample, upload, upload_duration_ms))
-    run_ids = tuple(
-        dict.fromkeys(upload.run_id for _, upload, _ in uploads if not upload.duplicate)
-    )
+    waves = schedule_run_waves(uploads)
+    run_ids = tuple(run_id for wave in waves for run_id in wave)
     already_processed = {
         upload.run_id: api.detail(upload.invoice_id).invoice.run_status != "QUEUED"
         for _, upload, _ in uploads
         if not upload.duplicate
     }
-    worker_results = worker.process(run_ids, recorded=recorded)
+    worker_results: dict[UUID, dict[str, str]] = {}
+    for wave in waves:
+        worker_results.update(worker.process(wave, recorded=recorded))
     if set(worker_results) != set(run_ids):
         raise PipelineRunError("Worker result set differs from uploaded run IDs")
     records: list[RunRecord] = []
@@ -347,6 +393,7 @@ def main() -> int:
     parser.add_argument("--no-start", action="store_true")
     parser.add_argument("--project-name")
     parser.add_argument("--worker-timeout", type=int, default=18000)
+    parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -371,7 +418,11 @@ def main() -> int:
             manifest, split=args.split, limit=args.limit, recorded=args.recorded
         )
         documents = preflight_documents(args.dataset, selected, recorded=args.recorded)
-        compose = Compose(project_name=args.project_name, timeout_seconds=args.worker_timeout)
+        compose = Compose(
+            project_name=args.project_name,
+            timeout_seconds=args.worker_timeout,
+            workers=args.workers,
+        )
         if not args.no_start:
             compose.start()
         compose.seed()

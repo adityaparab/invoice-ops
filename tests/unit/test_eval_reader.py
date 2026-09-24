@@ -15,20 +15,30 @@ ROOT = Path(__file__).resolve().parents[2]
 NOW = datetime(2026, 9, 24, tzinfo=UTC)
 
 
-async def test_committed_baseline_is_measured_and_unavailable_views_are_empty() -> None:
+async def test_committed_reports_distinguish_measured_development_evidence() -> None:
     reader = FileEvalReader(ApiSettings(eval_reports_dir=ROOT / "eval/reports"), clock=lambda: NOW)
     dashboard = await reader.dashboard()
     assert dashboard.read_at == NOW
-    assert len(dashboard.reports) == 1
-    report = dashboard.reports[0]
+    assert len(dashboard.reports) == 2
+    development = dashboard.reports[0]
+    assert development.report_id == "golden-openai-prod-development-v01"
+    assert development.report_version == "pipeline-eval@v1"
+    assert any(row.key == "exception_recall" and row.value > 0 for row in development.metrics)
+    assert all(row.key != "cost_per_invoice_usd" for row in development.metrics)
+    assert len(development.per_anomaly_confusion) == 10
+    assert any("partial" in caveat.lower() for caveat in development.caveats)
+    report = dashboard.reports[1]
     assert report.report_version == "extraction-baseline@v1"
     assert report.metrics[0].key == "micro-f1"
     assert report.metrics[0].value == Decimal("0.7226")
     assert report.metrics[0].sample_count == 512
     assert report.per_anomaly_confusion == []
     assert report.tau_sweep == []
-    assert len(dashboard.experiments) == 1
-    assert dashboard.experiments[0].report_id == report.report_id
+    assert len(dashboard.experiments) == 2
+    assert {row.report_id for row in dashboard.experiments} == {
+        report.report_id,
+        development.report_id,
+    }
     assert '"value":"0.7226"' in dashboard.model_dump_json()
 
 

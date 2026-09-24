@@ -16,6 +16,7 @@ from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
 from invoiceops_agent.obs.tracing import traced_call
 from invoiceops_agent.schemas.common import model_digest
 from invoiceops_agent.schemas.similarity import (
+    EMBEDDING_DIMENSIONS,
     SUMMARY_VERSION,
     EmbeddingVector,
     SimilarityConfig,
@@ -62,6 +63,7 @@ class NearDuplicateAgent:
                     prompt_version=SUMMARY_VERSION,
                     scenario="near_duplicate",
                     inputs=(invoice_summary(request.extraction),),
+                    dimensions=EMBEDDING_DIMENSIONS,
                 )
             ),
         )

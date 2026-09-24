@@ -62,7 +62,7 @@ class TriageResult(TriageModel):
     fallback_reason: Literal["GATEWAY_FAILURE", "INVALID_EVIDENCE_REFS", "POLICY_CONFLICT"] | None
     evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     model_version: str = Field(min_length=1, max_length=160)
-    prompt_version: Literal["triage@v1"] = "triage@v1"
+    prompt_version: Literal["triage@v1", "triage@v2"] = "triage@v2"
     gateway_attempts: int = Field(ge=0, le=6)
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)

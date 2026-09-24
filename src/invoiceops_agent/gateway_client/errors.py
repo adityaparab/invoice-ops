@@ -1,15 +1,20 @@
 """Sanitized failures: callers can escalate without exposing SDK bodies or document text."""
 
+from decimal import Decimal
+
 from invoiceops_agent.gateway_client.schemas import RequestContext
 
 
 class GatewayError(Exception):
     code = "gateway_error"
 
-    def __init__(self, context: RequestContext, *, attempts: int = 0) -> None:
+    def __init__(
+        self, context: RequestContext, *, attempts: int = 0, cost_usd: Decimal | None = None
+    ) -> None:
         self.run_id = context.run_id
         self.trace_id = context.trace_id
         self.attempts = attempts
+        self.cost_usd = cost_usd
         super().__init__(f"{self.code} run_id={self.run_id} trace_id={self.trace_id}")
 
 
