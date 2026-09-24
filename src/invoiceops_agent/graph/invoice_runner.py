@@ -19,6 +19,7 @@ from invoiceops_agent.graph.errors import (
 from invoiceops_agent.graph.invoice import InvoiceGraph
 from invoiceops_agent.graph.runner import RunLock
 from invoiceops_agent.graph.state import InvoiceGraphState, ReviewDecision
+from invoiceops_agent.obs.tracing import operation_span
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,8 @@ class InvoiceGraphRunner:
                 timeout(self.timeout_seconds),
                 self.lock.acquire(initial.run_id, initial.trace_id),
             ):
-                result = await self._run_locked(initial)
+                with operation_span("workflow", "invoice", initial):
+                    result = await self._run_locked(initial)
         except GraphError:
             raise
         except TimeoutError as error:
@@ -88,7 +90,8 @@ class InvoiceGraphRunner:
                         run_id=run_id,
                         trace_id=trace_id,
                     )
-                output = await self.graph.ainvoke(command, config, durability="sync")
+                with operation_span("workflow", "review_resume", state):
+                    output = await self.graph.ainvoke(command, config, durability="sync")
                 result = self._state(output, run_id, trace_id)
                 if result.status != "completed":
                     raise InvalidCheckpoint(

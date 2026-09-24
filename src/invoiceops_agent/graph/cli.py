@@ -11,6 +11,7 @@ from invoiceops_agent.graph.checkpoints import postgres_graph
 from invoiceops_agent.graph.errors import GraphError
 from invoiceops_agent.graph.settings import GraphSettings
 from invoiceops_agent.obs.logging import configure_logging
+from invoiceops_agent.obs.tracing import tracing_session
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,10 @@ logger = logging.getLogger(__name__)
 async def run_demo(*, run_id: UUID, invoice_id: UUID) -> int:
     trace_id = uuid4().hex
     try:
-        settings = GraphSettings()
-        async with postgres_graph(settings) as runner:
-            result = await runner.run(run_id=run_id, invoice_id=invoice_id, trace_id=trace_id)
+        async with tracing_session("invoiceops-graph-demo"):
+            settings = GraphSettings()
+            async with postgres_graph(settings) as runner:
+                result = await runner.run(run_id=run_id, invoice_id=invoice_id, trace_id=trace_id)
     except (GraphError, ValidationError) as error:
         logger.error(
             "graph_demo_failed run_id=%s trace_id=%s error_type=%s",

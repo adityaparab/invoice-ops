@@ -14,20 +14,22 @@ from invoiceops_agent.graph.runtime import (
 )
 from invoiceops_agent.graph.state import InvoiceGraphState
 from invoiceops_agent.graph.worker import PostgresAttemptStore, RetryWorker
+from invoiceops_agent.obs.tracing import tracing_session
 
 
 async def run_invoice(run_id: UUID) -> dict[str, str]:
-    settings = InvoiceRuntimeSettings()
-    retry = RetryConfig()
+    async with tracing_session("invoiceops-worker"):
+        settings = InvoiceRuntimeSettings()
+        retry = RetryConfig()
 
-    async def run_once(value: UUID) -> InvoiceGraphState:
-        async with invoice_runtime(value, settings=settings) as workflow:
-            return await workflow.run()
+        async def run_once(value: UUID) -> InvoiceGraphState:
+            async with invoice_runtime(value, settings=settings) as workflow:
+                return await workflow.run()
 
-    store = PostgresAttemptStore(
-        lambda: runtime_connection(settings.postgres_dsn.get_secret_value()), retry
-    )
-    result = await RetryWorker(store, run_once, retry).process(run_id)
+        store = PostgresAttemptStore(
+            lambda: runtime_connection(settings.postgres_dsn.get_secret_value()), retry
+        )
+        result = await RetryWorker(store, run_once, retry).process(run_id)
     return {
         "run_id": str(result.run_id),
         "invoice_id": str(result.invoice_id),

@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from invoiceops_agent.gateway_client.schemas import EmbeddingRequest, EmbeddingValue, GatewayResult
 from invoiceops_agent.ledger.audit import AuditWriter
 from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
+from invoiceops_agent.obs.tracing import traced_call
 from invoiceops_agent.schemas.common import model_digest
 from invoiceops_agent.schemas.similarity import (
     SUMMARY_VERSION,
@@ -50,14 +51,19 @@ class NearDuplicateAgent:
 
     async def detect(self, request: SimilarityRequest) -> SimilarityResult:
         started = perf_counter()
-        embedded = await self._gateway.embed(
-            EmbeddingRequest(
-                run_id=request.run_id,
-                trace_id=request.trace_id,
-                prompt_version=SUMMARY_VERSION,
-                scenario="near_duplicate",
-                inputs=(invoice_summary(request.extraction),),
-            )
+        embedded = await traced_call(
+            "tool",
+            "similarity_embedding",
+            request,
+            lambda: self._gateway.embed(
+                EmbeddingRequest(
+                    run_id=request.run_id,
+                    trace_id=request.trace_id,
+                    prompt_version=SUMMARY_VERSION,
+                    scenario="near_duplicate",
+                    inputs=(invoice_summary(request.extraction),),
+                )
+            ),
         )
         try:
             if len(embedded.value.vectors) != 1:
@@ -75,8 +81,13 @@ class NearDuplicateAgent:
             ) from None
         model_version = embedded.provenance.model_version
         async with self._connection() as connection, connection.transaction():
-            candidate = await SimilarityRepository.detect_and_store(
-                connection, request.invoice_id, vector, model_version, self._config
+            candidate = await traced_call(
+                "tool",
+                "similarity_repository",
+                request,
+                lambda: SimilarityRepository.detect_and_store(
+                    connection, request.invoice_id, vector, model_version, self._config
+                ),
             )
             result = SimilarityResult(
                 status="NEAR_DUPLICATE" if candidate is not None else "NO_MATCH",
