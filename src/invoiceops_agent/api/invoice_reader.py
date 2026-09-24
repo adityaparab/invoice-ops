@@ -18,6 +18,7 @@ from invoiceops_agent.api.schemas.invoice_read import (
     InvoiceListQuery,
     InvoicePage,
     InvoiceSummary,
+    PendingProposal,
 )
 from invoiceops_agent.api.settings import ApiSettings
 
@@ -181,6 +182,7 @@ class PostgresInvoiceReader:
                     raise InvoiceNotFound("Invoice does not exist")
                 summary = InvoiceSummary.model_validate(row)
                 exception: InvoiceException | None = None
+                pending_proposal: PendingProposal | None = None
                 if summary.exception_id is not None:
                     exception_row = await (
                         await connection.execute(
@@ -192,6 +194,19 @@ class PostgresInvoiceReader:
                     ).fetchone()
                     if exception_row is not None:
                         exception = InvoiceException.model_validate(exception_row)
+                        if exception.status == "IN_REVIEW":
+                            proposal_row = await (
+                                await connection.execute(
+                                    "SELECT id, action, rationale, reason_code, actor_id, "
+                                    "created_at "
+                                    "FROM public.decisions WHERE exception_id = %s "
+                                    "AND supersedes_id IS NULL "
+                                    "ORDER BY created_at DESC, id DESC LIMIT 1",
+                                    (exception.id,),
+                                )
+                            ).fetchone()
+                            if proposal_row is not None:
+                                pending_proposal = PendingProposal.model_validate(proposal_row)
                 evidence_rows = await (
                     await connection.execute(
                         "SELECT event_type, payload FROM public.ledger WHERE run_id = %s "
@@ -213,6 +228,7 @@ class PostgresInvoiceReader:
         return InvoiceDetail(
             invoice=summary,
             exception=exception,
+            pending_proposal=pending_proposal,
             evidence=evidence,
             read_at=self._clock(),
         )

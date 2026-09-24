@@ -172,6 +172,16 @@
           "invoice": {
             "$ref": "#/components/schemas/InvoiceSummary"
           },
+          "pending_proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingProposal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "read_at": {
             "format": "date-time",
             "title": "Read At",
@@ -524,6 +534,52 @@
           }
         },
         "title": "LivenessResponse",
+        "type": "object"
+      },
+      "PendingProposal": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "APPROVE",
+              "RETURN",
+              "ESCALATE"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reason_code": {
+            "title": "Reason Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "rationale",
+          "reason_code",
+          "actor_id",
+          "created_at"
+        ],
+        "title": "PendingProposal",
         "type": "object"
       },
       "ProblemDetails": {

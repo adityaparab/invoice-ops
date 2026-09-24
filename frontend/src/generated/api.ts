@@ -185,6 +185,7 @@ export interface components {
             };
             exception: components["schemas"]["InvoiceException"] | null;
             invoice: components["schemas"]["InvoiceSummary"];
+            pending_proposal?: components["schemas"]["PendingProposal"] | null;
             /**
              * Read At
              * Format: date-time
@@ -324,6 +325,30 @@ export interface components {
              * @constant
              */
             status: "ok";
+        };
+        /** PendingProposal */
+        PendingProposal: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "APPROVE" | "RETURN" | "ESCALATE";
+            /** Actor Id */
+            actor_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rationale */
+            rationale: string;
+            /** Reason Code */
+            reason_code: string;
         };
         /** ProblemDetails */
         ProblemDetails: {

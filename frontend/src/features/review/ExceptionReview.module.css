@@ -1,0 +1,147 @@
+.screen,
+.detailSections,
+.decisionForm {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.card {
+  display: grid;
+  gap: 1.1rem;
+  min-width: 0;
+  padding: 1.6rem;
+  border: 1px solid #e3e7ef;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px #14254208;
+}
+
+.sectionHeader,
+.detailHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.detailHeader {
+  margin-top: 0.6rem;
+}
+
+.eyebrow {
+  color: #317a6a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.muted,
+.fieldLabel {
+  color: #667085;
+  font-size: 0.82rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.filters :global(.mantine-Switch-root) {
+  padding-bottom: 0.55rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid #e3e7ef;
+  border-radius: 0.6rem;
+}
+
+.table {
+  min-width: 760px;
+}
+
+.table :global(thead) {
+  background: #f4f7fb;
+}
+
+.table :global(th),
+.table :global(td) {
+  padding: 0.8rem;
+  border-bottom: 1px solid #e8ecf2;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table :global(tbody tr:last-child td) {
+  border-bottom: 0;
+}
+
+.selectedRow {
+  background: #e8f8f3;
+}
+
+.invoiceLink {
+  color: #08745f;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.sortButton {
+  color: #25344d;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 1.5rem;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.8rem;
+  border: 1px solid #e8ecf2;
+  border-radius: 0.5rem;
+}
+
+.findings {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.proposal {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-left: 3px solid #0da687;
+  background: #edf9f5;
+}
+
+@media (max-width: 900px) {
+  .filters,
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .filters,
+  .fieldGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    padding: 1rem;
+  }
+}

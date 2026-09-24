@@ -74,8 +74,18 @@ class InvoicePage(InvoiceReadModel):
     next_cursor: str | None = Field(default=None, max_length=200)
 
 
+class PendingProposal(InvoiceReadModel):
+    id: UUID
+    action: Literal["APPROVE", "RETURN", "ESCALATE"]
+    rationale: str
+    reason_code: str
+    actor_id: str
+    created_at: AwareDatetime
+
+
 class InvoiceDetail(InvoiceReadModel):
     invoice: InvoiceSummary
     exception: InvoiceException | None
+    pending_proposal: PendingProposal | None = None
     evidence: dict[str, dict[str, JsonValue]]
     read_at: AwareDatetime

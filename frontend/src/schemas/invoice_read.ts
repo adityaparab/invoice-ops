@@ -49,9 +49,19 @@ export const invoicePageSchema = z.object({
   next_cursor: z.string().max(200).nullable(),
 }).strict();
 
+export const pendingProposalSchema = z.object({
+  id: z.string().uuid(),
+  action: z.enum(["APPROVE", "RETURN", "ESCALATE"]),
+  rationale: z.string(),
+  reason_code: z.string(),
+  actor_id: z.string(),
+  created_at: timestamp,
+}).strict();
+
 export const invoiceDetailSchema = z.object({
   invoice: invoiceSummarySchema,
   exception: invoiceExceptionSchema.nullable(),
+  pending_proposal: pendingProposalSchema.nullable(),
   evidence: z.record(z.string(), jsonObject),
   read_at: timestamp,
 }).strict();

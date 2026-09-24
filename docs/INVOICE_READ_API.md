@@ -17,8 +17,9 @@ receives 403. All error bodies are `application/problem+json` and include a
 request trace ID.
 
 Each queue row uses the latest run and its latest extraction and exception.
-Detail returns the same summary, the full latest exception, and committed
-evidence keyed by workflow event type. Ledger payloads remain the source of
+Detail returns the same summary, the full latest exception, any pending analyst
+proposal needed for manager signoff, and committed evidence keyed by workflow
+event type. Ledger payloads remain the source of
 truth for extraction and decisions. Review entry writes the operational
 exception, `NEEDS_REVIEW` invoice status, and `triage.prepared` ledger event in
 one transaction. The versioned `exception-queue@v1` projection gives near

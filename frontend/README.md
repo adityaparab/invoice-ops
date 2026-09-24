@@ -1,8 +1,9 @@
 # InvoiceOps UI
 
 Vite, React, TypeScript, Mantine, TanStack Query, and React Router form the
-single-page application shell. Its six routed workspaces are added in plan
-steps 3.5–3.10. The current shell shows the routes and API liveness.
+single-page application shell. The Exception Review screen is connected to the
+queue, detail, and decision endpoints; the remaining workspaces follow in plan
+steps 3.6–3.10.
 
 ```sh
 cd frontend
@@ -30,3 +31,11 @@ Enter the matching persona token to make protected API reads. Tokens stay in
 the current tab's memory and are never bundled into the app or persisted in
 browser storage. Switching persona or changing a token clears TanStack Query's
 cache, while the API enforces the actual role permissions.
+
+The Exception Review queue applies status, source, priority, and exception
+filters on the server. Search and column sorting cover loaded rows; use
+**Load more** to fetch further keyset pages. The detail view shows the
+audited invoice/PO/receipt comparisons, extracted field confidence, and cited
+triage draft. Maria submits an analyst proposal; Dan can inspect that
+proposal after a reload and independently sign it. The decision endpoint
+enforces the role and four-eyes rules.

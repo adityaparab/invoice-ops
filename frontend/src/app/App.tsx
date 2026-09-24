@@ -2,6 +2,7 @@ import { Badge, Button, PasswordInput, Select, Text, Title } from "@mantine/core
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, Navigate, Route, Routes } from "react-router";
 import { fetchHealth } from "../api/health";
+import { ExceptionReview } from "../features/review/ExceptionReview";
 import { isPersona, personaIds, personaLabels, usePersona } from "./persona";
 import { appRoutes, routesFor } from "./routes";
 import type { AppRoute } from "./routes";
@@ -66,7 +67,7 @@ function GuardedScreen({ route }: { route: AppRoute }) {
     const home = routesFor(persona)[0];
     return <Navigate to={home?.path ?? "/queue"} replace />;
   }
-  return <ScreenPlaceholder route={route} />;
+  return route.path === "/queue" ? <ExceptionReview /> : <ScreenPlaceholder route={route} />;
 }
 
 export function App() {
