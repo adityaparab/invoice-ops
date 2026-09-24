@@ -26,16 +26,21 @@ can read and append audit entries and perform CRUD on operational tables. It can
 alter schema, or truncate tables. Audit update, delete, and truncate operations are also blocked
 by database triggers.
 
-The optional Compose LiteLLM proxy starts with:
+The invoice worker uses `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, and the
+model-name variables in `.env.example` directly. No local LiteLLM proxy or
+additional route configuration is loaded.
+
+The optional observability stack starts with:
 
 ```bash
-docker compose --profile gateway up -d --wait
+docker compose --profile observability up -d --wait --wait-timeout 300
 ```
 
-It binds to port 4001 to leave port 4000 available for a native developer gateway. Supply the selected
-upstream's environment variables first; [gateway configuration](litellm/README.md) describes the
-native bridge, Ollama, and production routes. Startup rejects missing variables. The health check
-verifies proxy readiness without invoking models. Application gateway traffic is implemented in step 1.5.
+Langfuse is at `http://127.0.0.1:3000`, Prometheus at `http://127.0.0.1:9090`,
+and Grafana at `http://127.0.0.1:3001` with a provisioned Prometheus data source
+and platform health dashboard. Langfuse has isolated Postgres, ClickHouse,
+Redis, and MinIO dependencies under the same optional profile. See
+[observability setup](observability/README.md) for ports, credentials, and checks.
 
 All published ports bind to `127.0.0.1`; `.env.example` lists port overrides and synthetic local
 credentials. Change credentials before a shared deployment. Docker build context excludes local
@@ -43,7 +48,7 @@ environment files, Git history, tests, and host virtual environments.
 
 Postgres data lives in the `postgres_data` named volume, and MinIO objects live in `minio_data`.
 `docker compose down` stops services while retaining both volumes. Start again with `up -d --wait`
-to reuse the data. The API and proxy keep no persistent application data in their containers.
+to reuse the data. The API keeps no persistent application data in its container.
 
 For native Python development against the running infrastructure:
 
@@ -92,7 +97,7 @@ Run an accepted invoice with the optional one-shot worker using its upload respo
 docker compose run --rm invoice-worker invoiceops-invoice-run <run_id>
 ```
 
-The worker uses the three LiteLLM connection/model variables plus an embedding model name; it
-does not use the optional local proxy configuration. See [workflow operation](../docs/INVOICE_WORKFLOW.md).
+The worker uses the LiteLLM URL, key, and model-name variables directly. See
+[workflow operation](../docs/INVOICE_WORKFLOW.md).
 Failed runs can be inspected and redriven with `invoiceops-invoice-dlq`; see
 [retry and dead-letter operation](../docs/RETRY_AND_DLQ.md).

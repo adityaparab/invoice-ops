@@ -37,6 +37,7 @@ decision require a superseding ADR or an explicit status change.
 | [0005](../adr/0005-gateway-only-model-traffic.md) | Route every model call through the gateway client and LiteLLM virtual aliases. |
 | [0006](../adr/0006-synthetic-data-anomalies.md) | Use reproducible synthetic data with seeded anomalies and published prevalence assumptions. |
 | [0007](../adr/0007-vcr-cassettes.md) | Replay committed model-response cassettes in tests; reserve live calls for explicit evaluation runs. |
+| [0008](../adr/0008-direct-litellm-environment.md) | Use the operator's LiteLLM URL, key, and model-name environment variables without another proxy configuration. |
 
 ## 5. HTTP API
 
@@ -168,8 +169,9 @@ permitted to contact a live model.
 
 ## 10. Deployment
 
-The root `compose.yaml` starts the API, Postgres with pgvector, and MinIO. An optional `gateway`
-profile starts the Compose LiteLLM proxy when a native developer gateway is not used. The API waits
+The root `compose.yaml` starts the API, Postgres with pgvector, and MinIO. The worker uses the
+operator's direct LiteLLM endpoint. An optional `observability` profile starts Langfuse,
+Prometheus, and provisioned Grafana. The API waits
 for healthy infrastructure, runs as a non-root user, and exposes dependency readiness separately
 from process liveness. Postgres and MinIO persist in named volumes; published ports bind to localhost.
 The one-shot `migrate` service applies owner-driven Alembic migrations and provisions the restricted

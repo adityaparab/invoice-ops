@@ -3,8 +3,15 @@
 import re
 from typing import Literal, Self
 
-from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 
 from invoiceops_agent.gateway_client.schemas import Contract, ModelAlias, Version
 
@@ -27,10 +34,8 @@ class AliasPolicy(Contract):
         return self
 
 
-class GatewaySettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="INVOICEOPS_GATEWAY_", extra="ignore", hide_input_in_errors=True, frozen=True
-    )
+class GatewaySettings(BaseModel):
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True, frozen=True)
 
     base_url: HttpUrl
     api_key: SecretStr
