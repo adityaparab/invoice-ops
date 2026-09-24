@@ -12,6 +12,7 @@ from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
 from invoiceops_agent.gateway_client.schemas import ModelAlias, RequestContext, TokenUsage, Version
+from invoiceops_agent.obs.metrics import Metrics
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,25 @@ class LoggingTelemetry:
             event.cost_usd,
             event.error_code,
         )
+
+
+class MetricGatewayTelemetry:
+    """Record logical gateway calls once while preserving structured call logs."""
+
+    def __init__(self, metrics: Metrics) -> None:
+        self._metrics = metrics
+        self._logging = LoggingTelemetry()
+
+    def record(self, event: GatewayEvent) -> None:
+        self._metrics.record_gateway(
+            alias=event.alias,
+            status=event.status,
+            latency_ms=event.latency_ms,
+            cost_usd=event.cost_usd,
+            input_tokens=event.usage.input_tokens if event.usage else None,
+            output_tokens=event.usage.output_tokens if event.usage else None,
+        )
+        self._logging.record(event)
 
 
 @contextmanager

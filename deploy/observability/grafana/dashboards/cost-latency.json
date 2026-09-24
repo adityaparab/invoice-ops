@@ -1,0 +1,91 @@
+{
+  "uid": "invoiceops-cost-latency",
+  "title": "InvoiceOps Cost and Latency",
+  "description": "API scrape metrics, worker OTLP metrics, and a complete one-hour LiteLLM spend-log snapshot.",
+  "tags": ["invoiceops", "cost", "latency"],
+  "timezone": "utc",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "API requests per second by status",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (http_response_status_class) (rate(invoiceops_api_requests_total{job=\"invoiceops-api\"}[$__rate_interval]))", "legendFormat": "{{http_response_status_class}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "API p95 latency",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (le) (rate(invoiceops_api_duration_seconds_bucket{job=\"invoiceops-api\"}[$__rate_interval])))", "legendFormat": "API p95" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "id": 3,
+      "title": "LiteLLM spend, last complete hour",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "invoiceops_litellm_spend_last_hour_nusd{job=\"invoiceops-api\",window=\"1h\"} / 1e9", "legendFormat": "LiteLLM USD" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 8 }
+    },
+    {
+      "id": 4,
+      "title": "LiteLLM spend logs available",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "invoiceops_litellm_spend_logs_available{job=\"invoiceops-api\"}", "legendFormat": "complete window" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 8 }
+    },
+    {
+      "id": 5,
+      "title": "Worker model spend by task alias",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (alias) (sum_over_time(invoiceops_gateway_cost_nUSD_total[$__interval])) / 1e9", "legendFormat": "{{alias}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "id": 6,
+      "title": "Worker model p95 latency by task alias",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.95, sum by (alias, le) (sum_over_time(invoiceops_gateway_duration_seconds_bucket[$__interval])))", "legendFormat": "{{alias}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "id": 7,
+      "title": "Worker model calls by outcome",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (alias, status) (sum_over_time(invoiceops_gateway_calls_total[$__interval]))", "legendFormat": "{{alias}} {{status}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    }
+  ]
+}

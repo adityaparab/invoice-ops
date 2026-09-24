@@ -6,3 +6,7 @@ scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["prometheus:9090"]
+  - job_name: invoiceops-api
+    metrics_path: /v1/metrics
+    static_configs:
+      - targets: ["api:8000"]

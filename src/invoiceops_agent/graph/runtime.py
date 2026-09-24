@@ -15,6 +15,7 @@ from invoiceops_agent.agents.near_duplicate import NearDuplicateAgent
 from invoiceops_agent.agents.near_duplicate_settings import LiteLLMWorkflowSettings
 from invoiceops_agent.agents.triage import TriageAgent
 from invoiceops_agent.gateway_client import GatewayClient
+from invoiceops_agent.gateway_client.telemetry import GatewayTelemetry
 from invoiceops_agent.graph.checkpoints import postgres_invoice_graph
 from invoiceops_agent.graph.errors import RunNotFound
 from invoiceops_agent.graph.invoice_nodes import InvoiceNodes
@@ -122,6 +123,7 @@ async def invoice_runtime(
     *,
     settings: InvoiceRuntimeSettings | None = None,
     clock: Callable[[], datetime] = utc_now,
+    gateway_telemetry: GatewayTelemetry | None = None,
 ) -> AsyncIterator[InvoiceWorkflowRuntime]:
     runtime = settings if settings is not None else InvoiceRuntimeSettings()
     graph = GraphSettings(_env_file=".env")
@@ -158,7 +160,7 @@ async def invoice_runtime(
             bucket=storage.raw_bucket,
             timeout_seconds=storage.storage_timeout_seconds,
         ) as raw_storage,
-        GatewayClient(litellm.gateway_settings()) as gateway,
+        GatewayClient(litellm.gateway_settings(), telemetry=gateway_telemetry) as gateway,
     ):
         services = LiveInvoiceServices(
             connection=connection,
