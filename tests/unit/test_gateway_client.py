@@ -279,6 +279,119 @@ async def test_alias_policy_can_route_to_a_named_litellm_model() -> None:
 
 
 @pytest.mark.asyncio
+async def test_public_model_route_requires_explicit_public_sensitivity() -> None:
+    seen: list[str] = []
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        seen.append(json.loads(call.content)["model"])
+        return fixture_response()
+
+    configured = settings(
+        aliases={
+            "extract-vision": {
+                "model_version": "restricted-v1",
+                "model_name": "restricted-vision",
+                "public_model_name": "public-vision",
+            }
+        }
+    )
+    public_request = GatewayRequest.model_validate(
+        {**request().model_dump(), "sensitivity": "public"}
+    )
+    async with GatewayClient(configured, transport=httpx2.MockTransport(handle)) as client:
+        restricted = await client.complete(request(), SyntheticExtraction)
+        public = await client.complete(public_request, SyntheticExtraction)
+    assert seen == ["restricted-vision", "public-vision"]
+    assert restricted.provenance.model_version == "restricted-v1"
+    assert public.provenance.model_version == "public-vision"
+
+
+@pytest.mark.asyncio
+async def test_infrastructure_fallback_stays_within_sensitivity_tier() -> None:
+    seen: list[str] = []
+    telemetry = Telemetry()
+    clock = FakeClock()
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        model = json.loads(call.content)["model"]
+        seen.append(model)
+        return (
+            httpx2.Response(503, json={"error": {"code": "unavailable"}})
+            if model == "restricted-primary"
+            else fixture_response()
+        )
+
+    configured = settings(
+        max_attempts=2,
+        aliases={
+            "extract-vision": {
+                "model_version": "restricted-v1",
+                "model_name": "restricted-primary",
+                "public_model_name": "public-primary",
+                "fallback_model_name": "restricted-fallback",
+                "public_fallback_model_name": "public-fallback",
+            }
+        },
+    )
+    async with GatewayClient(
+        configured,
+        transport=httpx2.MockTransport(handle),
+        telemetry=telemetry,
+        clock=clock,
+        sleep=clock.sleep,
+    ) as client:
+        result = await client.complete(request(), SyntheticExtraction)
+    assert seen == ["restricted-primary", "restricted-primary", "restricted-fallback"]
+    assert result.attempts == 3
+    assert result.provenance.model_version == "restricted-fallback"
+    assert telemetry.events[0].route_index == 1
+    assert clock.delays == [0.5]
+
+
+@pytest.mark.asyncio
+async def test_business_failure_does_not_use_fallback_model() -> None:
+    seen: list[str] = []
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        seen.append(json.loads(call.content)["model"])
+        return httpx2.Response(429, json={"error": {"code": "insufficient_quota"}})
+
+    configured = settings(
+        aliases={
+            "extract-vision": {
+                "model_version": "restricted-v1",
+                "model_name": "restricted-primary",
+                "fallback_model_name": "restricted-fallback",
+            }
+        }
+    )
+    async with GatewayClient(configured, transport=httpx2.MockTransport(handle)) as client:
+        with pytest.raises(GatewayRequestRejected):
+            await client.complete(request(), SyntheticExtraction)
+    assert seen == ["restricted-primary"]
+
+
+@pytest.mark.asyncio
+async def test_gateway_emits_one_observed_cost_budget_alert_per_run() -> None:
+    telemetry = Telemetry()
+    configured = settings(budget_alert_usd=Decimal("0.04"))
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        response = fixture_response()
+        return httpx2.Response(
+            200, headers={"x-litellm-response-cost": "0.02"}, json=response.json()
+        )
+
+    async with GatewayClient(
+        configured, transport=httpx2.MockTransport(handle), telemetry=telemetry
+    ) as client:
+        for _ in range(3):
+            await client.complete(request(), SyntheticExtraction)
+    assert [event.budget_alert for event in telemetry.events] == [False, True, False]
+    assert telemetry.events[-1].observed_run_cost_usd == Decimal("0.06")
+
+
+@pytest.mark.asyncio
 async def test_redacts_before_transport_and_never_logs_input_or_key(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

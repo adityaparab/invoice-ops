@@ -45,6 +45,10 @@ class Metrics:
         self._gateway_calls = meter.create_counter("invoiceops.gateway.calls", unit="{call}")
         self._gateway_duration = meter.create_histogram("invoiceops.gateway.duration", unit="s")
         self._gateway_cost = meter.create_counter("invoiceops.gateway.cost", unit="nUSD")
+        self._budget_alerts = meter.create_counter(
+            "invoiceops.gateway.budget_alerts", unit="{alert}"
+        )
+        self._cache_hits = meter.create_counter("invoiceops.gateway.cache_hits", unit="{hit}")
         self._input_tokens = meter.create_counter("invoiceops.gateway.input_tokens", unit="{token}")
         self._output_tokens = meter.create_counter(
             "invoiceops.gateway.output_tokens", unit="{token}"
@@ -82,6 +86,12 @@ class Metrics:
         if self._registry is None:
             raise RuntimeError("Prometheus reader is not configured")
         return generate_latest(self._registry)
+
+    def record_budget_alert(self, alias: str) -> None:
+        self._budget_alerts.add(1, {"alias": alias})
+
+    def record_cache_hit(self, alias: str) -> None:
+        self._cache_hits.add(1, {"alias": alias})
 
     @property
     def registry(self) -> CollectorRegistry:

@@ -44,6 +44,9 @@ class RequestGuards:
             text = pattern.sub(f"[REDACTED:{name}]", text)
         return text
 
+    def contains_pii(self, text: str) -> bool:
+        return any(pattern.search(text) is not None for _, pattern in self._pii)
+
     def chat(
         self, request: GatewayRequest, policy: AliasPolicy, response_model: type[BaseModel]
     ) -> GuardedChat:

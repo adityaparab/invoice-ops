@@ -1,6 +1,7 @@
 """Environment-backed gateway and alias policy; no provider fallback endpoint."""
 
 import re
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import (
@@ -13,12 +14,15 @@ from pydantic import (
     model_validator,
 )
 
-from invoiceops_agent.gateway_client.schemas import Contract, ModelAlias, Version
+from invoiceops_agent.gateway_client.schemas import Contract, DataSensitivity, ModelAlias, Version
 
 
 class AliasPolicy(Contract):
     model_version: Version
     model_name: Version | None = None
+    public_model_name: Version | None = None
+    fallback_model_name: Version | None = None
+    public_fallback_model_name: Version | None = None
     input_token_limit: int = Field(default=32_768, gt=0)
     output_token_limit: int = Field(default=4096, gt=0)
     total_token_limit: int = Field(default=36_864, gt=0)
@@ -32,6 +36,29 @@ class AliasPolicy(Contract):
         if self.output_token_limit >= self.total_token_limit:
             raise ValueError("Output limit must leave room for input tokens")
         return self
+
+    def routes_for(
+        self, sensitivity: DataSensitivity, alias: ModelAlias
+    ) -> tuple[tuple[str, str], ...]:
+        primary = (
+            self.public_model_name
+            if sensitivity == "public" and self.public_model_name
+            else self.model_name
+        ) or alias
+        primary_version = (
+            self.public_model_name
+            if sensitivity == "public" and self.public_model_name
+            else self.model_version
+        )
+        fallback = (
+            self.public_fallback_model_name or self.fallback_model_name
+            if sensitivity == "public"
+            else self.fallback_model_name
+        )
+        routes = [(primary, primary_version)]
+        if fallback is not None and fallback != primary:
+            routes.append((fallback, fallback))
+        return tuple(routes)
 
 
 class GatewaySettings(BaseModel):
@@ -48,6 +75,11 @@ class GatewaySettings(BaseModel):
     max_binary_bytes: int = Field(default=5_000_000, gt=0, le=10_000_000)
     max_binary_parts: int = Field(default=4, gt=0, le=16)
     max_request_bytes: int = Field(default=14_000_000, gt=0, le=56_000_000)
+    budget_alert_usd: Decimal = Field(default=Decimal("0.04"), gt=0, allow_inf_nan=False)
+    semantic_cache_min_similarity: float = Field(default=0.995, gt=0, le=1)
+    semantic_cache_ttl_seconds: int = Field(default=86_400, gt=0, le=604_800)
+    semantic_cache_probe_timeout_seconds: float = Field(default=10, gt=0, le=30)
+    semantic_cache_store_timeout_seconds: float = Field(default=5, gt=0, le=30)
     pii_patterns: dict[str, str] = Field(
         default_factory=lambda: {
             "EMAIL": r"\b[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}\b",

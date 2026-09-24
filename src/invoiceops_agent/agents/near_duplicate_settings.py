@@ -19,6 +19,9 @@ class LiteLLMEmbeddingSettings(BaseSettings):
     api_base: HttpUrl
     master_key: SecretStr
     embed_model: Version
+    embed_public_model: Version | None = None
+    embed_fallback_model: Version | None = None
+    embed_public_fallback_model: Version | None = None
 
     @field_validator("embed_model")
     @classmethod
@@ -35,6 +38,9 @@ class LiteLLMEmbeddingSettings(BaseSettings):
                 "embed": AliasPolicy(
                     model_version=self.embed_model,
                     model_name=self.embed_model,
+                    public_model_name=self.embed_public_model,
+                    fallback_model_name=self.embed_fallback_model,
+                    public_fallback_model_name=self.embed_public_fallback_model,
                 )
             },
         )
@@ -46,6 +52,12 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
     model: Version
     extract_model: Version | None = None
     triage_model: Version | None = None
+    extract_public_model: Version | None = None
+    extract_fallback_model: Version | None = None
+    extract_public_fallback_model: Version | None = None
+    triage_public_model: Version | None = None
+    triage_fallback_model: Version | None = None
+    triage_public_fallback_model: Version | None = None
 
     def gateway_settings(self) -> GatewaySettings:
         vision_model = self.extract_model or self.model
@@ -56,16 +68,25 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
                 "extract-vision": AliasPolicy(
                     model_version=vision_model,
                     model_name=vision_model,
+                    public_model_name=self.extract_public_model,
+                    fallback_model_name=self.extract_fallback_model,
+                    public_fallback_model_name=self.extract_public_fallback_model,
                     allow_images=True,
                     allow_pdf=True,
                 ),
                 "embed": AliasPolicy(
                     model_version=self.embed_model,
                     model_name=self.embed_model,
+                    public_model_name=self.embed_public_model,
+                    fallback_model_name=self.embed_fallback_model,
+                    public_fallback_model_name=self.embed_public_fallback_model,
                 ),
                 "triage-reasoner": AliasPolicy(
                     model_version=self.triage_model or self.model,
                     model_name=self.triage_model or self.model,
+                    public_model_name=self.triage_public_model,
+                    fallback_model_name=self.triage_fallback_model,
+                    public_fallback_model_name=self.triage_public_fallback_model,
                 ),
             },
         )

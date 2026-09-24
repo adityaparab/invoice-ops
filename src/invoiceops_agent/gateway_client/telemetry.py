@@ -28,6 +28,10 @@ class GatewayEvent(RequestContext):
     error_code: str | None = None
     usage: TokenUsage | None = None
     cost_usd: Decimal | None = None
+    route_index: int = 0
+    observed_run_cost_usd: Decimal | None = None
+    budget_alert: bool = False
+    cache_hit: bool = False
 
 
 class GatewayTelemetry(Protocol):
@@ -40,8 +44,9 @@ class LoggingTelemetry:
         logger.info(
             "event=gateway.call run_id=%s trace_id=%s alias=%s requested_model=%s "
             "model=%s model_version=%s "
-            "prompt_version=%s status=%s attempts=%d latency_ms=%.1f "
-            "input_tokens=%s output_tokens=%s cost_usd=%s error_code=%s",
+            "prompt_version=%s status=%s attempts=%d route_index=%d latency_ms=%.1f "
+            "input_tokens=%s output_tokens=%s cost_usd=%s "
+            "observed_run_cost_usd=%s budget_alert=%s cache_hit=%s error_code=%s",
             event.run_id,
             event.trace_id,
             event.alias,
@@ -51,12 +56,23 @@ class LoggingTelemetry:
             event.prompt_version,
             event.status,
             event.attempts,
+            event.route_index,
             event.latency_ms,
             event.usage.input_tokens if event.usage else None,
             event.usage.output_tokens if event.usage else None,
             event.cost_usd,
+            event.observed_run_cost_usd,
+            event.budget_alert,
+            event.cache_hit,
             event.error_code,
         )
+        if event.budget_alert:
+            logger.warning(
+                "event=gateway.budget_alert run_id=%s alias=%s observed_run_cost_usd=%s",
+                event.run_id,
+                event.alias,
+                event.observed_run_cost_usd,
+            )
 
 
 class MetricGatewayTelemetry:
@@ -67,14 +83,19 @@ class MetricGatewayTelemetry:
         self._logging = LoggingTelemetry()
 
     def record(self, event: GatewayEvent) -> None:
-        self._metrics.record_gateway(
-            alias=event.alias,
-            status=event.status,
-            latency_ms=event.latency_ms,
-            cost_usd=event.cost_usd,
-            input_tokens=event.usage.input_tokens if event.usage else None,
-            output_tokens=event.usage.output_tokens if event.usage else None,
-        )
+        if event.cache_hit:
+            self._metrics.record_cache_hit(event.alias)
+        else:
+            self._metrics.record_gateway(
+                alias=event.alias,
+                status=event.status,
+                latency_ms=event.latency_ms,
+                cost_usd=event.cost_usd,
+                input_tokens=event.usage.input_tokens if event.usage else None,
+                output_tokens=event.usage.output_tokens if event.usage else None,
+            )
+        if event.budget_alert:
+            self._metrics.record_budget_alert(event.alias)
         self._logging.record(event)
 
 
@@ -117,6 +138,8 @@ class SpanGatewayTelemetry:
             span.set_attribute("invoiceops.gateway.alias", event.alias)
             span.set_attribute("invoiceops.gateway.status", event.status)
             span.set_attribute("invoiceops.gateway.attempts", event.attempts)
+            span.set_attribute("invoiceops.gateway.route_index", event.route_index)
+            span.set_attribute("invoiceops.gateway.cache_hit", event.cache_hit)
             span.set_attribute("invoiceops.gateway.latency_ms", event.latency_ms)
             span.set_attribute(
                 "langfuse.observation.model.name", event.model or event.requested_model
@@ -144,6 +167,8 @@ class SpanGatewayTelemetry:
                     "langfuse.observation.cost_details",
                     '{"total":' + str(event.cost_usd) + "}",
                 )
+            if event.budget_alert:
+                span.set_attribute("invoiceops.gateway.budget_alert", True)
             if event.status != "succeeded":
                 span.set_attribute(
                     "invoiceops.gateway.error_code", event.error_code or event.status
