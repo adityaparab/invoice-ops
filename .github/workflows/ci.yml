@@ -38,6 +38,23 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --locked --all-groups
 
+      - name: Install Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend contract, types, and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run generate:api
+          git diff --exit-code -- openapi.json src/generated/api.ts
+          npm run typecheck
+          npm test
+          npm run build
+
       - name: Ruff lint and format
         run: |
           uv run --no-sync ruff check .
@@ -91,6 +108,13 @@ jobs:
                              for table in ("vendors", "purchase_orders", "goods_receipts"))
           assert counts == (12, 24, 12), counts
           PY
+
+      - name: Start UI and verify API proxy
+        timeout-minutes: 3
+        run: |
+          docker compose --profile ui up -d --build --wait --wait-timeout 120 ui
+          curl --retry 10 --retry-delay 1 --fail --silent --show-error http://localhost:5173/
+          curl --retry 10 --retry-delay 1 --fail --silent --show-error http://localhost:5173/healthz
 
       - name: Accept and replay an authenticated Compose upload
         timeout-minutes: 1

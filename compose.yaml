@@ -1,6 +1,22 @@
 name: invoiceops
 
 services:
+  ui:
+    profiles: ["ui"]
+    image: invoiceops-ui:local
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    init: true
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8000
+    ports:
+      - "127.0.0.1:${UI_PORT:-5173}:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
   api:
     image: invoiceops-api:local
     build:
