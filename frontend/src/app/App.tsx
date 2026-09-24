@@ -14,6 +14,9 @@ const ExceptionReview = lazy(() => import("../features/review/ExceptionReview").
 const Dashboard = lazy(() => import("../features/dashboard/Dashboard").then(
   (module) => ({ default: module.Dashboard }),
 ));
+const Intake = lazy(() => import("../features/intake/Intake").then(
+  (module) => ({ default: module.Intake }),
+));
 
 function HealthStatus() {
   const health = useQuery({
@@ -76,6 +79,7 @@ function GuardedScreen({ route }: { route: AppRoute }) {
   }
   if (route.path === "/queue") return <Suspense fallback={<Text>Loading review…</Text>}><ExceptionReview /></Suspense>;
   if (route.path === "/dashboard") return <Suspense fallback={<Text>Loading dashboard…</Text>}><Dashboard /></Suspense>;
+  if (route.path === "/intake") return <Suspense fallback={<Text>Loading intake…</Text>}><Intake /></Suspense>;
   return <ScreenPlaceholder route={route} />;
 }
 

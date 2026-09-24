@@ -3,7 +3,8 @@
 Vite, React, TypeScript, Mantine, TanStack Query, and React Router form the
 single-page application shell. The Exception Review screen is connected to the
 queue, detail, and decision endpoints. Dan's dashboard uses the manager-only
-summary endpoint; the remaining workspaces follow in plan steps 3.7–3.10.
+summary endpoint. Maria's Intake screen uploads invoices and shows current
+status; the remaining workspaces follow in plan steps 3.8–3.10.
 
 ```sh
 cd frontend
@@ -45,3 +46,10 @@ observed model cost for a selectable UTC period. Model cost coverage is shown
 beside the per-invoice figure. Recharts modules load only when the dashboard
 route is opened. [Dashboard metric definitions](../docs/DASHBOARD.md) specify
 the denominators and missing-cost behavior.
+
+The Intake screen accepts a PDF, PNG, or JPEG and uses a separate upload
+service token held only in the current tab. XHR reports transfer progress and
+allows cancellation; TanStack Query owns the mutation and status query. The
+UI shows the original IDs when exact content is rejected as a duplicate and
+displays the API's problem detail on rejection. Maria's sidebar token enables
+polling for the current invoice and run status after upload.
