@@ -5,6 +5,13 @@
 happens before body reading or multipart parsing. PDF, PNG, and JPEG declared media types must match
 their leading file signatures; this is format identification, not document decoding or malware scanning.
 
+The React Intake screen sends this request with a separate in-memory service
+token and shows transfer progress. It parses the `201` accepted and `200`
+exact-duplicate responses at the Zod boundary, then uses Maria's distinct
+analyst token to read the current invoice/run status. The original upload
+response's `QUEUED` status is labeled as an ingest response, since processing
+may advance after the upload commits.
+
 ```sh
 curl --fail-with-body http://localhost:8000/v1/invoices \
   -H 'Authorization: Bearer invoiceops-local-upload-token' \

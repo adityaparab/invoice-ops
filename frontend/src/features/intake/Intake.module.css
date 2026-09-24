@@ -1,0 +1,89 @@
+.screen {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  color: #317a6a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: #667085;
+  font-size: 0.88rem;
+}
+
+.card,
+.form,
+.progressArea,
+.status {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  justify-items: start;
+  padding: 1.7rem;
+  border: 1px solid #e3e7ef;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px #14254208;
+}
+
+.form {
+  width: min(100%, 34rem);
+}
+
+.progressArea {
+  padding: 1rem;
+  border: 1px solid #d9e8e4;
+  border-radius: 0.6rem;
+  background: #f2faf7;
+}
+
+.progress {
+  width: 100%;
+}
+
+.identifiers {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.identifiers div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.identifiers dt {
+  color: #667085;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.identifiers dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.status {
+  gap: 0.2rem;
+}
+
+.queueLink {
+  color: #08745f;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 1rem;
+  }
+}
