@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 4 complete.** Golden-set evaluation remains planned.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 5 in progress.** Golden v1.0.0 is built; pipeline evaluation remains planned.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
@@ -148,7 +148,7 @@ API push  ─────► │  dedupe · virus-scan stub · idempotency key �
 - **Base corpus:** [Voxel51 High-Quality Invoice Images for OCR](https://huggingface.co/datasets/Voxel51/high-quality-invoice-images-for-ocr) (8,181 images, 1,489 fully annotated)
 - **Synthetic ERP:** Faker-generated vendors, purchase orders, and goods receipts in Postgres, so 3-way matches have a ground-truth backend
 - **Anomaly injection:** a controlled catalog of 10 anomaly types (duplicate invoice, price mismatch, quantity mismatch, missing PO, vendor-bank-detail change, currency mismatch, tax errors, line-math errors, stale/closed PO, partial-delivery mismatch) with prevalence weights mirroring real AP queues
-- **Golden dataset:** 500 labeled invoices (≈350 clean, ≈150 anomalous) held out for eval; test/train discipline enforced in the harness
+- **Golden dataset:** 500 labeled invoices (350 clean, 150 anomalous) with a 100-case development split and a 400-case held-out split; [source and label eligibility](docs/EVALUATION.md) are published
 
 ---
 
