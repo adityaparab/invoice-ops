@@ -4,7 +4,8 @@ Vite, React, TypeScript, Mantine, TanStack Query, and React Router form the
 single-page application shell. The Exception Review screen is connected to the
 queue, detail, and decision endpoints. Dan's dashboard uses the manager-only
 summary endpoint. Maria's Intake screen uploads invoices and shows current
-status; the remaining workspaces follow in plan steps 3.8–3.10.
+status. The Agent Run screen follows audited workflow events; Audit and Evals
+follow in plan steps 3.9–3.10.
 
 ```sh
 cd frontend
@@ -53,3 +54,10 @@ allows cancellation; TanStack Query owns the mutation and status query. The
 UI shows the original IDs when exact content is rejected as a duplicate and
 displays the API's problem detail on rejection. Maria's sidebar token enables
 polling for the current invoice and run status after upload.
+
+The Agent Run screen opens from Intake or Exception Review, or accepts a run
+UUID. It polls the role-protected progress endpoint for all invoice-v1 nodes,
+shows the current inferred node, and lets the operator inspect each recorded
+node's bounded state. Platform Engineer uses the service API token in the
+sidebar. [Progress semantics](../docs/RUN_PROGRESS.md) distinguish committed
+audit observations from an in-flight node.

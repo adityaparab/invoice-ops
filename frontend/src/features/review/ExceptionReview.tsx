@@ -1,6 +1,7 @@
 import { flexRender, getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
 import { Alert, Badge, Button, Select, Switch, Table, Text, TextInput, Title, UnstyledButton } from "@mantine/core";
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
 import { createColumnHelper } from "@tanstack/react-table";
 import { usePersona } from "../../app/persona";
 import type { InvoiceFilters } from "../../api/invoices";
@@ -298,6 +299,7 @@ export function ExceptionReview() {
                 </div>
                 <Badge>{detail.data.exception?.exception_type ?? detail.data.invoice.status}</Badge>
               </div>
+              <Link className={styles.runLink} to={`/runs?run_id=${detail.data.invoice.run_id}`}>Follow Agent Run</Link>
               <DetailContent detail={detail.data} token={token} />
             </>
           )}
