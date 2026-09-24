@@ -1,0 +1,123 @@
+.screen {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  color: #317a6a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: #667085;
+  font-size: 0.82rem;
+}
+
+.card {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.5rem;
+  border: 1px solid #e3e7ef;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px #14254208;
+}
+
+.lookup,
+.heading,
+.actions {
+  display: flex;
+  align-items: end;
+  gap: 1rem;
+}
+
+.lookup > :first-child {
+  flex: 1;
+}
+
+.heading {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metadata,
+.pins {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem 1.5rem;
+  margin: 0;
+}
+
+.metadata dd,
+.pins dd {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: #152b46;
+  font-weight: 600;
+}
+
+.metadata dt,
+.pins dt {
+  color: #667085;
+  font-size: 0.75rem;
+}
+
+.pins {
+  gap: 0.4rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.78rem;
+}
+
+.timeline {
+  max-height: 30rem;
+  overflow: auto;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.tableWrap table {
+  min-width: 52rem;
+}
+
+.tableWrap tbody tr:nth-child(odd) {
+  background: #f7f9fc;
+}
+
+.tableWrap tbody tr:hover {
+  background: #e8f8f2;
+}
+
+.secondaryButton {
+  border: 1px solid #c9d4e0;
+  background: #fff;
+  color: #223951;
+}
+
+.payload {
+  overflow: auto;
+  max-width: 30rem;
+  max-height: 18rem;
+  padding: 0.8rem;
+  border-radius: 0.5rem;
+  background: #f4f7fa;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 650px) {
+  .lookup,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .metadata,
+  .pins {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

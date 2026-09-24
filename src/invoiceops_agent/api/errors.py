@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from invoiceops_agent.api.audit_reader import AuditReadError, AuditRunNotFound
 from invoiceops_agent.api.context import get_request_context
 from invoiceops_agent.api.dashboard_reader import DashboardUnavailable
 from invoiceops_agent.api.decision_service import (
@@ -109,6 +110,18 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DecisionError, _decision_error)
     app.add_exception_handler(DashboardUnavailable, _dashboard_error)
     app.add_exception_handler(RunProgressError, _run_progress_error)
+    app.add_exception_handler(AuditReadError, _audit_read_error)
+
+
+async def _audit_read_error(request: Request, error: Exception) -> JSONResponse:
+    status = 404 if isinstance(error, AuditRunNotFound) else 503
+    logger.warning(
+        "audit_read_rejected trace_id=%s error_type=%s status=%d",
+        get_request_context(request).trace_id,
+        type(error).__name__,
+        status,
+    )
+    return problem_response(request, status=status, detail=str(error))
 
 
 async def _run_progress_error(request: Request, error: Exception) -> JSONResponse:

@@ -5,7 +5,7 @@ single-page application shell. The Exception Review screen is connected to the
 queue, detail, and decision endpoints. Dan's dashboard uses the manager-only
 summary endpoint. Maria's Intake screen uploads invoices and shows current
 status. The Agent Run screen follows audited workflow events; Audit and Evals
-follow in plan steps 3.9–3.10.
+Evals follows in plan step 3.10.
 
 ```sh
 cd frontend
@@ -61,3 +61,9 @@ shows the current inferred node, and lets the operator inspect each recorded
 node's bounded state. Platform Engineer uses the service API token in the
 sidebar. [Progress semantics](../docs/RUN_PROGRESS.md) distinguish committed
 audit observations from an in-flight node.
+
+Priya's Audit & Provenance screen reads an auditor-only, keyset-paginated run
+ledger. Its timeline and ledger table show each event's actor, node, correction
+link, payload, and version pins. The export button fetches all pages into a
+run-scoped JSON file. [Audit read and export semantics](../docs/AUDIT_SCREEN.md)
+describe the consistency boundary.

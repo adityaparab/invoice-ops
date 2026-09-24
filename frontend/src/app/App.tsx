@@ -20,6 +20,9 @@ const Intake = lazy(() => import("../features/intake/Intake").then(
 const AgentRun = lazy(() => import("../features/runs/AgentRun").then(
   (module) => ({ default: module.AgentRun }),
 ));
+const Audit = lazy(() => import("../features/audit/Audit").then(
+  (module) => ({ default: module.Audit }),
+));
 
 function HealthStatus() {
   const health = useQuery({
@@ -82,6 +85,7 @@ function GuardedScreen({ route }: { route: AppRoute }) {
   if (route.path === "/dashboard") return <Suspense fallback={<Text>Loading dashboard…</Text>}><Dashboard /></Suspense>;
   if (route.path === "/intake") return <Suspense fallback={<Text>Loading intake…</Text>}><Intake /></Suspense>;
   if (route.path === "/runs") return <Suspense fallback={<Text>Loading run…</Text>}><AgentRun /></Suspense>;
+  if (route.path === "/audit") return <Suspense fallback={<Text>Loading audit…</Text>}><Audit /></Suspense>;
   return <ScreenPlaceholder route={route} />;
 }
 

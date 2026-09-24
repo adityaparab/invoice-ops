@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.security import HTTPBearer
 from starlette.responses import JSONResponse
 
+from invoiceops_agent.api.audit_reader import AuditReader, PostgresAuditReader
 from invoiceops_agent.api.context import (
     IDEMPOTENCY_KEY_PATTERN,
     RequestContext,
@@ -33,6 +34,7 @@ from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceRe
 from invoiceops_agent.api.middleware import RequestContextMiddleware
 from invoiceops_agent.api.read_auth import authenticate_read, authenticate_run, authorize_queue
 from invoiceops_agent.api.run_progress_reader import PostgresRunProgressReader, RunProgressReader
+from invoiceops_agent.api.schemas.audit import AuditRunPage
 from invoiceops_agent.api.schemas.dashboard import DashboardSummary
 from invoiceops_agent.api.schemas.decision import DecisionRequest, DecisionResponse
 from invoiceops_agent.api.schemas.email import email_request_schema
@@ -68,6 +70,7 @@ def create_app(
     decision_writer: DecisionWriter | None = None,
     dashboard_reader: DashboardReader | None = None,
     run_progress_reader: RunProgressReader | None = None,
+    audit_reader: AuditReader | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -87,6 +90,7 @@ def create_app(
         if run_progress_reader is not None
         else PostgresRunProgressReader(configuration)
     )
+    audit = audit_reader if audit_reader is not None else PostgresAuditReader(configuration)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -288,6 +292,26 @@ def create_app(
     async def get_run_progress(run_id: UUID, request: Request) -> RunProgress:
         authenticate_run(request, configuration)
         return await run_progress.read(run_id)
+
+    @app.get(
+        "/v1/runs/{run_id}/ledger",
+        response_model=AuditRunPage,
+        tags=["audit"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (401, 403, 404, 422, 503)},
+    )
+    async def get_run_ledger(
+        run_id: UUID,
+        request: Request,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+        after_sequence: Annotated[int | None, Query(ge=1)] = None,
+    ) -> AuditRunPage:
+        if authenticate_read(request, configuration) != "AUDITOR":
+            raise HTTPException(403, "Only the auditor can read the full run ledger.")
+        return await audit.for_run(
+            run_id, trace_id=context.trace_id, limit=limit, after_sequence=after_sequence
+        )
 
     @app.post(
         "/v1/exceptions/{exception_id}/decision",

@@ -34,6 +34,66 @@
         "title": "AgingCounts",
         "type": "object"
       },
+      "AuditRunPage": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEvent"
+            },
+            "maxItems": 200,
+            "title": "Events",
+            "type": "array"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunCursor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "PAUSED",
+              "COMPLETED",
+              "FAILED",
+              "CANCELLED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trace_id": {
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Trace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "invoice_id",
+          "trace_id",
+          "status",
+          "events",
+          "next_cursor"
+        ],
+        "title": "AuditRunPage",
+        "type": "object"
+      },
       "DailyVolume": {
         "additionalProperties": false,
         "properties": {
@@ -717,6 +777,112 @@
         "type": "object"
       },
       "JsonValue": {},
+      "LedgerEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "actor_type": {
+            "enum": [
+              "SYSTEM",
+              "AGENT",
+              "HUMAN",
+              "POLICY"
+            ],
+            "title": "Actor Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event_type": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "node": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "payload": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Payload",
+            "type": "object"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "versions": {
+            "$ref": "#/components/schemas/VersionPins"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "invoice_id",
+          "sequence",
+          "event_type",
+          "actor_type",
+          "actor_id",
+          "payload",
+          "node",
+          "supersedes_id",
+          "versions",
+          "created_at"
+        ],
+        "title": "LedgerEvent",
+        "type": "object"
+      },
       "LivenessResponse": {
         "additionalProperties": false,
         "properties": {
@@ -904,6 +1070,27 @@
         "title": "ReadinessResponse",
         "type": "object"
       },
+      "RunCursor": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "sequence"
+        ],
+        "title": "RunCursor",
+        "type": "object"
+      },
       "RunProgress": {
         "additionalProperties": false,
         "properties": {
@@ -1014,6 +1201,47 @@
           "read_at"
         ],
         "title": "RunProgress",
+        "type": "object"
+      },
+      "VersionPins": {
+        "additionalProperties": false,
+        "properties": {
+          "graph_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Graph Version",
+            "type": "string"
+          },
+          "model_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Model Version",
+            "type": "string"
+          },
+          "policy_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "prompt_version": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Prompt Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "graph_version",
+          "model_version",
+          "prompt_version",
+          "policy_version"
+        ],
+        "title": "VersionPins",
         "type": "object"
       }
     },
@@ -1900,6 +2128,123 @@
         "summary": "Get Invoice",
         "tags": [
           "invoices"
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/ledger": {
+      "get": {
+        "operationId": "get_run_ledger_v1_runs__run_id__ledger_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after_sequence",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After Sequence"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditRunPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "PersonaToken": []
+          }
+        ],
+        "summary": "Get Run Ledger",
+        "tags": [
+          "audit"
         ]
       }
     },
