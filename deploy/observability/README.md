@@ -34,10 +34,23 @@ invoice cost/latency panels are plan step 4.4, so no invoice metric is
 fabricated here. Prometheus currently scrapes itself; step 4.4 adds the API
 target when `/v1/metrics` exists.
 
+To export workflow spans, create a Langfuse project and API keys. Set
+`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` to
+`http://langfuse-web:3000/api/public/otel/v1/traces` for Compose processes.
+Set `OTEL_EXPORTER_OTLP_TRACES_HEADERS` to
+`Authorization=Basic <base64(public-key:secret-key)>,x-langfuse-ingestion-version=4`.
+Use `http://127.0.0.1:3000/api/public/otel/v1/traces` for host CLIs instead.
+These standard OTLP variables are optional; unset means local spans are not
+exported. The [Langfuse OTLP guide](https://langfuse.com/integrations/native/opentelemetry)
+documents this endpoint, authentication, and v4 ingestion header. The API,
+invoice worker, review worker, and graph demo have independent service names.
+Only stable run, invoice, and trace identifiers plus error types are emitted;
+document content, prompts, and credentials are excluded. LLM-specific spans
+and usage are step 4.3.
+
 The observability profile does not configure or proxy LiteLLM. The invoice
 worker continues to use only the operator's `LITELLM_API_BASE`,
-`LITELLM_MASTER_KEY`, and task model-name variables. Langfuse tracing is wired
-in step 4.3.
+`LITELLM_MASTER_KEY`, and task model-name variables.
 
 Stop the optional services without deleting their named volumes:
 

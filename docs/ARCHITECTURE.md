@@ -171,7 +171,10 @@ permitted to contact a live model.
 
 The root `compose.yaml` starts the API, Postgres with pgvector, and MinIO. The worker uses the
 operator's direct LiteLLM endpoint. An optional `observability` profile starts Langfuse,
-Prometheus, and provisioned Grafana. The API waits
+Prometheus, and provisioned Grafana. Durable graph runs, their nodes, and live tool calls
+emit sanitized parent-child OpenTelemetry spans with run/invoice/trace identifiers. API and
+worker processes can export batches to an explicit OTLP/HTTP endpoint; absent configuration
+does not send spans. The API waits
 for healthy infrastructure, runs as a non-root user, and exposes dependency readiness separately
 from process liveness. Postgres and MinIO persist in named volumes; published ports bind to localhost.
 The one-shot `migrate` service applies owner-driven Alembic migrations and provisions the restricted

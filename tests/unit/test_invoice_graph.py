@@ -5,6 +5,10 @@ from uuid import UUID
 
 import pytest
 from langgraph.checkpoint.memory import InMemorySaver
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic import JsonValue
 from tests.unit.policy_support import policy_request
 
@@ -120,6 +124,34 @@ def _runner(saver: InMemorySaver, services: FakeServices) -> InvoiceGraphRunner:
         build_invoice_graph(saver, InvoiceNodes(services)),
         InProcessRunLock(),
     )
+
+
+async def test_workflow_node_and_tool_spans_share_a_trace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(trace, "get_tracer", provider.get_tracer)
+    result = await _runner(
+        InMemorySaver(serde=restricted_serializer()), FakeServices(auto_enabled=True)
+    ).run(_state())
+
+    spans = exporter.get_finished_spans()
+    names = {span.name for span in spans}
+    assert {f"invoiceops.node.{name}" for name in result.completed_nodes} <= names
+    assert {"invoiceops.tool.extract", "invoiceops.tool.match", "invoiceops.tool.gate"} <= names
+    workflow = next(span for span in spans if span.name == "invoiceops.workflow.invoice")
+    extract = next(span for span in spans if span.name == "invoiceops.node.Extract")
+    tool = next(span for span in spans if span.name == "invoiceops.tool.extract")
+    assert workflow.context is not None
+    assert extract.context is not None
+    assert extract.parent is not None
+    assert tool.parent is not None
+    assert extract.parent.span_id == workflow.context.span_id
+    assert tool.parent.span_id == extract.context.span_id
+    assert len({span.context.trace_id for span in spans if span.context is not None}) == 1
+    provider.shutdown()
 
 
 async def test_auto_path_checkpoints_every_node_and_replays_without_effects() -> None:

@@ -70,6 +70,7 @@ from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
 from invoiceops_agent.api.webhooks import decode_email_document, read_signed_email
 from invoiceops_agent.graph.ingestion import utc_now
 from invoiceops_agent.obs.logging import configure_logging
+from invoiceops_agent.obs.tracing import tracing_session
 
 
 def create_app(
@@ -113,7 +114,11 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        async with factory(configuration) as checks, ingestion_factory(configuration) as ingestion:
+        async with (
+            tracing_session("invoiceops-api"),
+            factory(configuration) as checks,
+            ingestion_factory(configuration) as ingestion,
+        ):
             runtime.checks = checks
             uploads.service = ingestion
             try:

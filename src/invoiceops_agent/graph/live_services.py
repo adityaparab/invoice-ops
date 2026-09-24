@@ -21,6 +21,7 @@ from invoiceops_agent.graph.nodes.validate import ValidateNode
 from invoiceops_agent.graph.state import InvoiceGraphState, ReviewDecision
 from invoiceops_agent.ledger.audit import AuditSink, AuditWriter
 from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
+from invoiceops_agent.obs.tracing import operation_span, traced_call
 from invoiceops_agent.schemas.common import model_digest
 from invoiceops_agent.schemas.documents import DocumentReference
 from invoiceops_agent.schemas.exception_queue import QueueConfig
@@ -208,20 +209,34 @@ class LiveInvoiceServices:
             result = ValidationResult.model_validate(cached)
             self._require_digest(result.input_sha256, extraction, "Validation")
             return result
-        return await self._validation.run(
-            ValidationRequest(
-                run_id=state.run_id,
-                invoice_id=state.invoice_id,
-                trace_id=state.trace_id,
-                extraction=extraction,
-            )
+        return await traced_call(
+            "tool",
+            "validation_rules",
+            state,
+            lambda: self._validation.run(
+                ValidationRequest(
+                    run_id=state.run_id,
+                    invoice_id=state.invoice_id,
+                    trace_id=state.trace_id,
+                    extraction=extraction,
+                )
+            ),
         )
 
     async def match(self, state: InvoiceGraphState) -> tuple[ERPSnapshot | None, MatchResult]:
         extraction = self._required_extraction(state)
         async with self._connection() as connection:
             po_number = extraction.po_number.value
-            snapshot = await ERPRepository.snapshot(connection, po_number) if po_number else None
+            snapshot = (
+                await traced_call(
+                    "tool",
+                    "erp_snapshot",
+                    state,
+                    lambda: ERPRepository.snapshot(connection, po_number),
+                )
+                if po_number
+                else None
+            )
         cached = await self._events.read(state, "matching.completed")
         if cached is not None:
             result = MatchResult.model_validate(cached)
@@ -229,14 +244,19 @@ class LiveInvoiceServices:
             if result.snapshot_sha256 != (model_digest(snapshot) if snapshot is not None else None):
                 raise ReplayEvidenceError("ERP snapshot changed after committed matching evidence")
             return snapshot, result
-        result = await self._matching.run(
-            MatchRequest(
-                run_id=state.run_id,
-                invoice_id=state.invoice_id,
-                trace_id=state.trace_id,
-                extraction=extraction,
-                snapshot=snapshot,
-            )
+        result = await traced_call(
+            "tool",
+            "matching_rules",
+            state,
+            lambda: self._matching.run(
+                MatchRequest(
+                    run_id=state.run_id,
+                    invoice_id=state.invoice_id,
+                    trace_id=state.trace_id,
+                    extraction=extraction,
+                    snapshot=snapshot,
+                )
+            ),
         )
         return snapshot, result
 
@@ -253,13 +273,18 @@ class LiveInvoiceServices:
         similarity = (
             SimilarityResult.model_validate(cached_similarity)
             if cached_similarity is not None
-            else await self._similarity.detect(
-                SimilarityRequest(
-                    run_id=state.run_id,
-                    invoice_id=state.invoice_id,
-                    trace_id=state.trace_id,
-                    extraction=extraction,
-                )
+            else await traced_call(
+                "tool",
+                "near_duplicate",
+                state,
+                lambda: self._similarity.detect(
+                    SimilarityRequest(
+                        run_id=state.run_id,
+                        invoice_id=state.invoice_id,
+                        trace_id=state.trace_id,
+                        extraction=extraction,
+                    )
+                ),
             )
         )
         self._require_digest(similarity.extraction_sha256, extraction, "Similarity")
@@ -278,7 +303,12 @@ class LiveInvoiceServices:
         taxonomy = (
             TaxonomyResult.model_validate(cached_taxonomy)
             if cached_taxonomy is not None
-            else await self._taxonomy.run(taxonomy_request)
+            else await traced_call(
+                "tool",
+                "exception_taxonomy",
+                state,
+                lambda: self._taxonomy.run(taxonomy_request),
+            )
         )
         self._require_digest(taxonomy.input_sha256, taxonomy_request, "Taxonomy")
         policy_request = PolicyRequest(
@@ -296,7 +326,9 @@ class LiveInvoiceServices:
         decision = (
             PolicyResult.model_validate(cached_policy)
             if cached_policy is not None
-            else await self._policy.run(policy_request)
+            else await traced_call(
+                "tool", "policy_rules", state, lambda: self._policy.run(policy_request)
+            )
         )
         self._require_digest(decision.input_sha256, policy_request, "Policy")
         return similarity, taxonomy, decision
@@ -317,7 +349,8 @@ class LiveInvoiceServices:
                     result.match_sha256, self._required_match(state), "Gate matching"
                 )
             return result
-        result = evaluate_composite_gate(request, policy, self._gate_config)
+        with operation_span("tool", "composite_gate", state):
+            result = evaluate_composite_gate(request, policy, self._gate_config)
         await self._audit.append(
             AppendEvent(
                 run_id=state.run_id,
@@ -345,27 +378,31 @@ class LiveInvoiceServices:
             "extraction_escalated": state.extraction is None,
         }
         triage_result: TriageResult | None = None
-        if (
-            self._triage_agent is not None
-            and await self._events.read(state, "triage.prepared") is None
-        ):
-            evidence = gather_triage_evidence(
-                taxonomy=taxonomy,
-                policy=PolicyResult.model_validate(state.policy) if state.policy else None,
-                match=MatchResult.model_validate(state.match) if state.match else None,
-                validation=ValidationResult.model_validate(state.validation)
-                if state.validation
-                else None,
-                extraction_escalated=state.extraction is None,
-            )
-            triage_result = await self._triage_agent.prepare(
-                TriageRequest(
-                    run_id=state.run_id,
-                    invoice_id=state.invoice_id,
-                    trace_id=state.trace_id,
-                    evidence=evidence,
-                    evidence_sha256=model_digest(evidence),
+        triage_agent = self._triage_agent
+        if triage_agent is not None and await self._events.read(state, "triage.prepared") is None:
+            with operation_span("tool", "triage_evidence", state):
+                evidence = gather_triage_evidence(
+                    taxonomy=taxonomy,
+                    policy=PolicyResult.model_validate(state.policy) if state.policy else None,
+                    match=MatchResult.model_validate(state.match) if state.match else None,
+                    validation=ValidationResult.model_validate(state.validation)
+                    if state.validation
+                    else None,
+                    extraction_escalated=state.extraction is None,
                 )
+            triage_result = await traced_call(
+                "tool",
+                "triage_agent",
+                state,
+                lambda: triage_agent.prepare(
+                    TriageRequest(
+                        run_id=state.run_id,
+                        invoice_id=state.invoice_id,
+                        trace_id=state.trace_id,
+                        evidence=evidence,
+                        evidence_sha256=model_digest(evidence),
+                    )
+                ),
             )
             payload["recommendation"] = (
                 triage_result.draft.recommended_action
@@ -398,15 +435,16 @@ class LiveInvoiceServices:
                 (state.run_id, state.invoice_id),
             )
             if await existing.fetchone() is None:
-                projection = project_exception(
-                    now=self._clock(),
-                    taxonomy=taxonomy,
-                    policy=PolicyResult.model_validate(state.policy) if state.policy else None,
-                    gate=_gate_adapter.validate_python(state.gate) if state.gate else None,
-                    extraction_escalated=state.extraction is None,
-                    recommendation=payload,
-                    config=self._queue_config,
-                )
+                with operation_span("tool", "queue_projection", state):
+                    projection = project_exception(
+                        now=self._clock(),
+                        taxonomy=taxonomy,
+                        policy=PolicyResult.model_validate(state.policy) if state.policy else None,
+                        gate=_gate_adapter.validate_python(state.gate) if state.gate else None,
+                        extraction_escalated=state.extraction is None,
+                        recommendation=payload,
+                        config=self._queue_config,
+                    )
                 await connection.execute(
                     "INSERT INTO public.exceptions (id, run_id, invoice_id, exception_type, "
                     "priority, sla_due_at, evidence, recommendation) "

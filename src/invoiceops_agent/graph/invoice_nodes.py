@@ -7,6 +7,7 @@ from langgraph.types import interrupt
 from pydantic import JsonValue
 
 from invoiceops_agent.graph.state import InvoiceGraphState, InvoiceNodeName, ReviewDecision
+from invoiceops_agent.obs.tracing import traced_call
 from invoiceops_agent.schemas.exceptions import TaxonomyResult
 from invoiceops_agent.schemas.extraction import (
     ExtractionResult,
@@ -67,7 +68,7 @@ class InvoiceNodes:
         }
 
     async def extract(self, state: InvoiceGraphState) -> dict[str, object]:
-        outcome = await self.services.extract(state)
+        outcome = await traced_call("tool", "extract", state, lambda: self.services.extract(state))
         extraction = (
             outcome.extraction.model_dump(mode="json")
             if isinstance(outcome, ExtractionSuccess)
@@ -80,14 +81,16 @@ class InvoiceNodes:
         }
 
     async def validate(self, state: InvoiceGraphState) -> dict[str, object]:
-        result = await self.services.validate(state)
+        result = await traced_call("tool", "validate", state, lambda: self.services.validate(state))
         return {
             "validation": result.model_dump(mode="json"),
             "completed_nodes": _completed(state, "Validate"),
         }
 
     async def match_three_way(self, state: InvoiceGraphState) -> dict[str, object]:
-        snapshot, result = await self.services.match(state)
+        snapshot, result = await traced_call(
+            "tool", "match", state, lambda: self.services.match(state)
+        )
         return {
             "snapshot": snapshot.model_dump(mode="json") if snapshot is not None else None,
             "match": result.model_dump(mode="json"),
@@ -95,7 +98,9 @@ class InvoiceNodes:
         }
 
     async def policy(self, state: InvoiceGraphState) -> dict[str, object]:
-        similarity, taxonomy, decision = await self.services.policy(state)
+        similarity, taxonomy, decision = await traced_call(
+            "tool", "policy", state, lambda: self.services.policy(state)
+        )
         return {
             "similarity": similarity.model_dump(mode="json") if similarity is not None else None,
             "taxonomy": taxonomy.model_dump(mode="json"),
@@ -104,7 +109,7 @@ class InvoiceNodes:
         }
 
     async def gate(self, state: InvoiceGraphState) -> dict[str, object]:
-        result = await self.services.gate(state)
+        result = await traced_call("tool", "gate", state, lambda: self.services.gate(state))
         return {
             "gate": result.model_dump(mode="json"),
             "route": result.route,
@@ -112,11 +117,11 @@ class InvoiceNodes:
         }
 
     async def auto_approve(self, state: InvoiceGraphState) -> dict[str, object]:
-        await self.services.auto_approve(state)
+        await traced_call("tool", "auto_approve", state, lambda: self.services.auto_approve(state))
         return {"completed_nodes": _completed(state, "AutoApprove")}
 
     async def exception_triage(self, state: InvoiceGraphState) -> dict[str, object]:
-        result = await self.services.triage(state)
+        result = await traced_call("tool", "triage", state, lambda: self.services.triage(state))
         return {
             "status": "awaiting_review",
             "route": "REVIEW",
@@ -133,7 +138,7 @@ class InvoiceNodes:
             }
         )
         decision = ReviewDecision.model_validate(value)
-        await self.services.review(state, decision)
+        await traced_call("tool", "review", state, lambda: self.services.review(state, decision))
         return {
             "review": decision.model_dump(mode="json"),
             "status": "running",
@@ -141,14 +146,14 @@ class InvoiceNodes:
         }
 
     async def archive(self, state: InvoiceGraphState) -> dict[str, object]:
-        await self.services.archive(state)
+        await traced_call("tool", "archive", state, lambda: self.services.archive(state))
         return {
             "status": "completed",
             "completed_nodes": _completed(state, "Archive"),
         }
 
     async def reject(self, state: InvoiceGraphState) -> dict[str, object]:
-        await self.services.reject(state)
+        await traced_call("tool", "reject", state, lambda: self.services.reject(state))
         return {
             "status": "rejected",
             "completed_nodes": _completed(state, "Reject"),

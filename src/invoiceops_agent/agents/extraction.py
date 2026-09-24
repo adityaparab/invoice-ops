@@ -39,6 +39,7 @@ from invoiceops_agent.gateway_client.schemas import ModelAlias, RequestContext
 from invoiceops_agent.ledger.audit import AuditSink
 from invoiceops_agent.ledger.errors import LedgerError
 from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
+from invoiceops_agent.obs.tracing import operation_span, traced_call
 from invoiceops_agent.schemas.extraction import (
     EscalationReason,
     ExtractionEscalation,
@@ -208,15 +209,27 @@ class ExtractionAgent:
                 and not policy.allow_images
             ):
                 raise UnsupportedDocumentFeature(run_id=request.run_id, trace_id=request.trace_id)
-            document = await self._reader.read(
-                request, run_id=request.run_id, trace_id=request.trace_id
+            document = await traced_call(
+                "tool",
+                "document_read",
+                request,
+                lambda: self._reader.read(
+                    request, run_id=request.run_id, trace_id=request.trace_id
+                ),
             )
             if (
                 document.content_hash != request.content_hash
                 or document.content_type != request.content_type
             ):
                 raise DocumentError(run_id=request.run_id, trace_id=request.trace_id)
-            await self._preflight.check(document, run_id=request.run_id, trace_id=request.trace_id)
+            await traced_call(
+                "tool",
+                "document_preflight",
+                request,
+                lambda: self._preflight.check(
+                    document, run_id=request.run_id, trace_id=request.trace_id
+                ),
+            )
         except DocumentUnavailable:
             return _escalation(request, calls, "DOCUMENT_UNAVAILABLE")
         except UnsupportedDocumentFeature:
@@ -226,7 +239,8 @@ class ExtractionAgent:
         for repair in (False, True):
             model_request = _model_request(request, document, prompts, repair=repair)
             try:
-                result = await self._gateway.complete(model_request, InvoiceExtraction)
+                with operation_span("tool", "extraction_gateway", request):
+                    result = await self._gateway.complete(model_request, InvoiceExtraction)
             except (GatewayCassetteMismatch, GatewayConfigurationError):
                 raise
             except GatewayError as error:

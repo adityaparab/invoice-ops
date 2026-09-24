@@ -19,6 +19,7 @@ from invoiceops_agent.graph.errors import (
 )
 from invoiceops_agent.graph.hello import HelloGraph
 from invoiceops_agent.graph.state import GraphState
+from invoiceops_agent.obs.tracing import operation_span
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ class GraphRunner:
         started = perf_counter()
         try:
             async with timeout(self.timeout_seconds), self.lock.acquire(run_id, trace):
-                result = await self._run_locked(initial)
+                with operation_span("workflow", "hello", initial):
+                    result = await self._run_locked(initial)
         except GraphError as error:
             logger.warning(
                 "graph_rejected run_id=%s trace_id=%s error_type=%s",
