@@ -39,11 +39,33 @@ from invoiceops_agent.gateway_client import (
     TextPart,
     TokenBudgetExceeded,
 )
-from invoiceops_agent.gateway_client.cassettes import Cassette, CassetteMismatch, CassetteTransport
+from invoiceops_agent.gateway_client.cassettes import (
+    AliasCassetteTransport,
+    Cassette,
+    CassetteMismatch,
+    CassetteTransport,
+)
 from invoiceops_agent.gateway_client.telemetry import GatewayEvent
 
 pytestmark = pytest.mark.unit
 CASSETTES = Path(__file__).parents[1] / "cassettes" / "gateway"
+
+
+@pytest.mark.asyncio
+async def test_alias_cassette_replays_with_the_configured_model_name() -> None:
+    configured = settings(
+        aliases={
+            "extract-vision": {
+                "model_version": "provider/model-v2",
+                "model_name": "provider/model-v2",
+            }
+        }
+    )
+    async with GatewayClient(configured, transport=AliasCassetteTransport(CASSETTES)) as client:
+        result = await client.complete(request(), SyntheticExtraction)
+    assert result.value.invoice_number == "SYN-001"
+    assert result.provenance.model_version == "provider/model-v2"
+    assert result.provenance.model == "provider/model-v2"
 
 
 class SyntheticExtraction(BaseModel):

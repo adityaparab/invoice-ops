@@ -315,3 +315,33 @@ class CassetteTransport(httpx2.AsyncBaseTransport):
         self._closed = True
         if self._upstream is not None:
             await self._upstream.aclose()
+
+
+class AliasCassetteTransport(CassetteTransport):
+    """Replay by task alias while preserving the caller's configured model provenance."""
+
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
+        try:
+            alias: ModelAlias = TypeAdapter(ModelAlias).validate_python(
+                request.headers["X-InvoiceOps-Alias"]
+            )
+            body = json.loads(request.content)
+            model_name = body["model"]
+            if not isinstance(model_name, str):
+                raise ValueError("Invalid model name")
+            body["model"] = alias
+        except (KeyError, ValueError, TypeError):
+            raise CassetteMismatch("Invalid alias cassette request") from None
+        normalized = httpx2.Request(
+            request.method,
+            request.url,
+            headers=request.headers,
+            content=json.dumps(body, separators=(",", ":"), ensure_ascii=False).encode(),
+        )
+        response = await super().handle_async_request(normalized)
+        payload = response.json()
+        if isinstance(payload, dict) and isinstance(payload.get("model"), str):
+            payload["model"] = model_name
+        return httpx2.Response(
+            response.status_code, headers=response.headers, json=payload, request=request
+        )

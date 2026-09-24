@@ -7,7 +7,13 @@ import psycopg
 from psycopg.rows import DictRow
 from psycopg.types.json import Jsonb
 
-from invoiceops_agent.schemas.erp import ERPFixture, GoodsReceipt, PurchaseOrder, Vendor
+from invoiceops_agent.schemas.erp import (
+    ERPFixture,
+    GoldenERPSeed,
+    GoodsReceipt,
+    PurchaseOrder,
+    Vendor,
+)
 
 SeedOutcome = Literal["created", "unchanged"]
 _LOCK = int.from_bytes(hashlib.sha256(b"invoiceops:erp-seed@v1").digest()[:8], signed=True)
@@ -44,7 +50,24 @@ async def seed_fixture(
 ) -> SeedOutcome:
     """Insert all records once; exact reruns are no-ops and drift fails closed."""
     await connection.execute("SELECT pg_advisory_xact_lock(%s)", (_LOCK,))
-    counts = (
+    counts = await _fixture_counts(connection, fixture)
+    expected_counts = (
+        len(fixture.vendors),
+        len(fixture.purchase_orders),
+        len(fixture.goods_receipts),
+    )
+    if counts == expected_counts:
+        return "unchanged"
+    if any(counts):
+        raise ERPSeedConflict("Existing synthetic ERP fixture is incomplete")
+    await _insert_fixture(connection, fixture, include_vendors=True)
+    return "created"
+
+
+async def _fixture_counts(
+    connection: psycopg.AsyncConnection[DictRow], fixture: ERPFixture | GoldenERPSeed
+) -> tuple[int, int, int]:
+    return (
         await _existing_count(
             connection,
             table="vendors",
@@ -70,30 +93,51 @@ async def seed_fixture(
             model=GoodsReceipt,
         ),
     )
-    expected_counts = (
+
+
+async def seed_golden_fixture(
+    connection: psycopg.AsyncConnection[DictRow], fixture: GoldenERPSeed
+) -> SeedOutcome:
+    """Add the golden orders beside the base fixture, or verify an exact rerun."""
+    if fixture.version != "golden-erp@v1":
+        raise ERPSeedConflict("Expected the golden ERP fixture version")
+    await connection.execute("SELECT pg_advisory_xact_lock(%s)", (_LOCK,))
+    counts = await _fixture_counts(connection, fixture)
+    full = (
         len(fixture.vendors),
         len(fixture.purchase_orders),
         len(fixture.goods_receipts),
     )
-    if counts == expected_counts:
+    if counts == full:
         return "unchanged"
-    if any(counts):
-        raise ERPSeedConflict("Existing synthetic ERP fixture is incomplete")
-    for vendor in fixture.vendors:
-        await connection.execute(
-            "INSERT INTO public.vendors "
-            "(id, external_id, name, tax_id, bank_account_iban, status, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (
-                vendor.id,
-                vendor.external_id,
-                vendor.name,
-                vendor.tax_id,
-                vendor.bank_account_iban,
-                vendor.status,
-                vendor.created_at,
-            ),
-        )
+    if counts not in {(0, 0, 0), (len(fixture.vendors), 0, 0)}:
+        raise ERPSeedConflict("Existing golden ERP fixture is incomplete")
+    await _insert_fixture(connection, fixture, include_vendors=counts[0] == 0)
+    return "created"
+
+
+async def _insert_fixture(
+    connection: psycopg.AsyncConnection[DictRow],
+    fixture: ERPFixture | GoldenERPSeed,
+    *,
+    include_vendors: bool,
+) -> None:
+    if include_vendors:
+        for vendor in fixture.vendors:
+            await connection.execute(
+                "INSERT INTO public.vendors "
+                "(id, external_id, name, tax_id, bank_account_iban, status, created_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (
+                    vendor.id,
+                    vendor.external_id,
+                    vendor.name,
+                    vendor.tax_id,
+                    vendor.bank_account_iban,
+                    vendor.status,
+                    vendor.created_at,
+                ),
+            )
     for order in fixture.purchase_orders:
         await connection.execute(
             "INSERT INTO public.purchase_orders "
@@ -126,4 +170,3 @@ async def seed_fixture(
                 receipt.created_at,
             ),
         )
-    return "created"

@@ -1,0 +1,38 @@
+{
+  "alias": "triage-reasoner",
+  "scenario": "triage",
+  "prompt_version": "triage@v1",
+  "request_sha256": "820f69244789937e922bd73afc1ef0adf3a7e12a335e5ae610d1f9dd226d4c1b",
+  "format_version": 2,
+  "outcomes": [
+    {
+      "kind": "response",
+      "status_code": 200,
+      "headers": {
+        "content-type": "application/json",
+        "x-litellm-response-cost": "0.001"
+      },
+      "response": {
+        "id": "chatcmpl-golden-smoke",
+        "object": "chat.completion",
+        "created": 1790164800,
+        "model": "triage-reasoner",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+              "role": "assistant",
+              "content": "{\"recommended_action\":\"APPROVE\",\"summary\":\"Synthetic invoice has no classified business exception.\",\"rationale\":\"The confidence gate requires a human review of this clean case.\",\"evidence_refs\":[\"taxonomy:status\",\"policy:status\"]}"
+            }
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 200,
+          "completion_tokens": 200,
+          "total_tokens": 400
+        }
+      }
+    }
+  ]
+}

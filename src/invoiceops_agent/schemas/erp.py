@@ -76,3 +76,11 @@ class ERPFixture(ERPRecord):
     purchase_orders: tuple[PurchaseOrder, ...]
     goods_receipts: tuple[GoodsReceipt, ...]
     ground_truth: tuple[PurchaseOrderTruth, ...]
+
+
+class GoldenERPSeed(ERPRecord):
+    version: Literal["golden-erp@v1"] = "golden-erp@v1"
+    seed: int
+    vendors: tuple[Vendor, ...]
+    purchase_orders: tuple[PurchaseOrder, ...]
+    goods_receipts: tuple[GoodsReceipt, ...]
