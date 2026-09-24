@@ -41,8 +41,11 @@ budgets in the operator's LiteLLM deployment. The optional Prometheus stack has 
 
 The workflow reads only `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`, and
 task-specific `LITELLM_*_MODEL` names from `.env`. `GatewaySettings` is an explicitly constructed
-value object; it does not load another environment prefix or proxy configuration file. Each
-internal alias has a `model_version` pin supplied from the selected model name. That name may be a
+value object; it does not load another environment prefix or proxy configuration file.
+The eval-only triage judge constructs the `eval-judge` alias from the explicit
+`LITELLM_JUDGE_MODEL` name and the same direct URL/key; it does not run unless
+that optional name is supplied. Each internal alias has a `model_version` pin
+supplied from the selected model name. That name may be a
 mutable LiteLLM route rather than an immutable provider revision; operators should keep deployment
 records for fallback and route changes.
 The response also preserves the gateway-reported `model` string; the client cannot independently

@@ -113,6 +113,42 @@ uv run python -m eval.metrics \
   --output eval/data/metrics/golden-v1.0.0.json
 ```
 
+## Diagnostics and triage rubric
+
+[`eval/diagnostics.py`](../eval/diagnostics.py) reads one pipeline report and
+emits per-code TP/FP/FN/TN counts, exact-value field F1 by A/B/C visual tier,
+ten equal-width score bins, and 101 threshold points from τ=0 to τ=1. Empty
+tier/field bins remain unavailable. Calibration compares the composite score
+with the observed clean share; the score is a ranking signal, not a probability.
+The τ sweep keeps policy eligibility fixed and changes only the score cutoff.
+Its routed-exception recall asks whether an anomaly would avoid auto-approval;
+the primary recall metric instead requires the injected taxonomy code.
+
+```bash
+uv run python -m eval.diagnostics \
+  --input eval/data/runs/live-1.json \
+  --output eval/data/diagnostics/live-1.json
+```
+
+The optional triage judge uses only the direct LiteLLM URL, key, and the new
+`LITELLM_JUDGE_MODEL` model-name variable documented in `.env.example`.
+`triage-judge@v1` scores evidence support, action safety, and clarity from
+zero to two each. Calls go through `src/agents/eval_judge.py` and the existing
+gateway. Its immutable report pins the source pipeline checksum, request
+evidence checksum, prompt version, model version, and observed cost. A missing
+model route or failed call never becomes a zero quality score; coverage stays
+explicit. To run it against a synthetic report and join its results:
+
+```bash
+uv run python -m eval.judge_triage \
+  --input eval/data/runs/live-1.json \
+  --output eval/data/judges/live-1.json
+uv run python -m eval.diagnostics \
+  --input eval/data/runs/live-1.json \
+  --judge-report eval/data/judges/live-1.json \
+  --output eval/data/diagnostics/live-1.json
+```
+
 The synthetic documents use one line item and repeated template structure;
 those constraints limit claims about real invoice diversity. The published
 split and label eligibility keep that limitation visible in every report.

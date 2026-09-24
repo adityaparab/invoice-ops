@@ -7,6 +7,7 @@ import math
 import unicodedata
 from collections import Counter
 from collections.abc import Iterable, Mapping
+from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Literal, NamedTuple
@@ -99,6 +100,20 @@ class PrimaryMetricsReport(BaseModel):
     caveats: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class FieldCounts:
+    tp: int = 0
+    fp: int = 0
+    fn: int = 0
+
+    def __add__(self, other: "FieldCounts") -> "FieldCounts":
+        return FieldCounts(self.tp + other.tp, self.fp + other.fp, self.fn + other.fn)
+
+    @property
+    def f1(self) -> Decimal | None:
+        return _f1(self.tp, self.fp, self.fn)
+
+
 def _text(value: object) -> str | None:
     if value is None:
         return None
@@ -132,43 +147,44 @@ def _extraction(record: RunRecord) -> InvoiceExtraction | None:
     return InvoiceExtraction.model_validate(raw) if isinstance(raw, dict) else None
 
 
-def _field_counts(label: InvoiceLabel, extraction: InvoiceExtraction | None) -> Counter[str]:
-    counts: Counter[str] = Counter()
+def score_fields(
+    label: InvoiceLabel, extraction: InvoiceExtraction | None
+) -> dict[str, FieldCounts]:
+    """Count exact matches by known field without treating unknown labels as negatives."""
+    results = {field: FieldCounts() for field in HEADER_FIELDS}
+    results.update({f"line_{field}": FieldCounts() for field in LINE_FIELDS})
 
-    def compare(field: str, expected: object, observed: object) -> None:
+    def compare(field: str, expected: object, observed: object) -> FieldCounts:
         if expected is None:
-            return
+            return FieldCounts()
         actual = _normalized(field, observed)
-        gold = _normalized(field, expected)
-        if gold == actual:
-            counts["tp"] += 1
-            if field in MONEY_FIELDS:
-                counts["money_tp"] += 1
-        else:
-            counts["fn"] += 1
-            if actual is not None:
-                counts["fp"] += 1
-            if field in MONEY_FIELDS:
-                counts["money_fn"] += 1
-                if actual is not None:
-                    counts["money_fp"] += 1
+        if _normalized(field, expected) == actual:
+            return FieldCounts(tp=1)
+        return FieldCounts(fp=int(actual is not None), fn=1)
 
     for field in HEADER_FIELDS:
         observed = getattr(extraction, field).value if extraction is not None else None
-        compare(field, getattr(label, field), observed)
+        results[field] += compare(field, getattr(label, field), observed)
     observed_lines = extraction.line_items if extraction is not None else ()
     for index, line in enumerate(label.line_items):
         actual = observed_lines[index] if index < len(observed_lines) else None
         for field in LINE_FIELDS:
             observed = getattr(actual, field).value if actual is not None else None
-            compare(field, getattr(line, field), observed)
+            results[f"line_{field}"] += compare(field, getattr(line, field), observed)
     if label.line_items:
         for extra_line in observed_lines[len(label.line_items) :]:
             for field in LINE_FIELDS:
                 if getattr(extra_line, field).value is not None:
-                    counts["fp"] += 1
-                    if field in MONEY_FIELDS:
-                        counts["money_fp"] += 1
+                    results[f"line_{field}"] += FieldCounts(fp=1)
+    return results
+
+
+def _field_counts(label: InvoiceLabel, extraction: InvoiceExtraction | None) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for field, row in score_fields(label, extraction).items():
+        counts.update({"tp": row.tp, "fp": row.fp, "fn": row.fn})
+        if field in MONEY_FIELDS or field.startswith("line_") and field[5:] in MONEY_FIELDS:
+            counts.update({"money_tp": row.tp, "money_fp": row.fp, "money_fn": row.fn})
     return counts
 
 
