@@ -6,8 +6,10 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.security import HTTPBearer
+from prometheus_client import CONTENT_TYPE_LATEST
 from pydantic import AwareDatetime
 from starlette.responses import JSONResponse
 
@@ -68,8 +70,14 @@ from invoiceops_agent.api.schemas.run_progress import RunProgress
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
 from invoiceops_agent.api.webhooks import decode_email_document, read_signed_email
+from invoiceops_agent.gateway_client.spend_logs import (
+    SpendLogReader,
+    SpendLogSampler,
+    SpendLogSettings,
+)
 from invoiceops_agent.graph.ingestion import utc_now
 from invoiceops_agent.obs.logging import configure_logging
+from invoiceops_agent.obs.metrics import metrics_session
 from invoiceops_agent.obs.tracing import tracing_session
 
 
@@ -116,9 +124,19 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         async with (
             tracing_session("invoiceops-api"),
+            metrics_session("invoiceops-api", prometheus=True) as metrics,
+            httpx.AsyncClient(timeout=3, follow_redirects=False, trust_env=False) as spend_client,
             factory(configuration) as checks,
             ingestion_factory(configuration) as ingestion,
         ):
+            spend_settings = SpendLogSettings()
+            spend_reader = (
+                SpendLogReader(spend_settings, spend_client)
+                if spend_settings.api_base is not None and spend_settings.master_key is not None
+                else None
+            )
+            app.state.spend_sampler = SpendLogSampler(spend_reader, metrics.registry)
+            app.state.metrics = metrics
             runtime.checks = checks
             uploads.service = ingestion
             try:
@@ -126,10 +144,20 @@ def create_app(
             finally:
                 runtime.checks = None
                 uploads.service = None
+                app.state.spend_sampler = None
+                app.state.metrics = None
 
     app = FastAPI(title="InvoiceOps API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
+
+    @app.get("/v1/metrics", include_in_schema=False)
+    async def prometheus_metrics() -> Response:
+        metrics = app.state.metrics if hasattr(app.state, "metrics") else None
+        if metrics is None:
+            raise HTTPException(503, "Metrics are not ready.")
+        await app.state.spend_sampler.refresh()
+        return Response(metrics.render(), media_type=CONTENT_TYPE_LATEST)
 
     @app.post(
         "/v1/invoices",

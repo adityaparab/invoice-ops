@@ -27,12 +27,27 @@ replace them before use on a shared host. Langfuse's first web user is created
 through its setup UI. Grafana uses `GRAFANA_ADMIN_USER` and
 `GRAFANA_ADMIN_PASSWORD`.
 
-Grafana provisions a Prometheus data source and the **InvoiceOps Platform
-Health** dashboard from files in this directory. This first dashboard shows
-live Prometheus scrape health and duration. The API metrics endpoint and
-invoice cost/latency panels are plan step 4.4, so no invoice metric is
-fabricated here. Prometheus currently scrapes itself; step 4.4 adds the API
-target when `/v1/metrics` exists.
+Grafana provisions the **InvoiceOps Platform Health** and **InvoiceOps Cost and
+Latency** dashboards. Prometheus scrapes itself and the API's `GET /v1/metrics`
+endpoint. That endpoint exports OpenTelemetry API request counts and latency
+histograms, plus a cached one-hour LiteLLM spend-log snapshot from
+`/spend/logs/v2`. The API derives the management endpoint from the configured
+`LITELLM_API_BASE` and authenticates with the existing `LITELLM_MASTER_KEY`.
+The spend-logs availability gauge is zero and the spend sample is absent if
+those settings are missing, access is denied, or the bounded read fails.
+The proxy must retain spend logs and permit the configured key to read them.
+
+For one-shot invoice workers, set
+`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://prometheus:9090/api/v1/otlp/v1/metrics`
+in `.env` while the observability profile is running. Prometheus's OTLP
+receiver is enabled on its internal network. Workers export a single metric
+snapshot on exit; Grafana's worker panels aggregate those samples over time.
+Gateway cost comes only from LiteLLM's `x-litellm-response-cost` header. The
+cost and spend metrics use integer nano-USD to preserve decimal money values;
+Grafana divides by 1 billion for display. Metrics use task alias and outcome
+labels, never run IDs, invoice identifiers, prompts, or credentials. The
+[Prometheus OTLP receiver guide](https://prometheus.io/docs/guides/opentelemetry/)
+documents the receiver endpoint.
 
 To export workflow spans, create a Langfuse project and API keys. Set
 `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` to

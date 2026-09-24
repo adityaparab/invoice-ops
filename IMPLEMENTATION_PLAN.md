@@ -132,7 +132,7 @@
 - [x] 4.1 Add `langfuse`, `prometheus`, `grafana` to Compose; Grafana dashboards provisioned
 - [x] 4.2 OTel spans per graph node + per tool call; exporters wired
 - [x] 4.3 Langfuse tracing for all LLM calls (gateway callback to OTLP; proxy callbacks superseded by ADR 0009)
-- [ ] 4.4 Cost/latency dashboards: LiteLLM spend logs + OTel metrics; `GET /v1/metrics` Prometheus endpoint
+- [x] 4.4 Cost/latency dashboards: LiteLLM spend logs + OTel metrics; `GET /v1/metrics` Prometheus endpoint
 - [ ] 4.5 Gateway hardening: model routing by task class + data-sensitivity tier, semantic cache, fallback chain, budget alerts
 
 
@@ -195,7 +195,7 @@ checkbox here.
 | P1 — Extraction & validation   | Complete    | 2026-09-23   | Ingestion, extraction, validation, and measured 32-image development baseline |
 | P2 — Match + policy            | Complete    | 2026-09-24   | Deterministic matching, taxonomy, similarity, policy, durable graph, composite gate, and audited retry/DLQ |
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
-| P4 — Observability + gateway   | In progress | —            | Optional stack and OTel workflow spans implemented; LLM tracing and metrics follow |
+| P4 — Observability + gateway   | In progress | —            | Optional stack, workflow/LLM traces, and cost/latency metrics implemented; gateway hardening follows |
 | P5 — Eval harness + CI gate    | Not started | —            |                                                           |
 | P6 — ADK variant + ADR         | Not started | —            |                                                           |
 | P7 — Polish                    | Not started | —            |                                                           |
@@ -250,3 +250,4 @@ checkbox here.
 | 2026-09-24 | Step 4.1 adds an opt-in, image-pinned Langfuse v4 stack with isolated Postgres/ClickHouse/Redis/MinIO, Prometheus, and file-provisioned Grafana. The first dashboard shows live Prometheus health; invoice metrics follow in step 4.4. Per the operator's direction, the unused Compose LiteLLM proxy, route YAML, and alternate gateway environment source are removed; runtime model traffic keeps only the direct `LITELLM_*` URL, key, and model-name variables (ADR 0008). |
 | 2026-09-24 | Step 4.2 adds sanitized OpenTelemetry parent spans for durable graph runs, every invoice/hello graph node, and the tool operations invoked by the live workflow. API and worker entry points can opt into batched OTLP/HTTP export with standard OTel endpoint/header variables; an absent endpoint leaves export disabled. Offline tests assert parent-child correlation, identifiers, error types, and exclusion of payload text. |
 | 2026-09-24 | Step 4.3 traces each gateway chat and embedding call as a Langfuse-compatible OTLP observation, carrying model identity, version pins, token usage, exact reported cost, latency, retry count, and typed errors without content. The existing direct LiteLLM endpoint remains the only model route; ADR 0009 replaces the planned proxy callback because it would require additional LiteLLM configuration. |
+| 2026-09-24 | Step 4.4 adds low-cardinality OTel API request and worker gateway metrics, a Prometheus API endpoint, bounded one-hour LiteLLM spend-log snapshots using the existing URL and key, and provisioned cost/latency dashboards. Live Compose smoke verified the API scrape, authorized spend-log read, Grafana provisioning, and one-shot worker OTLP samples; missing cost headers or inaccessible spend logs remain explicitly unavailable. |

@@ -1,7 +1,7 @@
 {
   "uid": "invoiceops-platform-health",
   "title": "InvoiceOps Platform Health",
-  "description": "Provisioned platform scrape health. Invoice workflow metrics are added in plan step 4.4.",
+  "description": "Provisioned Prometheus and InvoiceOps API scrape health.",
   "tags": ["invoiceops", "platform"],
   "timezone": "utc",
   "schemaVersion": 41,
@@ -42,6 +42,30 @@
       ],
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "gridPos": { "h": 8, "w": 16, "x": 8, "y": 0 }
+    },
+    {
+      "id": 3,
+      "title": "InvoiceOps API scrape health",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "up{job=\"invoiceops-api\"}", "legendFormat": "API" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }
     }
   ]
 }

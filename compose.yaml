@@ -70,6 +70,8 @@ services:
       INVOICEOPS_UPLOAD_TIMEOUT_SECONDS: ${INVOICEOPS_UPLOAD_TIMEOUT_SECONDS:-30}
       INVOICEOPS_STORAGE_TIMEOUT_SECONDS: ${INVOICEOPS_STORAGE_TIMEOUT_SECONDS:-10}
       INVOICEOPS_READINESS_TIMEOUT_SECONDS: "2"
+      LITELLM_API_BASE: ${LITELLM_API_BASE:-}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_TRACES_HEADERS: ${OTEL_EXPORTER_OTLP_TRACES_HEADERS:-}
     ports:
@@ -116,6 +118,8 @@ services:
       INVOICEOPS_AUTO_APPROVAL_ENABLED: ${INVOICEOPS_AUTO_APPROVAL_ENABLED:-true}
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_TRACES_HEADERS: ${OTEL_EXPORTER_OTLP_TRACES_HEADERS:-}
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_METRICS_HEADERS: ${OTEL_EXPORTER_OTLP_METRICS_HEADERS:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -307,7 +311,7 @@ services:
   prometheus:
     profiles: ["observability"]
     image: docker.io/prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=15d"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=15d", "--web.enable-otlp-receiver"]
     ports:
       - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     volumes:

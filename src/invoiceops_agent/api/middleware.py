@@ -67,10 +67,15 @@ class RequestContextMiddleware:
             else:
                 await self.app(scope, receive, send_with_trace)
         finally:
+            duration_seconds = perf_counter() - started
+            app = scope.get("app")
+            metrics = getattr(app.state, "metrics", None) if app is not None else None
+            if metrics is not None:
+                metrics.record_request(scope["method"], status, duration_seconds)
             logger.info(
                 "request_completed method=%s status=%s trace_id=%s duration_ms=%.3f",
                 scope["method"],
                 status,
                 trace_id,
-                (perf_counter() - started) * 1000,
+                duration_seconds * 1000,
             )
