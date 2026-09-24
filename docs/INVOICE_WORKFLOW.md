@@ -31,3 +31,6 @@ review still overrides the score. Set `INVOICEOPS_AUTO_APPROVAL_ENABLED=false` t
 approval during an operational hold. Exception triage prepares deterministic evidence and pauses at
 HumanReview. The review API and four-eyes control arrive in Phase 3; the graph's typed resume
 command is exercised by offline and Postgres restart tests.
+
+[Retry and dead-letter operation](RETRY_AND_DLQ.md) records run status, retries only uncaught
+infrastructure failures, and supports audited operator redrive.

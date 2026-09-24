@@ -28,6 +28,7 @@ dependencies = [
 [project.scripts]
 invoiceops-graph-demo = "invoiceops_agent.graph.cli:main"
 invoiceops-invoice-run = "invoiceops_agent.graph.invoice_cli:main"
+invoiceops-invoice-dlq = "invoiceops_agent.graph.dlq_cli:main"
 
 [build-system]
 requires = ["uv_build==0.11.25"]

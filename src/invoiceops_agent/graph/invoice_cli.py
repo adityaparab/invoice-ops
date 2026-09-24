@@ -6,15 +6,28 @@ import json
 import sys
 from uuid import UUID
 
-from pydantic import ValidationError
-
-from invoiceops_agent.graph.errors import GraphError
-from invoiceops_agent.graph.runtime import invoice_runtime
+from invoiceops_agent.graph.retry import RetryConfig
+from invoiceops_agent.graph.runtime import (
+    InvoiceRuntimeSettings,
+    invoice_runtime,
+    runtime_connection,
+)
+from invoiceops_agent.graph.state import InvoiceGraphState
+from invoiceops_agent.graph.worker import PostgresAttemptStore, RetryWorker
 
 
 async def run_invoice(run_id: UUID) -> dict[str, str]:
-    async with invoice_runtime(run_id) as workflow:
-        result = await workflow.run()
+    settings = InvoiceRuntimeSettings()
+    retry = RetryConfig()
+
+    async def run_once(value: UUID) -> InvoiceGraphState:
+        async with invoice_runtime(value, settings=settings) as workflow:
+            return await workflow.run()
+
+    store = PostgresAttemptStore(
+        lambda: runtime_connection(settings.postgres_dsn.get_secret_value()), retry
+    )
+    result = await RetryWorker(store, run_once, retry).process(run_id)
     return {
         "run_id": str(result.run_id),
         "invoice_id": str(result.invoice_id),
@@ -29,7 +42,7 @@ def main() -> None:
     args = parser.parse_args()
     try:
         result = asyncio.run(run_invoice(args.run_id))
-    except (GraphError, ValidationError, OSError) as error:
+    except Exception as error:
         sys.stderr.write(f"invoice_workflow_failed error_type={type(error).__name__}\n")
         raise SystemExit(1) from None
     sys.stdout.write(json.dumps(result, sort_keys=True) + "\n")
