@@ -49,6 +49,13 @@ labels, never run IDs, invoice identifiers, prompts, or credentials. The
 [Prometheus OTLP receiver guide](https://prometheus.io/docs/guides/opentelemetry/)
 documents the receiver endpoint.
 
+The gateway also exports cache-hit and observed-run-budget-alert counters. The
+`InvoiceOpsObservedRunBudgetExceeded` Prometheus rule fires when a worker reports
+that its run crossed the advisory $0.04 observed-cost threshold. The alert
+identifies no invoice or run in metrics; the worker's sanitized structured log
+contains the run ID for investigation. A cache hit represents no completion
+spend, while its embedding lookup is measured as a separate model call.
+
 To export workflow spans, create a Langfuse project and API keys. Set
 `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` to
 `http://langfuse-web:3000/api/public/otel/v1/traces` for Compose processes.

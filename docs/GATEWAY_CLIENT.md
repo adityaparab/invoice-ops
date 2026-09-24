@@ -7,6 +7,38 @@ available. The first three use `complete`; `embed` uses `embed`. Provider model 
 as request aliases before HTTP I/O. The explicit gateway URL is a trusted deployment setting;
 URL syntax checks cannot prove that an arbitrary hostname is actually a LiteLLM deployment.
 
+## Sensitivity routing, fallback, and cache
+
+Calls are `restricted` by default. Each task alias sends its configured `LITELLM_*_MODEL` name;
+an explicitly `public` request may use that task's optional `*_PUBLIC_MODEL` name. Optional
+`*_FALLBACK_MODEL` and `*_PUBLIC_FALLBACK_MODEL` names form a primary/fallback route chain.
+Restricted requests never use public model names. These are model-name variables in `.env.example`
+and Compose; the application does not load a LiteLLM proxy YAML or another LiteLLM settings source.
+Fallback starts only after bounded connection, timeout, 408/429, or 5xx retries on the primary
+route. Quota/billing denial, guard rejection, invalid model output, and other business failures
+escalate without fallback. The total deadline covers every route. Successful provenance and traces
+pin the route that actually answered. See [ADR 0010](../adr/0010-public-cache-and-gateway-hardening.md).
+
+Semantic caching requires `semantic_cache=True`, `sensitivity="public"`, a `public_` scenario,
+text-only content, and an injected cache store. No invoice workflow request opts in. The gateway
+embeds the guarded text through the configured LiteLLM embedding model and searches a versioned
+Postgres pgvector cache at cosine similarity ≥0.995. The namespace pins task, scenario, prompt
+version, response schema, primary and embedding model names, and exact numeric anchors. The table
+also separates embedding dimensions; recognizable PII in the request or response bypasses storage.
+The table stores embeddings and validated public responses. It has no columns for prompts, invoice
+documents, or credentials. Entries expire after one day and each namespace is bounded to 10,000 entries. Cache
+lookup/storage failures fall back to the normal model call. A cache hit has `attempts=0`, zero
+completion tokens, no completion cost, and `cache_hit=True`; the embedding lookup still incurs its
+own measured model cost. Approximate reuse is suitable only when the caller can guarantee a
+public, stable-answer question; it is deliberately unavailable for invoice decisions.
+
+The gateway accumulates observed `x-litellm-response-cost` values per run with `Decimal` and emits
+one structured warning and a Prometheus alert event when the observed total reaches $0.04. This
+is an advisory signal scoped to a gateway client, not a hard spend limit: missing cost headers,
+infrastructure failures, and another worker's calls cannot be counted. Enforce hard key or team
+budgets in the operator's LiteLLM deployment. The optional Prometheus stack has a rule named
+`InvoiceOpsObservedRunBudgetExceeded` for the event.
+
 The workflow reads only `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`, and
 task-specific `LITELLM_*_MODEL` names from `.env`. `GatewaySettings` is an explicitly constructed
 value object; it does not load another environment prefix or proxy configuration file. Each

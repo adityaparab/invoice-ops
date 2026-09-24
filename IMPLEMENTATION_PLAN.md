@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-24 (Phase 3 implementation complete; Phase 4 in progress)
+> **Last updated:** 2026-09-24 (Phase 4 complete; Phase 5 next)
 
 ---
 
@@ -133,7 +133,7 @@
 - [x] 4.2 OTel spans per graph node + per tool call; exporters wired
 - [x] 4.3 Langfuse tracing for all LLM calls (gateway callback to OTLP; proxy callbacks superseded by ADR 0009)
 - [x] 4.4 Cost/latency dashboards: LiteLLM spend logs + OTel metrics; `GET /v1/metrics` Prometheus endpoint
-- [ ] 4.5 Gateway hardening: model routing by task class + data-sensitivity tier, semantic cache, fallback chain, budget alerts
+- [x] 4.5 Gateway hardening: model routing by task class + data-sensitivity tier, semantic cache, fallback chain, budget alerts
 
 
 
@@ -195,7 +195,7 @@ checkbox here.
 | P1 — Extraction & validation   | Complete    | 2026-09-23   | Ingestion, extraction, validation, and measured 32-image development baseline |
 | P2 — Match + policy            | Complete    | 2026-09-24   | Deterministic matching, taxonomy, similarity, policy, durable graph, composite gate, and audited retry/DLQ |
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
-| P4 — Observability + gateway   | In progress | —            | Optional stack, workflow/LLM traces, and cost/latency metrics implemented; gateway hardening follows |
+| P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
 | P5 — Eval harness + CI gate    | Not started | —            |                                                           |
 | P6 — ADK variant + ADR         | Not started | —            |                                                           |
 | P7 — Polish                    | Not started | —            |                                                           |
@@ -251,3 +251,4 @@ checkbox here.
 | 2026-09-24 | Step 4.2 adds sanitized OpenTelemetry parent spans for durable graph runs, every invoice/hello graph node, and the tool operations invoked by the live workflow. API and worker entry points can opt into batched OTLP/HTTP export with standard OTel endpoint/header variables; an absent endpoint leaves export disabled. Offline tests assert parent-child correlation, identifiers, error types, and exclusion of payload text. |
 | 2026-09-24 | Step 4.3 traces each gateway chat and embedding call as a Langfuse-compatible OTLP observation, carrying model identity, version pins, token usage, exact reported cost, latency, retry count, and typed errors without content. The existing direct LiteLLM endpoint remains the only model route; ADR 0009 replaces the planned proxy callback because it would require additional LiteLLM configuration. |
 | 2026-09-24 | Step 4.4 adds low-cardinality OTel API request and worker gateway metrics, a Prometheus API endpoint, bounded one-hour LiteLLM spend-log snapshots using the existing URL and key, and provisioned cost/latency dashboards. Live Compose smoke verified the API scrape, authorized spend-log read, Grafana provisioning, and one-shot worker OTLP samples; missing cost headers or inaccessible spend logs remain explicitly unavailable. |
+| 2026-09-24 | Step 4.5 completes Phase 4 with restricted-by-default task/sensitivity routing, optional model-name fallbacks for infrastructure failures, a public/text-only pgvector semantic cache, and advisory Decimal per-run budget alerts. New model routes use only `LITELLM_*_MODEL` variables in `.env.example`; ADR 0010 records cache and routing limits. Ruff, strict mypy, 538 offline units, and 91 real integrations pass; Compose confirms the cache migration, Prometheus rule, and Grafana panels. |

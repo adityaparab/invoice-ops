@@ -68,6 +68,7 @@ async def test_gateway_metrics_record_cost_in_integer_nano_usd() -> None:
                 latency_ms=1250,
                 usage=TokenUsage(input_tokens=20, output_tokens=8, total_tokens=28),
                 cost_usd=Decimal("0.0012"),
+                budget_alert=True,
             )
         )
         rendered = metrics.render().decode()
@@ -76,8 +77,33 @@ async def test_gateway_metrics_record_cost_in_integer_nano_usd() -> None:
     assert "invoiceops_gateway_cost_nUSD_total" in rendered
     assert metric_value(rendered, "invoiceops_gateway_cost_nUSD_total") == 1_200_000
     assert "invoiceops_gateway_input_tokens_total" in rendered
+    assert "invoiceops_gateway_budget_alerts_total" in rendered
     assert "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" not in rendered
     assert usd_to_nano_usd(Decimal("0.0000000005")) == 1
+
+
+async def test_cache_hit_has_separate_metric_without_model_spend() -> None:
+    async with metrics_session("unit", prometheus=True) as metrics:
+        MetricGatewayTelemetry(metrics).record(
+            GatewayEvent(
+                run_id=UUID(int=1),
+                trace_id="c" * 32,
+                prompt_version="faq-v1",
+                scenario="public_faq",
+                alias="triage-reasoner",
+                requested_model="public-model",
+                model="public-model",
+                model_version="public-model",
+                status="succeeded",
+                attempts=0,
+                latency_ms=2,
+                cache_hit=True,
+            )
+        )
+        rendered = metrics.render().decode()
+    assert metric_value(rendered, "invoiceops_gateway_cache_hits_total") == 1
+    assert "invoiceops_gateway_calls_total" not in rendered
+    assert "invoiceops_gateway_cost_nUSD_total" not in rendered
 
 
 async def test_spend_reader_paginates_exact_decimal_window() -> None:

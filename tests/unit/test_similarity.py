@@ -80,6 +80,9 @@ def test_workflow_gateway_uses_only_litellm_env_model_names(
     monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "synthetic-vision")
     monkeypatch.setenv("LITELLM_TRIAGE_MODEL", "synthetic-triage")
     monkeypatch.setenv("LITELLM_EMBED_MODEL", "synthetic-384")
+    monkeypatch.setenv("LITELLM_EXTRACT_PUBLIC_MODEL", "synthetic-public-vision")
+    monkeypatch.setenv("LITELLM_EXTRACT_FALLBACK_MODEL", "synthetic-restricted-fallback")
+    monkeypatch.setenv("LITELLM_EXTRACT_PUBLIC_FALLBACK_MODEL", "synthetic-public-fallback")
     gateway = LiteLLMWorkflowSettings(_env_file=None).gateway_settings()
     assert str(gateway.base_url) == "https://gateway.example.test/v1"
     assert gateway.api_key.get_secret_value() == "synthetic-key"
@@ -88,6 +91,14 @@ def test_workflow_gateway_uses_only_litellm_env_model_names(
         "embed": "synthetic-384",
         "triage-reasoner": "synthetic-triage",
     }
+    assert gateway.aliases["extract-vision"].routes_for("restricted", "extract-vision") == (
+        ("synthetic-vision", "synthetic-vision"),
+        ("synthetic-restricted-fallback", "synthetic-restricted-fallback"),
+    )
+    assert gateway.aliases["extract-vision"].routes_for("public", "extract-vision") == (
+        ("synthetic-public-vision", "synthetic-public-vision"),
+        ("synthetic-public-fallback", "synthetic-public-fallback"),
+    )
     monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "")
     monkeypatch.setenv("LITELLM_TRIAGE_MODEL", "")
     fallback = LiteLLMWorkflowSettings(_env_file=None).gateway_settings()

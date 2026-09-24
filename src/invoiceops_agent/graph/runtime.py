@@ -35,6 +35,7 @@ from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.document_settings import DocumentSettings
 from invoiceops_agent.tools.raw_document_reader import S3DocumentReader
 from invoiceops_agent.tools.raw_storage import s3_storage
+from invoiceops_agent.tools.semantic_cache import PostgresSemanticCache
 from invoiceops_agent.tools.storage_settings import StorageSettings
 
 
@@ -160,7 +161,11 @@ async def invoice_runtime(
             bucket=storage.raw_bucket,
             timeout_seconds=storage.storage_timeout_seconds,
         ) as raw_storage,
-        GatewayClient(litellm.gateway_settings(), telemetry=gateway_telemetry) as gateway,
+        GatewayClient(
+            litellm.gateway_settings(),
+            telemetry=gateway_telemetry,
+            semantic_cache=PostgresSemanticCache(connection),
+        ) as gateway,
     ):
         services = LiveInvoiceServices(
             connection=connection,

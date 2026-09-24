@@ -1,0 +1,10 @@
+groups:
+  - name: invoiceops-gateway
+    rules:
+      - alert: InvoiceOpsObservedRunBudgetExceeded
+        expr: sum(sum_over_time(invoiceops_gateway_budget_alerts_total[5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: A workflow run crossed the observed gateway cost alert threshold.
+          description: Check the worker's structured budget alert log and LiteLLM spend logs.

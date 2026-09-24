@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 3 implementation complete.** Observability hardening and golden-set evaluation remain planned.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 4 complete.** Golden-set evaluation remains planned.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
@@ -15,7 +15,7 @@ validation, matching, policy, and human decisions commit to the
 and eval screens. Auditors can read [run traces and cross-run invoice provenance](docs/PROVENANCE_API.md).
 The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
 invoices and a checksummed preparation report. Every selected image is quality tier A under the
-versioned heuristic; extraction accuracy and tiers B/C remain unmeasured.
+versioned heuristic. The measured tier-A baseline field F1 is 0.7226; tiers B/C remain unmeasured.
 
 ---
 
@@ -137,7 +137,7 @@ API push  ─────► │  dedupe · virus-scan stub · idempotency key �
 1. **Determinism at the edges, intelligence in the middle.** Matching and policy are deterministic code; the LLM handles extraction, classification, and evidence summarization. This is what makes the system auditable. — [ADR 0001](adr/0001-deterministic-matcher-policy.md)
 2. **Confidence gate with abstention.** Below threshold τ the system *must* escalate rather than guess — tuning τ is an eval-driven decision, documented as an experiment. — [ADR 0003](adr/0003-composite-confidence-gate.md)
 3. **ADK and LangGraph variants of the same graph**, with an ADR comparing developer ergonomics, checkpointing, observability, and cloud fit — demonstrating framework judgment, not framework loyalty. — [ADR 0002](adr/0002-langgraph-primary-adk-variant.md)
-4. **Every LLM call goes through the LLM Gateway**: model routing by task class and data-sensitivity tier, semantic caching, PII redaction, token budgets, cost telemetry. — [ADR 0005](adr/0005-gateway-only-model-traffic.md), [ADR 0008](adr/0008-direct-litellm-environment.md) (one guarded client using the configured LiteLLM endpoint)
+4. **Every LLM call goes through the LLM Gateway**: model routing by task class and data-sensitivity tier, public-data semantic caching, PII redaction, token budgets, cost telemetry. — [ADR 0005](adr/0005-gateway-only-model-traffic.md), [ADR 0008](adr/0008-direct-litellm-environment.md), [ADR 0010](adr/0010-public-cache-and-gateway-hardening.md) (one guarded client using the configured LiteLLM endpoint)
 5. **Synthetic data only**, generated with known ground truth — itself a talking point about data governance in banking. — [ADR 0006](adr/0006-synthetic-data-anomalies.md)
 6. **Append-only audit ledger** with point-in-time version pinning — [ADR 0004](adr/0004-append-only-ledger.md) · **deterministic replay in tests** via recorded LLM cassettes — [ADR 0007](adr/0007-vcr-cassettes.md)
 

@@ -36,6 +36,7 @@ def test_migration_cli_supports_upgrade_downgrade_and_reupgrade(
         "ledger",
         "exceptions",
         "decisions",
+        "gateway_semantic_cache",
     }
     tables = migrated_database.execute(
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"

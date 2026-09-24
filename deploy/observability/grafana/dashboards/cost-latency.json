@@ -86,6 +86,28 @@
       ],
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    },
+    {
+      "id": 8,
+      "title": "Public semantic cache hits",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (alias) (sum_over_time(invoiceops_gateway_cache_hits_total[$__interval]))", "legendFormat": "{{alias}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 }
+    },
+    {
+      "id": 9,
+      "title": "Observed run budget alerts",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (alias) (sum_over_time(invoiceops_gateway_budget_alerts_total[$__interval]))", "legendFormat": "{{alias}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 }
     }
   ]
 }

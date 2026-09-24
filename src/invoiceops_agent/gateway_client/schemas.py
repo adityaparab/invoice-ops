@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 ModelAlias = Literal["extract-vision", "triage-reasoner", "eval-judge", "embed"]
 ChatAlias = Literal["extract-vision", "triage-reasoner", "eval-judge"]
+DataSensitivity = Literal["restricted", "public"]
 Version = Annotated[str, Field(min_length=1, max_length=160, pattern=r"^[A-Za-z0-9_.:@/+\-]+$")]
 
 
@@ -78,12 +79,26 @@ class RequestContext(Contract):
     trace_id: str = Field(pattern=r"^[0-9a-f]{32}$")
     prompt_version: Version
     scenario: str = Field(default="live", pattern=r"^[a-zA-Z0-9_\-]{1,80}$")
+    sensitivity: DataSensitivity = "restricted"
 
 
 class GatewayRequest(RequestContext):
     alias: ChatAlias
     messages: tuple[GatewayMessage, ...] = Field(min_length=1, max_length=64, repr=False)
     max_output_tokens: int | None = Field(default=None, gt=0)
+    semantic_cache: bool = False
+
+    @model_validator(mode="after")
+    def public_cache_only(self) -> Self:
+        if self.semantic_cache and self.sensitivity != "public":
+            raise ValueError("Semantic cache requires explicitly public data")
+        if self.semantic_cache and not self.scenario.startswith("public_"):
+            raise ValueError("Semantic cache requires a public_ scenario")
+        if self.semantic_cache and any(
+            not isinstance(part, TextPart) for message in self.messages for part in message.content
+        ):
+            raise ValueError("Semantic cache accepts text-only requests")
+        return self
 
 
 class EmbeddingRequest(RequestContext):
@@ -121,9 +136,17 @@ class GatewayResult[T: BaseModel](Contract):
     value: T
     provenance: GatewayProvenance
     usage: TokenUsage
-    attempts: int = Field(ge=1)
+    attempts: int = Field(ge=0)
     latency_ms: float = Field(ge=0)
     cost_usd: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    cache_hit: bool = False
+    route_index: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_cache_attempts(self) -> Self:
+        if self.cache_hit != (self.attempts == 0):
+            raise ValueError("Only a semantic cache hit may have zero gateway attempts")
+        return self
 
 
 class EmbeddingValue(Contract):
