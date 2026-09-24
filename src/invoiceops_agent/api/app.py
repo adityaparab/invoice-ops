@@ -15,6 +15,7 @@ from invoiceops_agent.api.context import (
     RequestContext,
     get_request_context,
 )
+from invoiceops_agent.api.dashboard_reader import DashboardReader, PostgresDashboardReader
 from invoiceops_agent.api.decision_service import DecisionService, DecisionWriter
 from invoiceops_agent.api.dependencies import (
     ApiRuntime,
@@ -31,6 +32,7 @@ from invoiceops_agent.api.ingestion_dependencies import (
 from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceReader
 from invoiceops_agent.api.middleware import RequestContextMiddleware
 from invoiceops_agent.api.read_auth import authenticate_read, authorize_queue
+from invoiceops_agent.api.schemas.dashboard import DashboardSummary
 from invoiceops_agent.api.schemas.decision import DecisionRequest, DecisionResponse
 from invoiceops_agent.api.schemas.email import email_request_schema
 from invoiceops_agent.api.schemas.health import (
@@ -62,6 +64,7 @@ def create_app(
     upload_factory: UploadFactory | None = None,
     invoice_reader: InvoiceReader | None = None,
     decision_writer: DecisionWriter | None = None,
+    dashboard_reader: DashboardReader | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -73,6 +76,9 @@ def create_app(
     ingestion_factory = upload_factory if upload_factory is not None else default_upload_factory
     reads = invoice_reader if invoice_reader is not None else PostgresInvoiceReader(configuration)
     decisions = decision_writer if decision_writer is not None else DecisionService(configuration)
+    dashboard = (
+        dashboard_reader if dashboard_reader is not None else PostgresDashboardReader(configuration)
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -207,6 +213,21 @@ def create_app(
         )
         response.status_code = outcome.response_status
         return InvoiceUploadResponse.model_validate(outcome.body.model_dump())
+
+    @app.get(
+        "/v1/dashboard",
+        response_model=DashboardSummary,
+        tags=["dashboard"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (401, 403, 422, 503)},
+    )
+    async def get_dashboard(
+        request: Request,
+        period_days: Annotated[int, Query(ge=1, le=90)] = 30,
+    ) -> DashboardSummary:
+        if authenticate_read(request, configuration) != "MANAGER":
+            raise HTTPException(403, "Only the procurement manager can read the dashboard.")
+        return await dashboard.summary(period_days)
 
     @app.get(
         "/v1/invoices",

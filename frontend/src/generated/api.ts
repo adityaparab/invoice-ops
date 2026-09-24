@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Dashboard */
+        get: operations["get_dashboard_v1_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/exceptions/{exception_id}/decision": {
         parameters: {
             query?: never;
@@ -111,6 +128,63 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AgingCounts */
+        AgingCounts: {
+            /** One To Three Days */
+            one_to_three_days: number;
+            /** Over Three Days */
+            over_three_days: number;
+            /** Sla Overdue */
+            sla_overdue: number;
+            /** Under 24 Hours */
+            under_24_hours: number;
+        };
+        /** DailyVolume */
+        DailyVolume: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Invoices */
+            invoices: number;
+        };
+        /** DashboardSummary */
+        DashboardSummary: {
+            aging: components["schemas"]["AgingCounts"];
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Auto Approved Count */
+            auto_approved_count: number;
+            /**
+             * Cost Coverage
+             * @enum {string}
+             */
+            cost_coverage: "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
+            /** Cost Observed Invoices */
+            cost_observed_invoices: number;
+            /** Cost Per Observed Invoice Usd */
+            cost_per_observed_invoice_usd: string | null;
+            /** Exception Types */
+            exception_types: components["schemas"]["ExceptionCount"][];
+            /** Invoice Count */
+            invoice_count: number;
+            /** Open Exception Count */
+            open_exception_count: number;
+            /** Period Days */
+            period_days: number;
+            /** Resolved Count */
+            resolved_count: number;
+            /** Stp Rate */
+            stp_rate: string | null;
+            /** Total Observed Cost Usd */
+            total_observed_cost_usd: string | null;
+            /** Volume By Day */
+            volume_by_day: components["schemas"]["DailyVolume"][];
+        };
         /** DecisionRequest */
         DecisionRequest: {
             /**
@@ -174,6 +248,13 @@ export interface components {
              * @enum {string}
              */
             postgres: "ok" | "unavailable" | "timeout" | "unconfigured";
+        };
+        /** ExceptionCount */
+        ExceptionCount: {
+            /** Code */
+            code: string;
+            /** Count */
+            count: number;
         };
         /** InvoiceDetail */
         InvoiceDetail: {
@@ -434,6 +515,64 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProblemDetails"];
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_dashboard_v1_dashboard_get: {
+        parameters: {
+            query?: {
+                period_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummary"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
                 };
             };
         };

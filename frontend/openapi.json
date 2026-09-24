@@ -1,6 +1,178 @@
 {
   "components": {
     "schemas": {
+      "AgingCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "one_to_three_days": {
+            "minimum": 0.0,
+            "title": "One To Three Days",
+            "type": "integer"
+          },
+          "over_three_days": {
+            "minimum": 0.0,
+            "title": "Over Three Days",
+            "type": "integer"
+          },
+          "sla_overdue": {
+            "minimum": 0.0,
+            "title": "Sla Overdue",
+            "type": "integer"
+          },
+          "under_24_hours": {
+            "minimum": 0.0,
+            "title": "Under 24 Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "under_24_hours",
+          "one_to_three_days",
+          "over_three_days",
+          "sla_overdue"
+        ],
+        "title": "AgingCounts",
+        "type": "object"
+      },
+      "DailyVolume": {
+        "additionalProperties": false,
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "invoices": {
+            "minimum": 0.0,
+            "title": "Invoices",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "invoices"
+        ],
+        "title": "DailyVolume",
+        "type": "object"
+      },
+      "DashboardSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "aging": {
+            "$ref": "#/components/schemas/AgingCounts"
+          },
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "auto_approved_count": {
+            "minimum": 0.0,
+            "title": "Auto Approved Count",
+            "type": "integer"
+          },
+          "cost_coverage": {
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "UNAVAILABLE"
+            ],
+            "title": "Cost Coverage",
+            "type": "string"
+          },
+          "cost_observed_invoices": {
+            "minimum": 0.0,
+            "title": "Cost Observed Invoices",
+            "type": "integer"
+          },
+          "cost_per_observed_invoice_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Per Observed Invoice Usd"
+          },
+          "exception_types": {
+            "items": {
+              "$ref": "#/components/schemas/ExceptionCount"
+            },
+            "title": "Exception Types",
+            "type": "array"
+          },
+          "invoice_count": {
+            "minimum": 0.0,
+            "title": "Invoice Count",
+            "type": "integer"
+          },
+          "open_exception_count": {
+            "minimum": 0.0,
+            "title": "Open Exception Count",
+            "type": "integer"
+          },
+          "period_days": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Period Days",
+            "type": "integer"
+          },
+          "resolved_count": {
+            "minimum": 0.0,
+            "title": "Resolved Count",
+            "type": "integer"
+          },
+          "stp_rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stp Rate"
+          },
+          "total_observed_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Observed Cost Usd"
+          },
+          "volume_by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DailyVolume"
+            },
+            "title": "Volume By Day",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "period_days",
+          "invoice_count",
+          "resolved_count",
+          "auto_approved_count",
+          "stp_rate",
+          "open_exception_count",
+          "aging",
+          "cost_observed_invoices",
+          "total_observed_cost_usd",
+          "cost_per_observed_invoice_usd",
+          "volume_by_day",
+          "exception_types",
+          "cost_coverage"
+        ],
+        "title": "DashboardSummary",
+        "type": "object"
+      },
       "DecisionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -144,6 +316,28 @@
           "minio"
         ],
         "title": "DependencyStatuses",
+        "type": "object"
+      },
+      "ExceptionCount": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "count"
+        ],
+        "title": "ExceptionCount",
         "type": "object"
       },
       "InvoiceDetail": {
@@ -725,6 +919,86 @@
         "summary": "Readyz",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/v1/dashboard": {
+      "get": {
+        "operationId": "get_dashboard_v1_dashboard_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Period Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "PersonaToken": []
+          }
+        ],
+        "summary": "Get Dashboard",
+        "tags": [
+          "dashboard"
         ]
       }
     },

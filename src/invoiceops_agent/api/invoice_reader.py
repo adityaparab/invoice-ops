@@ -9,9 +9,9 @@ from typing import Protocol
 from uuid import UUID
 
 import psycopg
-from psycopg.rows import dict_row
 from pydantic import JsonValue, ValidationError
 
+from invoiceops_agent.api.read_store import ReadStoreUnavailable, connect_read_store
 from invoiceops_agent.api.schemas.invoice_read import (
     InvoiceDetail,
     InvoiceException,
@@ -113,18 +113,10 @@ class PostgresInvoiceReader:
         self._clock = clock
 
     async def _connect(self) -> psycopg.AsyncConnection[dict[str, object]]:
-        if self._settings.postgres_dsn is None:
-            raise InvoiceReadUnavailable("Invoice reads are not configured")
         try:
-            return await psycopg.AsyncConnection.connect(
-                self._settings.postgres_dsn.get_secret_value(),
-                autocommit=True,
-                row_factory=dict_row,
-                connect_timeout=5,
-                options="-c statement_timeout=10000 -c lock_timeout=10000",
-            )
-        except psycopg.Error as error:
-            raise InvoiceReadUnavailable("Invoice read connection failed") from error
+            return await connect_read_store(self._settings)
+        except ReadStoreUnavailable as error:
+            raise InvoiceReadUnavailable(str(error)) from error
 
     async def list(self, query: InvoiceListQuery) -> InvoicePage:
         clauses: list[str] = []

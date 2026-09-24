@@ -1,0 +1,125 @@
+.screen {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.header,
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  color: #317a6a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.muted,
+.chartNote,
+.metricNote {
+  color: #667085;
+  font-size: 0.82rem;
+}
+
+.period {
+  min-width: 10rem;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.metricCard,
+.chartCard {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 1.5rem;
+  border: 1px solid #e3e7ef;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px #14254208;
+}
+
+.metricLabel {
+  color: #5a6a80;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metricValue {
+  color: #152b46;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.coverage {
+  justify-self: start;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: #145c4f;
+  background: #d9f4e9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.drillLink {
+  color: #08745f;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.chartCard {
+  min-height: 23rem;
+}
+
+.chart {
+  width: 100%;
+  height: 17rem;
+  color: #317a6a;
+}
+
+.chart :global(.recharts-bar-rectangle) {
+  fill: #18a58b;
+}
+
+.chart :global(.recharts-cartesian-grid-horizontal line) {
+  stroke: #e5ebf2;
+}
+
+@media (max-width: 1100px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .header,
+  .sectionHeader {
+    flex-direction: column;
+  }
+
+  .metrics,
+  .chartGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

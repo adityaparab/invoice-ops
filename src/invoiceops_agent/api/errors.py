@@ -11,6 +11,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from invoiceops_agent.api.context import get_request_context
+from invoiceops_agent.api.dashboard_reader import DashboardUnavailable
 from invoiceops_agent.api.decision_service import (
     DecisionConflict,
     DecisionError,
@@ -101,6 +102,16 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(IngestionError, _ingestion_error)
     app.add_exception_handler(InvoiceReadError, _invoice_read_error)
     app.add_exception_handler(DecisionError, _decision_error)
+    app.add_exception_handler(DashboardUnavailable, _dashboard_error)
+
+
+async def _dashboard_error(request: Request, error: Exception) -> JSONResponse:
+    logger.warning(
+        "dashboard_rejected trace_id=%s error_type=%s",
+        get_request_context(request).trace_id,
+        type(error).__name__,
+    )
+    return problem_response(request, status=503, detail=str(error))
 
 
 async def _decision_error(request: Request, error: Exception) -> JSONResponse:
