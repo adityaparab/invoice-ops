@@ -119,8 +119,10 @@ class FakeGateway:
         )
 
 
+@pytest.mark.parametrize("auto_approval", [True, False])
 async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
     ledger_runtime_dsn: str,
+    auto_approval: bool,
 ) -> None:
     source = matching_request(snapshot_for("CLOSED"))
     assert source.snapshot is not None
@@ -156,7 +158,7 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         policy=PolicyNode(sink),
         audit=sink,
         audit_writer=ledger_writer,
-        gate_config=CompositeGateConfig(auto_approval_enabled=True),
+        gate_config=CompositeGateConfig(auto_approval_enabled=auto_approval),
     )
     initial, version = await load_invoice_state(
         lambda: runtime_connection(ledger_runtime_dsn), RUN_ID, as_of=date(2026, 9, 23)
@@ -175,8 +177,8 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         PostgresAttemptStore(lambda: runtime_connection(ledger_runtime_dsn), RetryConfig()),
         run_once,
     ).process(RUN_ID)
-    assert result.status == "completed"
-    assert result.route == "AUTO_APPROVE"
+    assert result.status == ("completed" if auto_approval else "awaiting_review")
+    assert result.route == ("AUTO_APPROVE" if auto_approval else "REVIEW")
     assert gateway.completions == 1 and gateway.embeddings == 1
     assert await services.extract(initial) == await services.extract(initial)
     assert gateway.completions == 1
@@ -191,8 +193,15 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         run_status = await (
             await connection.execute("SELECT status FROM runs WHERE id = %s", (RUN_ID,))
         ).fetchone()
-    assert status == {"status": "APPROVED"}
-    assert run_status == {"status": "COMPLETED"}
+        exception = await (
+            await connection.execute(
+                "SELECT exception_type, status, priority, sla_due_at, evidence, recommendation "
+                "FROM exceptions WHERE run_id = %s",
+                (RUN_ID,),
+            )
+        ).fetchone()
+    assert status == {"status": "APPROVED" if auto_approval else "NEEDS_REVIEW"}
+    assert run_status == {"status": "COMPLETED" if auto_approval else "PAUSED"}
     assert [event.event_type for event in page.events] == [
         "extraction.completed",
         "validation.completed",
@@ -201,14 +210,22 @@ async def test_full_graph_uses_real_erp_audit_and_replays_committed_extraction(
         "classification.completed",
         "policy.completed",
         "gate.completed",
-        "approval.auto_granted",
-        "workflow.archived",
+        *(["approval.auto_granted", "workflow.archived"] if auto_approval else ["triage.prepared"]),
     ]
     gate_event = next(event for event in page.events if event.event_type == "gate.completed")
     audited_gate = CompositeGateResult.model_validate(gate_event.payload)
     assert gate_event.versions.policy_version == "composite-gate@v1"
     assert audited_gate.score == 1
-    assert audited_gate.route == "AUTO_APPROVE"
+    assert audited_gate.route == ("AUTO_APPROVE" if auto_approval else "REVIEW")
+    if not auto_approval:
+        assert exception is not None
+        assert exception["status"] == "OPEN"
+        assert exception["priority"] == 1
+        assert exception["evidence"]["extraction_escalated"] is False
+        assert exception["recommendation"]["recommendation"] == "REVIEW"
+        assert page.events[-1].versions.policy_version == "exception-queue@v1"
+        return
+    assert exception is None
     transitions = WorkflowTransitions(lambda: runtime_connection(ledger_runtime_dsn), ledger_writer)
     await transitions.append_once(
         result,
