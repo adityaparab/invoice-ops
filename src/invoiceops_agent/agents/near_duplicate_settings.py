@@ -1,25 +1,10 @@
 """Use only the caller's LiteLLM URL, key, and embedding-model name."""
 
 from pydantic import HttpUrl, SecretStr, field_validator
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from invoiceops_agent.gateway_client.schemas import Version
 from invoiceops_agent.gateway_client.settings import AliasPolicy, GatewaySettings
-
-
-class DirectGatewaySettings(GatewaySettings):
-    """Validate explicit LiteLLM values without loading another settings source."""
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        return (init_settings,)
 
 
 class LiteLLMEmbeddingSettings(BaseSettings):
@@ -43,7 +28,7 @@ class LiteLLMEmbeddingSettings(BaseSettings):
         return value
 
     def gateway_settings(self) -> GatewaySettings:
-        return DirectGatewaySettings(
+        return GatewaySettings(
             base_url=self.api_base,
             api_key=self.master_key,
             aliases={
@@ -64,7 +49,7 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
 
     def gateway_settings(self) -> GatewaySettings:
         vision_model = self.extract_model or self.model
-        return DirectGatewaySettings(
+        return GatewaySettings(
             base_url=self.api_base,
             api_key=self.master_key,
             aliases={

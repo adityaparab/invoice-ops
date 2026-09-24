@@ -1,5 +1,33 @@
 name: invoiceops
 
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
+  DATABASE_URL: postgresql://langfuse:${LANGFUSE_POSTGRES_PASSWORD:-langfuse-local-only-password}@langfuse-postgres:5432/langfuse
+  SALT: ${LANGFUSE_SALT:-invoiceops-langfuse-local-salt-2026}
+  ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+  CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+  CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+  CLICKHOUSE_USER: langfuse
+  CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-langfuse-clickhouse-local-only}
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  REDIS_HOST: langfuse-redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:-langfuse-redis-local-only}
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_USER:-langfuse-local}
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-langfuse-minio-local-only}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_MINIO_USER:-langfuse-local}
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-langfuse-minio-local-only}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+
 services:
   ui:
     profiles: ["ui"]
@@ -163,35 +191,152 @@ services:
       retries: 5
     restart: unless-stopped
 
-  litellm:
-    profiles: ["gateway"]
-    image: ghcr.io/berriai/litellm:v1.102.1@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
-    entrypoint: ["python", "/app/preflight.py"]
-    command: ["--config", "/app/config.yaml", "--port", "4000", "--host", "0.0.0.0"]
+  langfuse-postgres:
+    profiles: ["observability"]
+    image: pgvector/pgvector:0.8.6-pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
     environment:
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-invoiceops-local-development-only}
-      NATIVE_LITELLM_BASE_URL: ${NATIVE_LITELLM_BASE_URL:-}
-      NATIVE_LITELLM_API_KEY: ${NATIVE_LITELLM_API_KEY:-}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
-      OLLAMA_EXTRACT_MODEL: ${OLLAMA_EXTRACT_MODEL:-}
-      OLLAMA_TRIAGE_MODEL: ${OLLAMA_TRIAGE_MODEL:-}
-      OLLAMA_JUDGE_MODEL: ${OLLAMA_JUDGE_MODEL:-}
-      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-    ports:
-      - "127.0.0.1:${LITELLM_PORT:-4001}:4000"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:-langfuse-local-only-password}
+      POSTGRES_DB: langfuse
     volumes:
-      - ./deploy/litellm/${LITELLM_CONFIG:-config.yaml}:/app/config.yaml:ro
-      - ./deploy/litellm/preflight.py:/app/preflight.py:ro
+      - langfuse_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:4000/health/readiness', timeout=3).close()"]
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
       interval: 10s
       timeout: 5s
-      start_period: 120s
       retries: 5
+    restart: unless-stopped
+
+  langfuse-clickhouse:
+    profiles: ["observability"]
+    image: docker.io/clickhouse/clickhouse-server:25.12@sha256:8a790dd3468db22b1d4e7b18a176f378ff5ff6053b9c48dd4ea1fa71a24c5ba6
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-langfuse-clickhouse-local-only}
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 10
+    restart: unless-stopped
+
+  langfuse-redis:
+    profiles: ["observability"]
+    image: docker.io/redis:7@sha256:c6eabf748fc7a61dbb5a705c78bcf3d6377b1127a97d0ce965c11c44ba46896f
+    command: ["redis-server", "--requirepass", "${LANGFUSE_REDIS_PASSWORD:-langfuse-redis-local-only}", "--maxmemory-policy", "noeviction"]
+    environment:
+      REDIS_PASSWORD: ${LANGFUSE_REDIS_PASSWORD:-langfuse-redis-local-only}
+    volumes:
+      - langfuse_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  langfuse-minio:
+    profiles: ["observability"]
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["mkdir -p /data/langfuse && exec minio server /data --console-address :9001"]
+    environment:
+      MINIO_ROOT_USER: ${LANGFUSE_MINIO_USER:-langfuse-local}
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_PASSWORD:-langfuse-minio-local-only}
+    ports:
+      - "127.0.0.1:${LANGFUSE_MINIO_PORT:-9091}:9000"
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  langfuse-worker:
+    profiles: ["observability"]
+    image: docker.io/langfuse/langfuse-worker:4@sha256:59be62f49978b656b27656cba7314097c6e9ca8d63ed6ef6f66394f6aaeede1b
+    environment: *langfuse-env
+    depends_on: &langfuse-depends-on
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://langfuse-worker:3030/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 120s
+      retries: 8
+    restart: unless-stopped
+
+  langfuse-web:
+    profiles: ["observability"]
+    image: docker.io/langfuse/langfuse:4@sha256:d6165b4ef72027c128c6132a4d87a4643945f6ba01f9cb5d6e4af7e5e3bf5316
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-invoiceops-langfuse-local-nextauth-secret-2026}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:${LANGFUSE_MINIO_PORT:-9091}
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://langfuse-minio:9000
+    ports:
+      - "127.0.0.1:${LANGFUSE_PORT:-3000}:3000"
+    depends_on: *langfuse-depends-on
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://langfuse-web:3000/api/public/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 120s
+      retries: 8
+    restart: unless-stopped
+
+  prometheus:
+    profiles: ["observability"]
+    image: docker.io/prom/prometheus:v3.13.3@sha256:6976aa8a60fec930796ce5772b8d12da7a318a5daa8d40d69c5c7819a05eeed7
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=15d"]
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:9090/-/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  grafana:
+    profiles: ["observability"]
+    image: docker.io/grafana/grafana:13.2.2@sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-invoiceops-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-invoiceops-grafana-local-only}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   graph-demo:
@@ -232,3 +377,10 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_redis_data:
+  langfuse_minio_data:
+  prometheus_data:
+  grafana_data:

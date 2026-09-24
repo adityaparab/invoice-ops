@@ -1,6 +1,6 @@
 # ADR 0005: All model traffic through the LLM Gateway — implemented as a LiteLLM proxy
 
-- **Status:** Accepted
+- **Status:** Superseded in part by [ADR 0008](0008-direct-litellm-environment.md)
 - **Date:** 2026-08-27
 - **Amended:** 2026-08-27 — LiteLLM named as the gateway implementation
 - **Deciders:** Architecture (this repo)

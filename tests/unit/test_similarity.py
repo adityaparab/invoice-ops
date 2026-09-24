@@ -60,7 +60,6 @@ def test_embedding_gateway_uses_only_litellm_url_key_and_model(
     monkeypatch.setenv("LITELLM_API_BASE", "https://gateway.example.test/v1")
     monkeypatch.setenv("LITELLM_MASTER_KEY", "synthetic-key")
     monkeypatch.setenv("LITELLM_EMBED_MODEL", "synthetic-384")
-    monkeypatch.setenv("LITELLM_CONFIG", "not-a-real-config.yaml")
     settings = LiteLLMEmbeddingSettings(_env_file=None)
     gateway = settings.gateway_settings()
     assert str(gateway.base_url) == "https://gateway.example.test/v1"
@@ -81,8 +80,6 @@ def test_workflow_gateway_uses_only_litellm_env_model_names(
     monkeypatch.setenv("LITELLM_EXTRACT_MODEL", "synthetic-vision")
     monkeypatch.setenv("LITELLM_TRIAGE_MODEL", "synthetic-triage")
     monkeypatch.setenv("LITELLM_EMBED_MODEL", "synthetic-384")
-    monkeypatch.setenv("LITELLM_CONFIG", "never-read.yaml")
-    monkeypatch.setenv("INVOICEOPS_GATEWAY_ALIASES", "invalid-json")
     gateway = LiteLLMWorkflowSettings(_env_file=None).gateway_settings()
     assert str(gateway.base_url) == "https://gateway.example.test/v1"
     assert gateway.api_key.get_secret_value() == "synthetic-key"

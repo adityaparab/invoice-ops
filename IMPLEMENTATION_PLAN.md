@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-23 (Phase 0 complete; Phase 1 in progress)
+> **Last updated:** 2026-09-24 (Phase 3 implementation complete; Phase 4 in progress)
 
 ---
 
@@ -15,17 +15,17 @@
 | Orchestration | **LangGraph** + Postgres checkpointer                                                                                                                                                             | Google ADK variant in Phase 6 (ADR 0002)                                                                                                      |
 | API           | **FastAPI** (async, uvicorn), Pydantic v2                                                                                                                                                         | RFC 7807 errors, idempotency-key header                                                                                                       |
 | DB            | **PostgreSQL + pgvector**, raw docs in **MinIO**                                                                                                                                                  | ERP sim + ledger + checkpoints                                                                                                                |
-| LLM access    | **LiteLLM proxy** (OpenAI-compliant API) for ALL traffic                                                                                                                                          | App uses only the `openai` SDK + one base URL; virtual model aliases (`extract-vision`, `triage-reasoner`, …) map to backends per environment |
-| LLM backends  | **Dev:** developer's native LiteLLM proxy (`glm-ocr` extract · `qwen38` triage · `compass-judger` judge · `nomic-embed` embed), URL+key via `.env` · **Prod/eval:** OpenAI via `config.prod.yaml` | Switching = env/config change, no code change                                                                                                 |
+| LLM access    | **Operator LiteLLM endpoint** (OpenAI-compliant API) for all model traffic | One guarded client uses `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, and task model-name variables; internal aliases select task policy |
+| LLM backends  | **Dev/prod/eval:** routes exposed by the configured LiteLLM deployment | Switching = direct environment model-name change; no local proxy YAML |
 | Extraction    | Dev: local vision model (Ollama-backed) · Prod: hosted vision LLM (e.g. GPT-4o class)                                                                                                             | Routed via LiteLLM alias `extract-vision`                                                                                                     |
 | Observability | **OpenTelemetry** (span per graph node), **Langfuse** (LLM traces), **Prometheus + Grafana**                                                                                                      | Cost telemetry reads LiteLLM spend logs too                                                                                                   |
 | Testing       | pytest, hypothesis, testcontainers, schemathesis, VCR-style cassettes                                                                                                                             | ADR 0007                                                                                                                                      |
 | CI/CD         | GitHub Actions: ruff → mypy → unit → integration → **eval gate** → build                                                                                                                          | Gate: fail PR on >0.5% absolute regression or metric-floor breach                                                                             |
 | Front end     | **React + TypeScript (Vite)** · **Mantine** UI library                                                                                                                                            | See "Front-End Stack" below                                                                                                                   |
-| Deployment    | Docker Compose (api, worker, postgres, minio, litellm, langfuse, grafana+prometheus, seed)                                                                                                        | Cloud variant documented as notes only                                                                                                        |
+| Deployment    | Docker Compose (api, worker, postgres, minio, optional langfuse, grafana+prometheus, seed) | Cloud variant documented as notes only |
 
 
-**Resolved (2026-08-27):** dev backends run on the developer's native LiteLLM proxy (glm-ocr / qwen38 / compass-judger / nomic-embed; base URL + key in `.env`); prod/eval uses OpenAI (`config.prod.yaml`).
+**Updated (2026-09-24):** the application uses only the operator-provided LiteLLM URL, API key, and model-name variables. ADR 0008 supersedes the former local proxy configuration.
 
 ### Front-End Stack (locked)
 
@@ -57,7 +57,7 @@
   - Merged in PR #1; no `hello.py` existed.
 - [x] 0.2 Bump Python to 3.12 in `.python-version` and `pyproject.toml`
 - [x] 0.3 Docker Compose stack: `api`, `postgres` (pgvector), `minio`, `litellm`; one-shot `seed` service placeholder; `langfuse` + `grafana`/`prometheus` deferred to Phase 4
-- [x] 0.4 `deploy/litellm/config.yaml` with virtual aliases (`extract-vision`, `triage-reasoner`) mapped to dev (Ollama) / prod (OpenAI) models; API key handling via env
+- [x] 0.4 Historical local proxy route maps; superseded in step 4.1 by direct LiteLLM environment configuration (ADR 0008)
 - [x] 0.5 FastAPI app shell: `/healthz`, `/readyz`, RFC 7807 error handler, Pydantic v2 settings, idempotency-key middleware
   - Implemented before 0.3 so Compose can run a real health-checked API. Idempotency context validation is ready; durable replay accompanies future mutation transactions.
 - [x] 0.6 Alembic migrations for full schema (ARCHITECTURE §6): `vendors`, `purchase_orders`, `goods_receipts`, `invoices` (unique `content_hash`), `invoice_lines`, `runs`, `checkpoints`, `ledger`, `exceptions`, `decisions`
@@ -129,7 +129,7 @@
 
 **Exit criteria:** OTel traces per node; cost/latency dashboards; all traffic through LiteLLM.
 
-- [ ] 4.1 Add `langfuse`, `prometheus`, `grafana` to Compose; Grafana dashboards provisioned
+- [x] 4.1 Add `langfuse`, `prometheus`, `grafana` to Compose; Grafana dashboards provisioned
 - [ ] 4.2 OTel spans per graph node + per tool call; exporters wired
 - [ ] 4.3 Langfuse tracing for all LLM calls (via LiteLLM callbacks)
 - [ ] 4.4 Cost/latency dashboards: LiteLLM spend logs + OTel metrics; `GET /v1/metrics` Prometheus endpoint
@@ -247,3 +247,4 @@ checkbox here.
 | 2026-09-24 | Step 3.10 serves bounded, versioned JSON evaluation summaries from `eval/reports/` to the auditor and platform service. The Evals screen shows measured field metrics, an experiment-log entry, per-anomaly confusion, and a τ sweep chart when those arrays exist. The current tier-A extraction baseline has no measured confusion or sweep, so those views say so; a typed pipeline report contract and tests cover future Phase 5 outputs without fabricating results. |
 | 2026-09-24 | Step 3.11 adds RTL coverage for paginated queue search/sort and both sides of the four-eyes decision form. A pinned Chromium Playwright smoke drives an analyst proposal through independent manager signoff with synthetic API fixtures in CI; backend authorization remains covered by integration tests. |
 | 2026-09-24 | Step 3.12 adds auditor-only run trace metadata and cross-run invoice provenance, with bounded keyset cursors and repeatable-read snapshots. Run trace omits payloads while invoice provenance includes full immutable ledger evidence and version pins. Offline access/cursor tests and restricted-role Postgres tests cover both. All Phase 3 implementation steps are complete; measured confidence-gate tuning remains dependent on the Phase 5 golden-set evaluation. |
+| 2026-09-24 | Step 4.1 adds an opt-in, image-pinned Langfuse v4 stack with isolated Postgres/ClickHouse/Redis/MinIO, Prometheus, and file-provisioned Grafana. The first dashboard shows live Prometheus health; invoice metrics follow in step 4.4. Per the operator's direction, the unused Compose LiteLLM proxy, route YAML, and alternate gateway environment source are removed; runtime model traffic keeps only the direct `LITELLM_*` URL, key, and model-name variables (ADR 0008). |

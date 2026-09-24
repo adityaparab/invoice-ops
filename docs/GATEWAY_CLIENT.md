@@ -7,11 +7,12 @@ available. The first three use `complete`; `embed` uses `embed`. Provider model 
 as request aliases before HTTP I/O. The explicit gateway URL is a trusted deployment setting;
 URL syntax checks cannot prove that an arbitrary hostname is actually a LiteLLM deployment.
 
-Configuration uses `GatewaySettings` and the `INVOICEOPS_GATEWAY_` environment prefix. Required
-fields are `BASE_URL`, `API_KEY`, and `ALIASES` (a JSON object keyed by virtual alias). Each alias
-requires an explicit `model_version` pin. This pin must identify the deployed model revision or
-versioned routing manifest; a virtual alias alone is not an immutable model version. Operators
-must keep the pin synchronized with the gateway configuration, including fallback routes.
+The workflow reads only `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`, and
+task-specific `LITELLM_*_MODEL` names from `.env`. `GatewaySettings` is an explicitly constructed
+value object; it does not load another environment prefix or proxy configuration file. Each
+internal alias has a `model_version` pin supplied from the selected model name. That name may be a
+mutable LiteLLM route rather than an immutable provider revision; operators should keep deployment
+records for fallback and route changes.
 The response also preserves the gateway-reported `model` string; the client cannot independently
 attest the actual provider revision behind that string.
 An optional `model_name` sends a specific LiteLLM route while callers continue to use the
@@ -40,9 +41,9 @@ from invoiceops_agent.gateway_client import (
     GatewayClient,
     GatewayMessage,
     GatewayRequest,
-    GatewaySettings,
     TextPart,
 )
+from invoiceops_agent.agents.near_duplicate_settings import LiteLLMWorkflowSettings
 
 
 class ExtractedTotal(BaseModel):
@@ -63,7 +64,7 @@ async def extract_total(run_id: UUID, trace_id: str) -> ExtractedTotal:
             ),
         ),
     )
-    async with GatewayClient(GatewaySettings()) as client:
+    async with GatewayClient(LiteLLMWorkflowSettings().gateway_settings()) as client:
         result = await client.complete(request, ExtractedTotal)
     return result.value
 ```

@@ -137,7 +137,7 @@ API push  ─────► │  dedupe · virus-scan stub · idempotency key �
 1. **Determinism at the edges, intelligence in the middle.** Matching and policy are deterministic code; the LLM handles extraction, classification, and evidence summarization. This is what makes the system auditable. — [ADR 0001](adr/0001-deterministic-matcher-policy.md)
 2. **Confidence gate with abstention.** Below threshold τ the system *must* escalate rather than guess — tuning τ is an eval-driven decision, documented as an experiment. — [ADR 0003](adr/0003-composite-confidence-gate.md)
 3. **ADK and LangGraph variants of the same graph**, with an ADR comparing developer ergonomics, checkpointing, observability, and cloud fit — demonstrating framework judgment, not framework loyalty. — [ADR 0002](adr/0002-langgraph-primary-adk-variant.md)
-4. **Every LLM call goes through the LLM Gateway**: model routing by task class and data-sensitivity tier, semantic caching, PII redaction, token budgets, cost telemetry. — [ADR 0005](adr/0005-gateway-only-model-traffic.md) (implemented as a LiteLLM proxy with virtual model aliases)
+4. **Every LLM call goes through the LLM Gateway**: model routing by task class and data-sensitivity tier, semantic caching, PII redaction, token budgets, cost telemetry. — [ADR 0005](adr/0005-gateway-only-model-traffic.md), [ADR 0008](adr/0008-direct-litellm-environment.md) (one guarded client using the configured LiteLLM endpoint)
 5. **Synthetic data only**, generated with known ground truth — itself a talking point about data governance in banking. — [ADR 0006](adr/0006-synthetic-data-anomalies.md)
 6. **Append-only audit ledger** with point-in-time version pinning — [ADR 0004](adr/0004-append-only-ledger.md) · **deterministic replay in tests** via recorded LLM cassettes — [ADR 0007](adr/0007-vcr-cassettes.md)
 
@@ -276,8 +276,8 @@ Pytest uses strict configuration and markers, with function-scoped asyncio loops
 must declare `unit`, `integration`, or `eval` as appropriate; async tests use `@pytest.mark.asyncio`.
 
 Start the local API, Postgres, and MinIO with `docker compose up -d --build --wait`.
-See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed placeholder,
-and the optional Compose LiteLLM proxy. Run `docker compose run --rm graph-demo` for the durable
+See [local platform setup](deploy/README.md) for credentials, persistent volumes, seed operation,
+and the optional observability profile. Run `docker compose run --rm graph-demo` for the durable
 LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. See
 [invoice ingestion instructions](docs/INGESTION.md) for multipart uploads, the signed webhook,
 limits, and durable replay. Accepted invoices remain queued until full graph wiring in Phase 2.
@@ -295,8 +295,8 @@ corrections append a superseding entry. See [schema and migration commands](docs
 table contracts, credential provisioning, and reversible migration behavior.
 
 The [gateway client](docs/GATEWAY_CLIENT.md) provides typed async chat and embedding calls through
-LiteLLM aliases, with text guards, schema validation, token allowances, bounded retries, and offline
-cassette replay. Configure its endpoint, key, and model-version policies explicitly; binary inputs
+LiteLLM task aliases, with text guards, schema validation, token allowances, bounded retries, and offline
+cassette replay. Configure its endpoint, key, and model names through `LITELLM_*` variables; binary inputs
 require a compatible route and trusted document preprocessing.
 
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).

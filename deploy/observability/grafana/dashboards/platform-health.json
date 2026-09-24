@@ -1,0 +1,47 @@
+{
+  "uid": "invoiceops-platform-health",
+  "title": "InvoiceOps Platform Health",
+  "description": "Provisioned platform scrape health. Invoice workflow metrics are added in plan step 4.4.",
+  "tags": ["invoiceops", "platform"],
+  "timezone": "utc",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Prometheus scrape health",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "up{job=\"prometheus\"}", "legendFormat": "Prometheus" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Scrape duration",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "invoiceops-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "scrape_duration_seconds{job=\"prometheus\"}", "legendFormat": "Prometheus" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 0 }
+    }
+  ]
+}
