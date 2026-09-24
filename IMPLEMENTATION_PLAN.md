@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-24 (Phase 4 complete; Phase 5 next)
+> **Last updated:** 2026-09-24 (Phase 5 in progress)
 
 ---
 
@@ -141,7 +141,7 @@
 
 **Exit criteria:** 500-invoice golden set; CI eval gate live; v0.1→v0.3 experiment report published.
 
-- [ ] 5.1 Golden dataset builder: 500 invoices = 350 clean (Voxel51 re-labeled + synthetic; 30 hard negatives with rotation/skew/stamps/faint print) + 150 anomalous (10 seeded codes, weighted prevalences); versioned (`golden/v1.0.0`), seed-pinned, held-out split
+- [x] 5.1 Golden dataset builder: 500 invoices = 350 clean (Voxel51 re-labeled + synthetic; 30 hard negatives with rotation/skew/stamps/faint print) + 150 anomalous (10 seeded codes, weighted prevalences); versioned (`golden/v1.0.0`), seed-pinned, held-out split
 - [ ] 5.2 `eval/runners/run_pipeline.py` — drives the real Compose stack through the API (not mocks); `--recorded` cassette mode for smoke
 - [ ] 5.3 `metrics.py`: exception recall (≥0.98), false-escalation (≤0.05), field F1 (≥0.95; money fields ≥0.97), routing accuracy (≥0.95), STP (≥0.70), cost (≤$0.04/inv), p95 latency (≤45s, N=3 runs)
 - [ ] 5.4 Diagnostics: per-anomaly confusion, per-field/per-tier F1, calibration curve, τ sweep ROC-style curve, LLM-judge triage rubric (judge via gateway, versioned)
@@ -196,7 +196,7 @@ checkbox here.
 | P2 — Match + policy            | Complete    | 2026-09-24   | Deterministic matching, taxonomy, similarity, policy, durable graph, composite gate, and audited retry/DLQ |
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
 | P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
-| P5 — Eval harness + CI gate    | Not started | —            |                                                           |
+| P5 — Eval harness + CI gate    | In progress | —            | Golden v1.0.0 dataset built; runner, metrics, diagnostics, reports, and gate remain |
 | P6 — ADK variant + ADR         | Not started | —            |                                                           |
 | P7 — Polish                    | Not started | —            |                                                           |
 
@@ -252,3 +252,4 @@ checkbox here.
 | 2026-09-24 | Step 4.3 traces each gateway chat and embedding call as a Langfuse-compatible OTLP observation, carrying model identity, version pins, token usage, exact reported cost, latency, retry count, and typed errors without content. The existing direct LiteLLM endpoint remains the only model route; ADR 0009 replaces the planned proxy callback because it would require additional LiteLLM configuration. |
 | 2026-09-24 | Step 4.4 adds low-cardinality OTel API request and worker gateway metrics, a Prometheus API endpoint, bounded one-hour LiteLLM spend-log snapshots using the existing URL and key, and provisioned cost/latency dashboards. Live Compose smoke verified the API scrape, authorized spend-log read, Grafana provisioning, and one-shot worker OTLP samples; missing cost headers or inaccessible spend logs remain explicitly unavailable. |
 | 2026-09-24 | Step 4.5 completes Phase 4 with restricted-by-default task/sensitivity routing, optional model-name fallbacks for infrastructure failures, a public/text-only pgvector semantic cache, and advisory Decimal per-run budget alerts. New model routes use only `LITELLM_*_MODEL` variables in `.env.example`; ADR 0010 records cache and routing limits. Ruff, strict mypy, 538 offline units, and 91 real integrations pass; Compose confirms the cache migration, Prometheus rule, and Grafana panels. |
+| 2026-09-24 | Step 5.1 builds golden/v1.0.0 from 50 newly selected Voxel51 extraction-only images and 450 ERP-backed synthetic images. It pins 350 clean and 150 anomalous cases, 30 visual hard negatives, ten published anomaly counts, a 100/400 development/held-out split, source and document checksums, and a 399-order ERP snapshot. The builder verifies committed manifests byte-for-byte. |
