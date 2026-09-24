@@ -239,3 +239,73 @@ jobs:
       - name: Clean up Compose services
         if: always()
         run: docker compose down --volumes --remove-orphans
+
+  eval-gate:
+    name: Golden eval gate
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      UV_PYTHON: "3.12"
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      REPORT_PATH: eval/reports/golden-v1.0.0-openai-prod.json
+    steps:
+      - name: Check out repository and main baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.25"
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Compare live primary reports
+        run: |
+          if [ ! -f "$REPORT_PATH" ]; then
+            if git cat-file -e "$BASE_SHA:$REPORT_PATH" 2>/dev/null; then
+              echo "The PR removed the live golden report." >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            echo "Live gate awaits the first measured 500-invoice report; recorded smoke cannot be used as quality evidence." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          mkdir -p eval/data/runs
+          if git cat-file -e "$BASE_SHA:$REPORT_PATH" 2>/dev/null; then
+            git show "$BASE_SHA:$REPORT_PATH" > eval/data/runs/main-primary.json
+          else
+            cp "$REPORT_PATH" eval/data/runs/main-primary.json
+            echo "Bootstrapping the first live baseline: enforce all floors now; regression comparisons begin after merge." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if ! uv run --no-sync python -m eval.ci_gate \
+            --baseline eval/data/runs/main-primary.json \
+            --candidate "$REPORT_PATH" \
+            --comment-file eval/data/runs/ci-gate.md \
+            --output eval/data/runs/ci-gate.json; then
+            if [ ! -s eval/data/runs/ci-gate.md ]; then
+              printf '%s\n' '### Golden evaluation gate: FAIL' '' 'The live report is incomplete or invalid. Check the CI gate log for the exact evidence error.' > eval/data/runs/ci-gate.md
+            fi
+            cat eval/data/runs/ci-gate.md >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          cat eval/data/runs/ci-gate.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment on PR with metric deltas
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s eval/data/runs/ci-gate.md ]; then
+            gh pr comment "$PR_NUMBER" --body-file eval/data/runs/ci-gate.md
+          fi

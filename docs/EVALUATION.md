@@ -69,7 +69,8 @@ or interrupted build cannot publish a complete manifest with unverified bytes.
 
 The [Compose runner](../eval/runners/README.md) collects API, worker, and ledger
 evidence for the suite. [`eval/metrics.py`](../eval/metrics.py) scores the eight
-primary measures; diagnostics and the CI gate follow in later Phase 5 steps.
+primary measures. Diagnostics and the [CI gate](../eval/ci_gate.py) consume those
+reports.
 Extraction scoring uses all fields with known labels. Exact duplicate uploads
 are excluded from extraction F1 because they do not invoke extraction. Wrong
 observed values count one false positive and one false negative; unknown gold
@@ -180,3 +181,30 @@ the recorded smoke.
 The synthetic documents use one line item and repeated template structure;
 those constraints limit claims about real invoice diversity. The published
 split and label eligibility keep that limitation visible in every report.
+
+## CI regression gate
+
+On each pull request, the gate compares the committed
+`eval/reports/golden-v1.0.0-openai-prod.json` report with the same path at the
+PR's base commit. Both reports must be tagged `openai-prod`, cover the same
+golden manifest, contain all eight observed primary metrics, and represent
+three independent live runs of all 500 invoices. It rejects a candidate below
+any versioned floor or more than 0.5 percentage points worse than main on a
+rate. Cost and latency have different units, so their allowed regression is
+0.5% of the versioned target: $0.0002/invoice and 0.225 seconds. Equality at
+the tolerance passes. The CI job writes a Markdown delta table to the job
+summary and comments it on same-repository PRs using `gh`.
+
+The first committed live report establishes the baseline: CI checks all floors
+and completeness against that report, then starts base-versus-PR comparisons
+after it merges. Until that report exists, the CI job explicitly says the live
+gate awaits evidence. The recorded cassette smoke is never used to pass a
+model-quality gate. To compare complete reports locally:
+
+```bash
+uv run python -m eval.ci_gate \
+  --baseline eval/data/metrics/main-openai-prod.json \
+  --candidate eval/reports/golden-v1.0.0-openai-prod.json \
+  --comment-file eval/data/runs/ci-gate.md \
+  --output eval/data/runs/ci-gate.json
+```
