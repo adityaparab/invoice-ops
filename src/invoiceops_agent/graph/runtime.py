@@ -175,6 +175,7 @@ async def invoice_runtime(
             audit=audit,
             audit_writer=writer,
             gate_config=CompositeGateConfig(auto_approval_enabled=runtime.auto_approval_enabled),
+            clock=clock,
         )
         async with postgres_invoice_graph(graph, InvoiceNodes(services)) as runner:
             yield InvoiceWorkflowRuntime(runner, initial)

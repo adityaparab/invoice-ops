@@ -110,7 +110,7 @@
 
 **Exit criteria:** full-fledged React UI for all six screens; decisions in ledger; confidence gate tuned via eval.
 
-- [ ] 3.1 `GET /v1/invoices` queue listing with filters; `GET /v1/invoices/{id}` aggregate view (RBAC)
+- [x] 3.1 `GET /v1/invoices` queue listing with filters; `GET /v1/invoices/{id}` aggregate view (RBAC)
 - [ ] 3.2 `POST /v1/exceptions/{id}/decision` with four-eyes check
 - [ ] 3.3 Triage agent (via `triage-reasoner` alias): evidence gathering, exception classification, recommendation draft
 - [ ] 3.4 Front-end scaffold: Vite + React + TS app in `frontend/` with Mantine provider, TanStack Query, React Router, generated API client from FastAPI OpenAPI schema, persona switcher (RBAC), wired to Compose (`ui` service, dev proxy to API)
@@ -235,3 +235,4 @@ checkbox here.
 | 2026-09-24 | Step 2.6 wires the invoice-v1 LangGraph worker through extraction, validation, ERP matching, similarity, taxonomy, policy, an interim conservative gate, and audited review/approval/archive transitions. Synchronous Postgres checkpoints, run locks, source fingerprints, and ledger-backed replay recover committed node work; an offline fake gateway and real restricted-role database test the full auto path. The worker reads only LiteLLM URL/key/model-name variables; composite scoring and the review API remain their own plan steps. |
 | 2026-09-24 | Step 2.7 replaces the interim gate for new decisions with a versioned Decimal composite score, explicit match-delta normalization, policy severity, threshold-inclusive routing, and complete audit evidence. Policy ineligibility and an operator hold always route to review; already committed provisional gate records still replay. Pure boundary tests and the full offline-gateway Postgres auto path verify behavior. |
 | 2026-09-24 | Step 2.8 makes the existing runs table a durable dead-letter queue: the worker tracks RUNNING/PAUSED/COMPLETED/FAILED states, retries only typed infrastructure failures with bounded versioned backoff, and atomically records terminal failures with ledger evidence. An idempotent operator redrive requires actor and reason and resets the retry cycle. Business outcomes remain single-attempt decisions. This completes Phase 2. |
+| 2026-09-24 | Step 3.1 adds analyst/manager queue reads and analyst/manager/auditor invoice detail reads with separate persona tokens, bounded keyset pagination, status/source/priority filters, and RFC 7807 errors. Review triage now commits a versioned priority/SLA exception projection, invoice status, and ledger event atomically; the detail view joins the latest run, exception, and committed evidence. Offline role tests and real restricted-role Postgres reads cover the contract. |

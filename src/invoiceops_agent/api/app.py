@@ -4,8 +4,9 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.security import HTTPBearer
 from starlette.responses import JSONResponse
 
@@ -26,7 +27,9 @@ from invoiceops_agent.api.ingestion_dependencies import (
     UploadRuntime,
     default_upload_factory,
 )
+from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceReader
 from invoiceops_agent.api.middleware import RequestContextMiddleware
+from invoiceops_agent.api.read_auth import authenticate_read, authorize_queue
 from invoiceops_agent.api.schemas.email import email_request_schema
 from invoiceops_agent.api.schemas.health import (
     DependencyStatuses,
@@ -34,6 +37,14 @@ from invoiceops_agent.api.schemas.health import (
     ReadinessResponse,
 )
 from invoiceops_agent.api.schemas.invoice import InvoiceUploadResponse
+from invoiceops_agent.api.schemas.invoice_read import (
+    InvoiceDetail,
+    InvoiceListQuery,
+    InvoicePage,
+    InvoiceSource,
+    InvoiceStatus,
+    RunStatus,
+)
 from invoiceops_agent.api.schemas.problem import ProblemDetails
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
@@ -47,6 +58,7 @@ def create_app(
     *,
     dependency_factory: DependencyFactory | None = None,
     upload_factory: UploadFactory | None = None,
+    invoice_reader: InvoiceReader | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -56,6 +68,7 @@ def create_app(
     runtime = ApiRuntime()
     uploads = UploadRuntime()
     ingestion_factory = upload_factory if upload_factory is not None else default_upload_factory
+    reads = invoice_reader if invoice_reader is not None else PostgresInvoiceReader(configuration)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -190,6 +203,47 @@ def create_app(
         )
         response.status_code = outcome.response_status
         return InvoiceUploadResponse.model_validate(outcome.body.model_dump())
+
+    @app.get(
+        "/v1/invoices",
+        response_model=InvoicePage,
+        tags=["invoices"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (400, 401, 403, 422, 503)},
+    )
+    async def list_invoices(
+        request: Request,
+        status: InvoiceStatus | None = None,
+        run_status: RunStatus | None = None,
+        source: InvoiceSource | None = None,
+        exception_only: bool = False,
+        min_priority: Annotated[int | None, Query(ge=0, le=3)] = None,
+        limit: Annotated[int, Query(ge=1, le=100)] = 50,
+        cursor: Annotated[str | None, Query(max_length=200)] = None,
+    ) -> InvoicePage:
+        authorize_queue(authenticate_read(request, configuration))
+        return await reads.list(
+            InvoiceListQuery(
+                status=status,
+                run_status=run_status,
+                source=source,
+                exception_only=exception_only,
+                min_priority=min_priority,
+                limit=limit,
+                cursor=cursor,
+            )
+        )
+
+    @app.get(
+        "/v1/invoices/{invoice_id}",
+        response_model=InvoiceDetail,
+        tags=["invoices"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (401, 404, 422, 503)},
+    )
+    async def get_invoice(invoice_id: UUID, request: Request) -> InvoiceDetail:
+        authenticate_read(request, configuration)
+        return await reads.detail(invoice_id)
 
     @app.get("/healthz", response_model=LivenessResponse, tags=["health"])
     async def healthz() -> LivenessResponse:

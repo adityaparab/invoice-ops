@@ -13,6 +13,9 @@ class ApiSettings(StorageSettings):
     postgres_dsn: SecretStr | None = None
     readiness_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
     service_token: SecretStr | None = None
+    analyst_token: SecretStr | None = None
+    manager_token: SecretStr | None = None
+    auditor_token: SecretStr | None = None
     document_max_bytes: int = Field(default=10 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
     upload_max_bytes: int = Field(default=11 * 1024 * 1024, gt=0, le=101 * 1024 * 1024)
     upload_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
@@ -30,7 +33,7 @@ class ApiSettings(StorageSettings):
             raise ValueError("Postgres DSN must use the postgresql:// or postgres:// scheme")
         return value
 
-    @field_validator("service_token")
+    @field_validator("service_token", "analyst_token", "manager_token", "auditor_token")
     @classmethod
     def validate_service_token(cls, value: SecretStr | None) -> SecretStr | None:
         if value is not None and (
@@ -41,6 +44,22 @@ class ApiSettings(StorageSettings):
                 "Service token must contain at least 16 printable ASCII characters without spaces"
             )
         return value
+
+    @model_validator(mode="after")
+    def unique_api_tokens(self) -> Self:
+        tokens = [
+            value.get_secret_value()
+            for value in (
+                self.service_token,
+                self.analyst_token,
+                self.manager_token,
+                self.auditor_token,
+            )
+            if value is not None
+        ]
+        if len(tokens) != len(set(tokens)):
+            raise ValueError("API role tokens must be distinct")
+        return self
 
     @model_validator(mode="after")
     def validate_upload_limits(self) -> Self:

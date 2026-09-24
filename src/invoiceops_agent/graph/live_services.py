@@ -3,9 +3,12 @@
 import logging
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 import psycopg
 from psycopg.rows import DictRow
+from psycopg.types.json import Jsonb
 from pydantic import BaseModel, JsonValue, TypeAdapter
 
 from invoiceops_agent.agents.extraction import ExtractionAgent
@@ -19,6 +22,7 @@ from invoiceops_agent.ledger.audit import AuditSink, AuditWriter
 from invoiceops_agent.ledger.schemas import AppendEvent, VersionOverrides
 from invoiceops_agent.schemas.common import model_digest
 from invoiceops_agent.schemas.documents import DocumentReference
+from invoiceops_agent.schemas.exception_queue import QueueConfig
 from invoiceops_agent.schemas.exceptions import TaxonomyRequest, TaxonomyResult
 from invoiceops_agent.schemas.extraction import (
     ExtractionRequest,
@@ -35,6 +39,7 @@ from invoiceops_agent.schemas.policy import PolicyRequest, PolicyResult
 from invoiceops_agent.schemas.similarity import SimilarityRequest, SimilarityResult
 from invoiceops_agent.schemas.validation import ValidationRequest, ValidationResult
 from invoiceops_agent.tools.erp_repository import ERPRepository
+from invoiceops_agent.tools.exception_queue import project_exception
 from invoiceops_agent.tools.gate import evaluate_composite_gate
 from invoiceops_agent.tools.policy import po_age_exceeded
 
@@ -143,6 +148,9 @@ class LiveInvoiceServices:
         audit: AuditSink,
         audit_writer: AuditWriter,
         gate_config: CompositeGateConfig | None = None,
+        queue_config: QueueConfig | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        new_id: Callable[[], UUID] = uuid4,
     ) -> None:
         self._connection = connection
         self._extraction = extraction
@@ -152,10 +160,14 @@ class LiveInvoiceServices:
         self._taxonomy = taxonomy
         self._policy = policy
         self._audit = audit
+        self._audit_writer = audit_writer
+        self._clock = clock
+        self._new_id = new_id
         self._events = EventCache(connection)
         self._transitions = WorkflowTransitions(connection, audit_writer)
         self._policy_config = policy.config
         self._gate_config = gate_config if gate_config is not None else CompositeGateConfig()
+        self._queue_config = queue_config if queue_config is not None else QueueConfig()
 
     async def extract(self, state: InvoiceGraphState) -> ExtractionResult:
         cached = await self._events.read(state, "extraction.completed", "extraction.escalated")
@@ -321,32 +333,85 @@ class LiveInvoiceServices:
         return result
 
     async def triage(self, state: InvoiceGraphState) -> dict[str, JsonValue]:
-        cached = await self._events.read(state, "triage.prepared")
-        if cached is not None:
-            return cached
         taxonomy = TaxonomyResult.model_validate(state.taxonomy) if state.taxonomy else None
         payload: dict[str, JsonValue] = {
             "recommendation": "REVIEW",
             "codes": list(taxonomy.codes) if taxonomy else [],
             "extraction_escalated": state.extraction is None,
         }
-        await self._audit.append(
-            AppendEvent(
-                run_id=state.run_id,
-                invoice_id=state.invoice_id,
-                event_type="triage.prepared",
-                node="ExceptionTriage",
-                actor_type="SYSTEM",
-                actor_id="invoiceops-triage-placeholder",
-                versions=VersionOverrides(
-                    model_version="not-applicable@v1",
-                    prompt_version="not-applicable@v1",
-                    policy_version="triage-placeholder@v1",
-                ),
-                payload=payload,
-            ),
-            trace_id=state.trace_id,
-        )
+        async with self._connection() as connection, connection.transaction():
+            locked = await connection.execute(
+                "SELECT id FROM public.runs WHERE id = %s AND invoice_id = %s FOR UPDATE",
+                (state.run_id, state.invoice_id),
+            )
+            if await locked.fetchone() is None:
+                raise ReplayEvidenceError("Review run is missing")
+            committed = await connection.execute(
+                "SELECT payload FROM public.ledger WHERE run_id = %s AND invoice_id = %s "
+                "AND event_type = 'triage.prepared' ORDER BY sequence DESC LIMIT 1",
+                (state.run_id, state.invoice_id),
+            )
+            row = await committed.fetchone()
+            if row is not None:
+                cached = row["payload"]
+                if not isinstance(cached, dict):
+                    raise ReplayEvidenceError("Committed triage evidence is invalid")
+                payload = cached
+            existing = await connection.execute(
+                "SELECT id FROM public.exceptions WHERE run_id = %s AND invoice_id = %s "
+                "ORDER BY created_at DESC, id DESC LIMIT 1",
+                (state.run_id, state.invoice_id),
+            )
+            if await existing.fetchone() is None:
+                projection = project_exception(
+                    now=self._clock(),
+                    taxonomy=taxonomy,
+                    policy=PolicyResult.model_validate(state.policy) if state.policy else None,
+                    gate=_gate_adapter.validate_python(state.gate) if state.gate else None,
+                    extraction_escalated=state.extraction is None,
+                    recommendation=payload,
+                    config=self._queue_config,
+                )
+                await connection.execute(
+                    "INSERT INTO public.exceptions (id, run_id, invoice_id, exception_type, "
+                    "priority, sla_due_at, evidence, recommendation) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (
+                        self._new_id(),
+                        state.run_id,
+                        state.invoice_id,
+                        projection.exception_type,
+                        projection.priority,
+                        projection.sla_due_at,
+                        Jsonb(projection.evidence),
+                        Jsonb(projection.recommendation),
+                    ),
+                )
+            if row is None:
+                updated = await connection.execute(
+                    "UPDATE public.invoices SET status = 'NEEDS_REVIEW' WHERE id = %s RETURNING id",
+                    (state.invoice_id,),
+                )
+                if await updated.fetchone() is None:
+                    raise ReplayEvidenceError("Invoice to review is missing")
+                await self._audit_writer.append(
+                    connection,
+                    AppendEvent(
+                        run_id=state.run_id,
+                        invoice_id=state.invoice_id,
+                        event_type="triage.prepared",
+                        node="ExceptionTriage",
+                        actor_type="SYSTEM",
+                        actor_id="invoiceops-queue-projection",
+                        versions=VersionOverrides(
+                            model_version="not-applicable@v1",
+                            prompt_version="not-applicable@v1",
+                            policy_version=self._queue_config.version,
+                        ),
+                        payload=payload,
+                    ),
+                    trace_id=state.trace_id,
+                )
         return payload
 
     async def auto_approve(self, state: InvoiceGraphState) -> None:
