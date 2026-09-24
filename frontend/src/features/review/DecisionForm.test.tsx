@@ -36,7 +36,7 @@ const detail = invoiceDetailSchema.parse({
   evidence: {}, read_at: "2026-09-24T12:00:00Z",
 });
 
-test("manager signoff binds to the analyst proposal and sends an idempotency key", async () => {
+function installBrowserShims() {
   vi.stubGlobal("matchMedia", vi.fn().mockImplementation((query: string) => ({
     matches: false, media: query, onchange: null,
     addListener: vi.fn(), removeListener: vi.fn(),
@@ -47,6 +47,10 @@ test("manager signoff binds to the analyst proposal and sends an idempotency key
     unobserve() {}
     disconnect() {}
   });
+}
+
+test("manager signoff binds to the analyst proposal and sends an idempotency key", async () => {
+  installBrowserShims();
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
     decision_id: "00000000-0000-4000-8000-000000000005",
     exception_id: exceptionId,
@@ -80,4 +84,44 @@ test("manager signoff binds to the analyst proposal and sends an idempotency key
     reason_code: "AMOUNT_MISMATCH", proposal_id: proposalId,
   });
   expect(await screen.findByText("The review worker will resume this run.")).toBeTruthy();
+});
+
+test("analyst proposal sends a new action without a manager proposal id", async () => {
+  installBrowserShims();
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    decision_id: "00000000-0000-4000-8000-000000000007",
+    exception_id: exceptionId,
+    run_id: runId,
+    invoice_id: invoiceId,
+    action: "ESCALATE",
+    actor_id: "maria-ap-analyst",
+    stage: "PENDING_SIGNOFF",
+    proposal_id: null,
+  }), { status: 201, headers: { "content-type": "application/json" } }));
+  vi.stubGlobal("fetch", fetchMock);
+  vi.stubGlobal("crypto", { randomUUID: () => "00000000-0000-4000-8000-000000000006" });
+  const analystDetail = invoiceDetailSchema.parse({
+    ...detail,
+    exception: { ...detail.exception, status: "OPEN" },
+    pending_proposal: null,
+  });
+  render(
+    <MantineProvider>
+      <QueryClientProvider client={new QueryClient()}>
+        <DecisionForm detail={analystDetail} token="synthetic-analyst-token" persona="maria" />
+      </QueryClientProvider>
+    </MantineProvider>,
+  );
+  fireEvent.change(screen.getByRole("textbox", { name: "Rationale" }), {
+    target: { value: "Synthetic discrepancy needs escalation" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Submit proposal" }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+  const request = fetchMock.mock.calls[0]?.[0] as Request;
+  expect(request.headers.get("Authorization")).toBe("Bearer synthetic-analyst-token");
+  expect(await request.json()).toEqual({
+    action: "ESCALATE", rationale: "Synthetic discrepancy needs escalation",
+    reason_code: "MANUAL_REVIEW", proposal_id: null,
+  });
+  expect(await screen.findByText("A different manager must sign off.")).toBeTruthy();
 });

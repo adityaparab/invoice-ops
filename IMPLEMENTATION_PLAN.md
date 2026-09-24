@@ -120,7 +120,7 @@
 - [x] 3.8 **Screen — Agent Run:** live LangGraph progress per node (polling or SSE), state inspection
 - [x] 3.9 **Screen — Audit/Trace & Provenance (Priya):** run trace (Mantine Timeline), full ledger view with actor/version pins, provenance export
 - [x] 3.10 **Screen — Evals:** experiment-log view — versioned metric tables, per-anomaly confusion, τ sweep chart; reads `eval/reports/`
-- [ ] 3.11 Front-end testing: Vitest + React Testing Library on decision form and queue; Playwright smoke of the happy path in CI
+- [x] 3.11 Front-end testing: Vitest + React Testing Library on decision form and queue; Playwright smoke of the happy path in CI
 - [ ] 3.12 Provenance endpoints: `GET /v1/runs/{run_id}/trace`, `GET /v1/invoices/{id}/provenance`
 
 
@@ -245,3 +245,4 @@ checkbox here.
 | 2026-09-24 | Step 3.8 adds a bounded run-progress read from the operational run and committed node audit events. It exposes an allowlisted state projection, infers the current node, and keeps storage references and bank data out of the response. The Agent Run screen polls active runs, shows all invoice-v1 nodes, and inspects recorded node outputs; Intake and Exception Review link to the run. |
 | 2026-09-24 | Step 3.9 exposes auditor-only run ledger pages with actor, correction link, and graph/model/prompt/policy versions from a read-only snapshot. Priya's screen renders a timeline and full ledger table, loads further pages, and exports all run events as provenance JSON with cursor-scope checks. Invoice-wide provenance resources remain step 3.12. |
 | 2026-09-24 | Step 3.10 serves bounded, versioned JSON evaluation summaries from `eval/reports/` to the auditor and platform service. The Evals screen shows measured field metrics, an experiment-log entry, per-anomaly confusion, and a τ sweep chart when those arrays exist. The current tier-A extraction baseline has no measured confusion or sweep, so those views say so; a typed pipeline report contract and tests cover future Phase 5 outputs without fabricating results. |
+| 2026-09-24 | Step 3.11 adds RTL coverage for paginated queue search/sort and both sides of the four-eyes decision form. A pinned Chromium Playwright smoke drives an analyst proposal through independent manager signoff with synthetic API fixtures in CI; backend authorization remains covered by integration tests. |

@@ -13,6 +13,7 @@ cd frontend
 npm ci
 npm run generate:api
 npm run typecheck
+npm test
 npm run dev
 ```
 
@@ -21,6 +22,13 @@ The Vite server proxies `/v1`, `/healthz`, and `/readyz` to
 server only for local development. Compose runs the UI with
 `docker compose --profile ui up --build`, then serves it at
 `http://127.0.0.1:5173`.
+
+Vitest and React Testing Library cover the decision form and queue behavior.
+With the UI running, `npx playwright install chromium` followed by
+`npm run test:e2e` runs the same synthetic analyst-proposal and independent
+manager-signoff browser smoke that CI runs. The smoke intercepts only its own
+API requests with synthetic fixtures; backend permissions and persistence are
+covered separately by integration tests.
 
 `npm run generate:api` exports FastAPI's local OpenAPI contract to
 `openapi.json` and regenerates `src/generated/api.ts`. Both files are checked

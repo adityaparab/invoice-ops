@@ -8,6 +8,8 @@ dist/
 node_modules/
 .vite/
 .playwright-cli/
+frontend/test-results/
+frontend/playwright-report/
 
 # Tool caches and reports
 .pytest_cache/
