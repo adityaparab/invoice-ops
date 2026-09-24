@@ -39,6 +39,7 @@ class FakeEmbeddingGateway:
         self.model_version = model_version
 
     async def embed(self, request: EmbeddingRequest) -> GatewayResult[EmbeddingValue]:
+        assert request.dimensions == 384
         return GatewayResult(
             value=EmbeddingValue(vectors=(self.vector,)),
             provenance=GatewayProvenance(

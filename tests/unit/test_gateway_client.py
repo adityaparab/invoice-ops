@@ -36,6 +36,7 @@ from invoiceops_agent.gateway_client import (
     GuardrailRejected,
     ImagePart,
     InvalidGatewayResponse,
+    InvalidStructuredOutput,
     TextPart,
     TokenBudgetExceeded,
 )
@@ -45,10 +46,46 @@ from invoiceops_agent.gateway_client.cassettes import (
     CassetteMismatch,
     CassetteTransport,
 )
+from invoiceops_agent.gateway_client.client import _cost
 from invoiceops_agent.gateway_client.telemetry import GatewayEvent
 
 pytestmark = pytest.mark.unit
 CASSETTES = Path(__file__).parents[1] / "cassettes" / "gateway"
+
+
+def test_gateway_cost_uses_adjusted_original_only_with_complete_headers() -> None:
+    headers = httpx2.Headers(
+        {
+            "x-litellm-response-cost-original": "0.001",
+            "x-litellm-response-cost-discount-amount": "0.0001",
+            "x-litellm-response-cost-margin-amount": "0.0002",
+        }
+    )
+    assert _cost(headers) == Decimal("0.0011")
+    headers["x-litellm-response-cost"] = "0.0013"
+    assert _cost(headers) == Decimal("0.0013")
+    del headers["x-litellm-response-cost"]
+    del headers["x-litellm-response-cost-margin-amount"]
+    assert _cost(headers) is None
+
+
+@pytest.mark.asyncio
+async def test_malformed_model_output_preserves_observed_cost_and_budget_evidence() -> None:
+    telemetry = Telemetry()
+
+    def handle(call: httpx2.Request) -> httpx2.Response:
+        payload = fixture_response().json()
+        payload["choices"][0]["message"]["content"] = "invalid-json"
+        return httpx2.Response(200, headers={"x-litellm-response-cost": "0.002"}, json=payload)
+
+    async with GatewayClient(
+        settings(), transport=httpx2.MockTransport(handle), telemetry=telemetry
+    ) as client:
+        with pytest.raises(InvalidStructuredOutput) as captured:
+            await client.complete(request(), SyntheticExtraction)
+    assert captured.value.cost_usd == Decimal("0.002")
+    assert telemetry.events[-1].cost_usd == Decimal("0.002")
+    assert telemetry.events[-1].observed_run_cost_usd == Decimal("0.002")
 
 
 @pytest.mark.asyncio
@@ -809,7 +846,9 @@ async def test_gateway_redirect_is_not_followed() -> None:
 async def test_embeddings_validate_order_usage_and_redact_text() -> None:
     def handle(call: httpx2.Request) -> httpx2.Response:
         assert call.url.path == "/v1/embeddings"
-        assert json.loads(call.content)["input"] == ["Contact [REDACTED:EMAIL]", "Second"]
+        body = json.loads(call.content)
+        assert body["input"] == ["Contact [REDACTED:EMAIL]", "Second"]
+        assert body["dimensions"] == 384
         return httpx2.Response(
             200,
             json={
@@ -831,6 +870,7 @@ async def test_embeddings_validate_order_usage_and_redact_text() -> None:
                 trace_id=context.trace_id,
                 prompt_version="embed@v1",
                 inputs=("Contact synthetic@example.test", "Second"),
+                dimensions=384,
             )
         )
     assert result.value.vectors == ((0.1, 0.2), (0.3, 0.4))

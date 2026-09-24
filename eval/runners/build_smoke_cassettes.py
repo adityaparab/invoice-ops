@@ -28,7 +28,7 @@ from invoiceops_agent.schemas.extraction import (
     ExtractionSuccess,
     InvoiceExtraction,
 )
-from invoiceops_agent.schemas.similarity import SUMMARY_VERSION
+from invoiceops_agent.schemas.similarity import EMBEDDING_DIMENSIONS, SUMMARY_VERSION
 from invoiceops_agent.schemas.triage import TriageDraft, TriageEvidence, TriageFact, TriageRequest
 from invoiceops_agent.tools.document_preflight import DocumentPreflight
 from invoiceops_agent.tools.document_settings import DocumentSettings
@@ -130,11 +130,16 @@ async def record(output: Path) -> None:
         api_key="synthetic-cassette-key",
         aliases={
             "extract-vision": AliasPolicy(
-                model_version="extract-vision", model_name="extract-vision", allow_images=True
+                model_version="extract-vision",
+                model_name="extract-vision",
+                allow_images=True,
+                response_format="json_object",
             ),
             "embed": AliasPolicy(model_version="embed", model_name="embed"),
             "triage-reasoner": AliasPolicy(
-                model_version="triage-reasoner", model_name="triage-reasoner"
+                model_version="triage-reasoner",
+                model_name="triage-reasoner",
+                response_format="json_object",
             ),
         },
     )
@@ -168,6 +173,7 @@ async def record(output: Path) -> None:
                 prompt_version=SUMMARY_VERSION,
                 scenario="near_duplicate",
                 inputs=(invoice_summary(result.extraction),),
+                dimensions=EMBEDDING_DIMENSIONS,
             )
         )
         evidence = TriageEvidence(

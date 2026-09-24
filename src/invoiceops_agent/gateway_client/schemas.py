@@ -104,6 +104,7 @@ class GatewayRequest(RequestContext):
 class EmbeddingRequest(RequestContext):
     alias: Literal["embed"] = "embed"
     inputs: tuple[str, ...] = Field(min_length=1, max_length=128, repr=False)
+    dimensions: int | None = Field(default=None, ge=1, le=3072)
 
     @field_validator("inputs")
     @classmethod

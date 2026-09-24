@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from decimal import Decimal
 from importlib.resources import files
 from time import perf_counter
 from typing import Protocol
@@ -21,7 +22,7 @@ from invoiceops_agent.gateway_client.schemas import ModelAlias, RequestContext
 from invoiceops_agent.schemas.triage import TriageDraft, TriageRequest, TriageResult
 
 logger = logging.getLogger(__name__)
-PROMPT_VERSION = "triage@v1"
+PROMPT_VERSION = "triage@v2"
 
 
 class TriageGateway(Protocol):
@@ -35,7 +36,7 @@ class TriageGateway(Protocol):
 async def _load_prompt() -> str:
     return await asyncio.to_thread(
         lambda: (
-            files("invoiceops_agent.prompts").joinpath("triage_v1.md").read_text(encoding="utf-8")
+            files("invoiceops_agent.prompts").joinpath("triage_v2.md").read_text(encoding="utf-8")
         )
     )
 
@@ -78,7 +79,9 @@ class TriageAgent:
                 type(error).__name__,
                 (perf_counter() - started) * 1000,
             )
-            return self._fallback(request, policy.model_version, "GATEWAY_FAILURE", error.attempts)
+            return self._fallback(
+                request, policy.model_version, "GATEWAY_FAILURE", error.attempts, error.cost_usd
+            )
         draft = response.value
         valid_refs = {fact.ref for fact in request.evidence.facts}
         if not set(draft.evidence_refs) <= valid_refs:
@@ -87,6 +90,7 @@ class TriageAgent:
                 response.provenance.model_version,
                 "INVALID_EVIDENCE_REFS",
                 response.attempts,
+                response.cost_usd,
             )
         if draft.recommended_action == "APPROVE" and any(
             fact.ref == "policy:status" and fact.detail == "BLOCK"
@@ -97,6 +101,7 @@ class TriageAgent:
                 response.provenance.model_version,
                 "POLICY_CONFLICT",
                 response.attempts,
+                response.cost_usd,
             )
         logger.info(
             "triage_draft_ready run_id=%s trace_id=%s model=%s refs=%d duration_ms=%.3f",
@@ -125,6 +130,7 @@ class TriageAgent:
         model_version: str,
         reason: str,
         attempts: int,
+        cost_usd: Decimal | None = None,
     ) -> TriageResult:
         return TriageResult.model_validate(
             {
@@ -134,5 +140,6 @@ class TriageAgent:
                 "evidence_sha256": request.evidence_sha256,
                 "model_version": model_version,
                 "gateway_attempts": attempts,
+                "cost_usd": cost_usd,
             }
         )

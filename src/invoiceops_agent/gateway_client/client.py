@@ -15,7 +15,7 @@ from types import TracebackType
 from typing import Literal, Self
 
 import httpx2
-from openai import APIConnectionError, APIResponseValidationError, APIStatusError, AsyncOpenAI
+from openai import APIConnectionError, APIResponseValidationError, APIStatusError, AsyncOpenAI, omit
 from openai.types.chat.completion_create_params import ResponseFormat
 from opentelemetry import trace
 from pydantic import BaseModel, ValidationError
@@ -92,8 +92,14 @@ class _CacheProbe:
 def _cost(headers: httpx2.Headers) -> Decimal | None:
     value = headers.get("x-litellm-response-cost")
     if value is None:
-        return None
-    cost = Decimal(value)
+        original = headers.get("x-litellm-response-cost-original")
+        discount = headers.get("x-litellm-response-cost-discount-amount")
+        margin = headers.get("x-litellm-response-cost-margin-amount")
+        if original is None or discount is None or margin is None:
+            return None
+        cost = Decimal(original) - Decimal(discount) + Decimal(margin)
+    else:
+        cost = Decimal(value)
     if not cost.is_finite() or cost < 0:
         raise ValueError("Invalid cost metadata")
     return cost
@@ -217,8 +223,9 @@ class GatewayClient:
                     timeout=request_timeout,
                 )
                 completion = raw.parse()
+                observed_cost = _cost(raw.headers)
                 if len(completion.choices) != 1 or completion.usage is None:
-                    raise InvalidGatewayResponse(request)
+                    raise InvalidGatewayResponse(request, cost_usd=observed_cost)
                 choice = completion.choices[0]
                 if (
                     choice.finish_reason != "stop"
@@ -227,11 +234,11 @@ class GatewayClient:
                     or choice.message.function_call
                     or not choice.message.content
                 ):
-                    raise InvalidGatewayResponse(request)
+                    raise InvalidGatewayResponse(request, cost_usd=observed_cost)
                 try:
                     value = response_model.model_validate_json(choice.message.content, strict=True)
                 except ValidationError:
-                    raise InvalidStructuredOutput(request) from None
+                    raise InvalidStructuredOutput(request, cost_usd=observed_cost) from None
                 usage = TokenUsage(
                     input_tokens=completion.usage.prompt_tokens,
                     output_tokens=completion.usage.completion_tokens,
@@ -239,7 +246,7 @@ class GatewayClient:
                 )
                 if usage.output_tokens > guarded.output_tokens:
                     raise TokenBudgetExceeded(request)
-                return _Response(value, usage, completion.model, _cost(raw.headers))
+                return _Response(value, usage, completion.model, observed_cost)
 
             return operation
 
@@ -425,6 +432,7 @@ class GatewayClient:
                 raw = await self._sdk.embeddings.with_raw_response.create(
                     input=inputs,
                     model=model_name,
+                    dimensions=request.dimensions if request.dimensions is not None else omit,
                     encoding_format="float",
                     extra_headers=_headers(
                         request,
@@ -484,6 +492,7 @@ class GatewayClient:
         status: Literal["succeeded", "failed", "cancelled"] = "failed"
         error_code: str | None = None
         observed_run_cost_usd: Decimal | None = None
+        failed_call_cost_usd: Decimal | None = None
         budget_alert = False
         try:
             async with (
@@ -509,7 +518,9 @@ class GatewayClient:
                                 response.usage.input_tokens > policy.input_token_limit
                                 or response.usage.total_tokens > policy.total_token_limit
                             ):
-                                raise TokenBudgetExceeded(context, attempts=attempts)
+                                raise TokenBudgetExceeded(
+                                    context, attempts=attempts, cost_usd=response.cost
+                                )
                             break
                         except CassetteMismatch:
                             raise GatewayCassetteMismatch(context, attempts=attempts) from None
@@ -586,6 +597,11 @@ class GatewayClient:
         except GatewayError as error:
             error.attempts = attempts
             error_code = error.code
+            failed_call_cost_usd = error.cost_usd
+            if error.cost_usd is not None:
+                observed_run_cost_usd, budget_alert = self._budgets.observe(
+                    context.run_id, error.cost_usd
+                )
             raise
         except asyncio.CancelledError:
             status = "cancelled"
@@ -608,7 +624,7 @@ class GatewayClient:
                     attempts=attempts,
                     latency_ms=max(0, self._clock() - started) * 1000,
                     usage=response.usage if response else None,
-                    cost_usd=response.cost if response else None,
+                    cost_usd=response.cost if response else failed_call_cost_usd,
                     error_code=error_code,
                 )
             )

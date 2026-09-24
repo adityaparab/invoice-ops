@@ -95,8 +95,15 @@ clean synthetic invoices; that denominator keeps the 70% target attainable.
 Cost per invoice sums observed extraction, embedding, and triage gateway cost
 for each selected invoice. Duplicate uploads cost zero for their own attempt.
 If any invoked model call lacks cost evidence, the metric is unavailable and
-coverage shows how many invoices are complete. P95 latency uses the elapsed
-time between `ingest.accepted` and `approval.auto_granted`, from three distinct
+coverage shows how many invoices are complete.
+The gateway prefers LiteLLM's total response-cost header. When it is absent,
+it uses original cost minus discount plus margin only if all three adjustment
+headers are present and valid. Billed malformed responses and conservative
+triage fallbacks keep their observed cost in the ledger. Missing headers stay
+unavailable rather than becoming zero.
+
+P95 latency uses the elapsed time between `ingest.accepted` and
+`approval.auto_granted`, from three distinct
 live runs over the same selection. It is unavailable when a run lacks an
 auto-approval, a timestamp, or independent run IDs. P95 uses the nearest-rank
 method over audited auto-approved invoices from the three runs. The versioned
@@ -208,3 +215,38 @@ uv run python -m eval.ci_gate \
   --comment-file eval/data/runs/ci-gate.md \
   --output eval/data/runs/ci-gate.json
 ```
+
+## Versioned report publication
+
+[`eval/publish_report.py`](../eval/publish_report.py) converts a matching live
+primary report and diagnostic report into the versioned Evals-screen schema.
+It keeps unavailable measurements out of metric rows, labels partial evidence,
+shows per-anomaly confusion and eligible threshold points, and converts p95
+seconds to milliseconds for the UI. The primary and diagnostic source JSONs
+remain separate, preserving detailed denominators and calibration. A
+publication command is:
+
+```bash
+uv run python -m eval.publish_report \
+  --metrics eval/data/metrics/openai-prod-development.json \
+  --diagnostics eval/data/diagnostics/openai-prod-development.json \
+  --report-id golden-openai-prod-development-v1 \
+  --title "Golden development measurement" \
+  --output eval/reports/pipeline-eval-openai-prod-development-v1.json
+```
+
+The experiment log at `eval/reports/experiment-log-v1.json` links each
+publication by `report_id` and records its hypothesis, change, observation,
+and decision. Development or partial measurements never become the production
+CI baseline.
+
+The first live development publication is
+[`pipeline-eval-openai-prod-development-v01.json`](../eval/reports/pipeline-eval-openai-prod-development-v01.json),
+with separate [primary metrics](../eval/reports/primary-openai-prod-development-v01.json)
+and [diagnostics](../eval/reports/diagnostics-openai-prod-development-v01.json).
+It covers 100 of 500 cases and one run. Exception recall was 0.9667 and clean
+false escalation was 1.0000; 48 near-duplicate and 26 bank-change false
+positives explain much of the review volume. Three repeated-citation failures
+made cost incomplete, and p95 requires two more independent runs. The triage
+citation bug is fixed in the same step. Step 5.8 addresses the remaining
+development failures before a full live release baseline is considered.

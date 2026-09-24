@@ -41,13 +41,19 @@ event. Recorded mode is a pipeline smoke, not a model-quality measurement.
 ## Full live run
 
 First build the 500 documents via [the golden builder](../../docs/EVALUATION.md).
-Set an actual 384-dimensional embedding route through the existing
-`LITELLM_EMBED_MODEL` variable in `.env.example`; the worker already requires
-it. Then run:
+Set an embedding route through the existing `LITELLM_EMBED_MODEL` model-name
+variable in `.env.example`; the workflow asks it for 384 dimensions and
+rejects any different result. Then run:
 
 ```bash
 uv run python -m eval.runners.run_pipeline --split all --model-class local-dev
 ```
+
+`--workers 8` runs eight isolated Compose worker containers in parallel for
+independent invoices. Parent invoices always finish before their near-duplicate
+children, so similarity decisions do not depend on scheduling. Use one worker
+for the recorded cassette smoke. The model class is a declared experiment tag;
+the actual model versions remain in the report's ledger events.
 
 Use `--split development` or `--split held_out` to run one split, and `--limit N`
 for a bounded subset. The runner verifies all selected document bytes before
@@ -77,4 +83,5 @@ provenance page. Worker errors still produce an evidence report and a nonzero
 exit status. Score one to three reports with [`eval/metrics.py`](../metrics.py)
 and inspect one report with [`eval/diagnostics.py`](../diagnostics.py), as
 described in [the evaluation spec](../../docs/EVALUATION.md). The release gate
-follows in a later step.
+requires a committed complete live report; recorded or partial runs remain
+diagnostic.

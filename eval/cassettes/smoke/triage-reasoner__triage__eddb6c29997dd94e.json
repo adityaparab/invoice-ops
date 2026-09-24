@@ -1,8 +1,8 @@
 {
   "alias": "triage-reasoner",
   "scenario": "triage",
-  "prompt_version": "triage@v1",
-  "request_sha256": "820f69244789937e922bd73afc1ef0adf3a7e12a335e5ae610d1f9dd226d4c1b",
+  "prompt_version": "triage@v2",
+  "request_sha256": "e56b955c9b3382f8ba31ab1f020d181ee5657cc370130631c5687b52aa8dbb53",
   "format_version": 2,
   "outcomes": [
     {

@@ -73,6 +73,7 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
                     public_fallback_model_name=self.extract_public_fallback_model,
                     allow_images=True,
                     allow_pdf=True,
+                    response_format="json_object",
                 ),
                 "embed": AliasPolicy(
                     model_version=self.embed_model,
@@ -87,6 +88,7 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
                     public_model_name=self.triage_public_model,
                     fallback_model_name=self.triage_fallback_model,
                     public_fallback_model_name=self.triage_public_fallback_model,
+                    response_format="json_object",
                 ),
             },
         )

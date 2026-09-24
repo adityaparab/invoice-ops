@@ -251,6 +251,7 @@ class ExtractionAgent:
                         prompt_version=model_request.prompt_version,
                         status="MALFORMED" if malformed else "FAILED",
                         gateway_attempts=error.attempts,
+                        cost_usd=error.cost_usd,
                     )
                 )
                 if malformed and not repair:

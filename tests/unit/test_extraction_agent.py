@@ -5,6 +5,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from uuid import UUID
 
@@ -172,10 +173,13 @@ async def test_malformed_output_gets_one_fixed_repair_without_echoing_content(
 
     def handle(request: httpx2.Request) -> httpx2.Response:
         bodies.append(request.content.decode())
-        return (
+        response = (
             model_response('{"secret":"synthetic-private-model-output"}')
             if len(bodies) == 1
             else model_response()
+        )
+        return httpx2.Response(
+            200, headers={"x-litellm-response-cost": "0.002"}, json=response.json()
         )
 
     audit = CaptureAudit()
@@ -184,6 +188,7 @@ async def test_malformed_output_gets_one_fixed_repair_without_echoing_content(
         result = await agent(client, audit, reader).extract(extraction_request())
     assert isinstance(result, ExtractionSuccess)
     assert [call.status for call in result.calls] == ["MALFORMED", "VALID"]
+    assert [call.cost_usd for call in result.calls] == [Decimal("0.002"), Decimal("0.002")]
     assert result.calls[-1].prompt_version == REPAIR_PROMPT_VERSION
     assert reader.calls == 1 and len(bodies) == 2
     assert "technical formatting" in bodies[-1]
