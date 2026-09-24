@@ -8,6 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.security import HTTPBearer
+from pydantic import AwareDatetime
 from starlette.responses import JSONResponse
 
 from invoiceops_agent.api.audit_reader import AuditReader, PostgresAuditReader
@@ -33,10 +34,12 @@ from invoiceops_agent.api.ingestion_dependencies import (
 )
 from invoiceops_agent.api.invoice_reader import InvoiceReader, PostgresInvoiceReader
 from invoiceops_agent.api.middleware import RequestContextMiddleware
+from invoiceops_agent.api.provenance_reader import PostgresProvenanceReader, ProvenanceReader
 from invoiceops_agent.api.read_auth import (
     authenticate_evals,
     authenticate_read,
     authenticate_run,
+    authorize_auditor,
     authorize_queue,
 )
 from invoiceops_agent.api.run_progress_reader import PostgresRunProgressReader, RunProgressReader
@@ -60,6 +63,7 @@ from invoiceops_agent.api.schemas.invoice_read import (
     RunStatus,
 )
 from invoiceops_agent.api.schemas.problem import ProblemDetails
+from invoiceops_agent.api.schemas.provenance import InvoiceProvenancePage, RunTracePage
 from invoiceops_agent.api.schemas.run_progress import RunProgress
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.api.uploads import authenticate_upload, parse_upload
@@ -78,6 +82,7 @@ def create_app(
     dashboard_reader: DashboardReader | None = None,
     run_progress_reader: RunProgressReader | None = None,
     audit_reader: AuditReader | None = None,
+    provenance_reader: ProvenanceReader | None = None,
     eval_reader: EvalReader | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
@@ -99,6 +104,11 @@ def create_app(
         else PostgresRunProgressReader(configuration)
     )
     audit = audit_reader if audit_reader is not None else PostgresAuditReader(configuration)
+    provenance = (
+        provenance_reader
+        if provenance_reader is not None
+        else PostgresProvenanceReader(configuration)
+    )
     evals = eval_reader if eval_reader is not None else FileEvalReader(configuration)
 
     @asynccontextmanager
@@ -316,10 +326,54 @@ def create_app(
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         after_sequence: Annotated[int | None, Query(ge=1)] = None,
     ) -> AuditRunPage:
-        if authenticate_read(request, configuration) != "AUDITOR":
-            raise HTTPException(403, "Only the auditor can read the full run ledger.")
+        authorize_auditor(authenticate_read(request, configuration))
         return await audit.for_run(
             run_id, trace_id=context.trace_id, limit=limit, after_sequence=after_sequence
+        )
+
+    @app.get(
+        "/v1/runs/{run_id}/trace",
+        response_model=RunTracePage,
+        tags=["audit"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (401, 403, 404, 422, 503)},
+    )
+    async def get_run_trace(
+        run_id: UUID,
+        request: Request,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+        after_sequence: Annotated[int | None, Query(ge=1)] = None,
+    ) -> RunTracePage:
+        authorize_auditor(authenticate_read(request, configuration))
+        return await provenance.for_run_trace(
+            run_id, trace_id=context.trace_id, limit=limit, after_sequence=after_sequence
+        )
+
+    @app.get(
+        "/v1/invoices/{invoice_id}/provenance",
+        response_model=InvoiceProvenancePage,
+        tags=["audit"],
+        dependencies=[Depends(HTTPBearer(auto_error=False, scheme_name="PersonaToken"))],
+        responses={status: {"model": ProblemDetails} for status in (400, 401, 403, 404, 422, 503)},
+    )
+    async def get_invoice_provenance(
+        invoice_id: UUID,
+        request: Request,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+        after_created_at: AwareDatetime | None = None,
+        after_event_id: UUID | None = None,
+    ) -> InvoiceProvenancePage:
+        authorize_auditor(authenticate_read(request, configuration))
+        if (after_created_at is None) != (after_event_id is None):
+            raise HTTPException(400, "Both provenance cursor fields are required together.")
+        return await provenance.for_invoice(
+            invoice_id,
+            trace_id=context.trace_id,
+            limit=limit,
+            after_created_at=after_created_at,
+            after_event_id=after_event_id,
         )
 
     @app.get(

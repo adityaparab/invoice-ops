@@ -17,4 +17,5 @@ with actor and graph/model/prompt/policy versions. The payload and correction
 link expand per event. **Export full run provenance** fetches every page anew
 and downloads a JSON document with the run identity, trace ID, status, export
 time, and all immutable events. A repeating or cross-run cursor aborts export.
-The invoice-wide provenance and derived trace endpoints remain plan step 3.12.
+The [trace and invoice-wide provenance endpoints](PROVENANCE_API.md) provide
+metadata-only run chronology and cross-run ledger history to auditors.

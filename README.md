@@ -2,17 +2,17 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 1 in progress.** The platform foundation, invoice ingestion, and extraction library are implemented; scheduled processing and the application screens below describe the target system.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 3 implementation complete.** Observability hardening and golden-set evaluation remain planned.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
-database role, LiteLLM routing configuration, and a durable LangGraph hello path. CI checks the
-Python package, real database/object-store integrations, and Compose startup. Phase 1 adds authenticated
-invoice uploads and a signed synthetic email webhook with raw storage, durable request replay,
-nonce claims, and audited exact-content duplicate rejection. The extraction library and standalone
-deterministic validation node are implemented; the hello graph still uses stub nodes.
-Phase 1 now includes the [transactional ledger writer and reader](docs/LEDGER.md), ready for atomic
-ingestion and later provenance endpoints. The upload endpoint uses this writer in its transaction.
+database role, and a durable invoice LangGraph workflow. Model calls use the configured LiteLLM
+URL, key, and model-name environment variables. CI checks the Python package, real database and
+object-store integrations, the React console, and Compose startup. The service accepts uploads
+and signed synthetic email webhooks with durable replay and duplicate rejection; deterministic
+validation, matching, policy, and human decisions commit to the
+[transactional ledger](docs/LEDGER.md). The console has intake, review, dashboard, run, audit,
+and eval screens. Auditors can read [run traces and cross-run invoice provenance](docs/PROVENANCE_API.md).
 The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
 invoices and a checksummed preparation report. Every selected image is quality tier A under the
 versioned heuristic; extraction accuracy and tiers B/C remain unmeasured.

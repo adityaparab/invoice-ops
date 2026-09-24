@@ -26,6 +26,11 @@ from invoiceops_agent.api.invoice_reader import (
     InvoiceReadError,
     InvoiceReadUnavailable,
 )
+from invoiceops_agent.api.provenance_reader import (
+    InvalidProvenanceCursor,
+    ProvenanceNotFound,
+    ProvenanceReadError,
+)
 from invoiceops_agent.api.run_progress_reader import (
     RunNotFound,
     RunProgressError,
@@ -113,6 +118,22 @@ def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RunProgressError, _run_progress_error)
     app.add_exception_handler(AuditReadError, _audit_read_error)
     app.add_exception_handler(EvalReadError, _eval_read_error)
+    app.add_exception_handler(ProvenanceReadError, _provenance_read_error)
+
+
+async def _provenance_read_error(request: Request, error: Exception) -> JSONResponse:
+    status = 503
+    if isinstance(error, InvalidProvenanceCursor):
+        status = 400
+    elif isinstance(error, ProvenanceNotFound):
+        status = 404
+    logger.warning(
+        "provenance_read_rejected trace_id=%s error_type=%s status=%d",
+        get_request_context(request).trace_id,
+        type(error).__name__,
+        status,
+    )
+    return problem_response(request, status=status, detail=str(error))
 
 
 async def _eval_read_error(request: Request, error: Exception) -> JSONResponse:

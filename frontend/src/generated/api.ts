@@ -141,6 +141,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/invoices/{invoice_id}/provenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Invoice Provenance */
+        get: operations["get_invoice_provenance_v1_invoices__invoice_id__provenance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/runs/{run_id}/ledger": {
         parameters: {
             query?: never;
@@ -167,6 +184,23 @@ export interface paths {
         };
         /** Get Run Progress */
         get: operations["get_run_progress_v1_runs__run_id__progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/runs/{run_id}/trace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Trace */
+        get: operations["get_run_trace_v1_runs__run_id__trace_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -401,6 +435,24 @@ export interface components {
             /** Report Id */
             report_id: string;
         };
+        /** InvoiceCursor */
+        InvoiceCursor: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+        };
         /** InvoiceDetail */
         InvoiceDetail: {
             /** Evidence */
@@ -461,6 +513,32 @@ export interface components {
             items: components["schemas"]["InvoiceSummary"][];
             /** Next Cursor */
             next_cursor?: string | null;
+        };
+        /** InvoiceProvenancePage */
+        InvoiceProvenancePage: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Events */
+            events: components["schemas"]["LedgerEvent"][];
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            next_cursor: components["schemas"]["InvoiceCursor"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "UPLOAD" | "EMAIL";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "RECEIVED" | "QUEUED" | "PROCESSING" | "NEEDS_REVIEW" | "APPROVED" | "REJECTED" | "RETURNED" | "ARCHIVED" | "FAILED";
         };
         /** InvoiceSummary */
         InvoiceSummary: {
@@ -737,6 +815,35 @@ export interface components {
              */
             status: "QUEUED" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
         };
+        /** RunTracePage */
+        RunTracePage: {
+            /** Completed At */
+            completed_at: string | null;
+            /** Events */
+            events: components["schemas"]["TraceEvent"][];
+            /** Graph Version */
+            graph_version: string;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            next_cursor: components["schemas"]["RunCursor"] | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
+            /** Trace Id */
+            trace_id: string;
+        };
         /** TauSweepPoint */
         TauSweepPoint: {
             /** Exception Recall */
@@ -747,6 +854,35 @@ export interface components {
             stp_rate: string;
             /** Threshold */
             threshold: string;
+        };
+        /** TraceEvent */
+        TraceEvent: {
+            /** Actor Id */
+            actor_id: string;
+            /**
+             * Actor Type
+             * @enum {string}
+             */
+            actor_type: "SYSTEM" | "AGENT" | "HUMAN" | "POLICY";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Event Type */
+            event_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Node */
+            node: string | null;
+            /** Sequence */
+            sequence: number;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+            versions: components["schemas"]["VersionPins"];
         };
         /** VersionPins */
         VersionPins: {
@@ -1360,6 +1496,86 @@ export interface operations {
             };
         };
     };
+    get_invoice_provenance_v1_invoices__invoice_id__provenance_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                after_created_at?: string | null;
+                after_event_id?: string | null;
+            };
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceProvenancePage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     get_run_ledger_v1_runs__run_id__ledger_get: {
         parameters: {
             query?: {
@@ -1452,6 +1668,76 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    get_run_trace_v1_runs__run_id__trace_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                after_sequence?: number | null;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunTracePage"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
