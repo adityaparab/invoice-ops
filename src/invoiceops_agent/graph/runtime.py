@@ -5,6 +5,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from datetime import UTC, date, datetime
 from uuid import UUID
 
+import httpx2
 import psycopg
 from psycopg.rows import DictRow, dict_row
 from pydantic import SecretStr
@@ -125,6 +126,7 @@ async def invoice_runtime(
     settings: InvoiceRuntimeSettings | None = None,
     clock: Callable[[], datetime] = utc_now,
     gateway_telemetry: GatewayTelemetry | None = None,
+    gateway_transport: httpx2.AsyncBaseTransport | None = None,
 ) -> AsyncIterator[InvoiceWorkflowRuntime]:
     runtime = settings if settings is not None else InvoiceRuntimeSettings()
     graph = GraphSettings(_env_file=".env")
@@ -163,6 +165,7 @@ async def invoice_runtime(
         ) as raw_storage,
         GatewayClient(
             litellm.gateway_settings(),
+            transport=gateway_transport,
             telemetry=gateway_telemetry,
             semantic_cache=PostgresSemanticCache(connection),
         ) as gateway,

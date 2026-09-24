@@ -6,6 +6,8 @@ import json
 import sys
 from uuid import UUID
 
+import httpx2
+
 from invoiceops_agent.gateway_client.telemetry import MetricGatewayTelemetry
 from invoiceops_agent.graph.retry import RetryConfig
 from invoiceops_agent.graph.runtime import (
@@ -19,7 +21,9 @@ from invoiceops_agent.obs.metrics import metrics_session
 from invoiceops_agent.obs.tracing import tracing_session
 
 
-async def run_invoice(run_id: UUID) -> dict[str, str]:
+async def run_invoice(
+    run_id: UUID, *, gateway_transport: httpx2.AsyncBaseTransport | None = None
+) -> dict[str, str]:
     async with (
         tracing_session("invoiceops-worker"),
         metrics_session("invoiceops-worker") as metrics,
@@ -29,7 +33,10 @@ async def run_invoice(run_id: UUID) -> dict[str, str]:
 
         async def run_once(value: UUID) -> InvoiceGraphState:
             async with invoice_runtime(
-                value, settings=settings, gateway_telemetry=MetricGatewayTelemetry(metrics)
+                value,
+                settings=settings,
+                gateway_telemetry=MetricGatewayTelemetry(metrics),
+                gateway_transport=gateway_transport,
             ) as workflow:
                 return await workflow.run()
 

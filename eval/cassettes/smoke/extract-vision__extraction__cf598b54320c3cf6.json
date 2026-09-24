@@ -1,0 +1,38 @@
+{
+  "alias": "extract-vision",
+  "scenario": "extraction",
+  "prompt_version": "extract@v1",
+  "request_sha256": "04f4a5dc08cbbdc58b5000051de939713ed13861de5054b981e11719145ad74a",
+  "format_version": 2,
+  "outcomes": [
+    {
+      "kind": "response",
+      "status_code": 200,
+      "headers": {
+        "content-type": "application/json",
+        "x-litellm-response-cost": "0.001"
+      },
+      "response": {
+        "id": "chatcmpl-golden-smoke",
+        "object": "chat.completion",
+        "created": 1790164800,
+        "model": "extract-vision",
+        "choices": [
+          {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {
+              "role": "assistant",
+              "content": "{\"vendor_name\":{\"value\":\"Synthetic Pink Daughter Supplies 010\",\"confidence\":\"0.99\"},\"vendor_tax_id\":{\"value\":\"SYN-TAX-20260827-010\",\"confidence\":\"0.99\"},\"bank_account_iban\":{\"value\":\"GB00SYNTH00202608270010\",\"confidence\":\"0.99\"},\"invoice_number\":{\"value\":\"SYN-GOLD-20260827-INV-SYN-CLEAN-0034\",\"confidence\":\"0.99\"},\"po_number\":{\"value\":\"SYN-GOLD-20260827-PO-SYN-CLEAN-0034\",\"confidence\":\"0.99\"},\"currency\":{\"value\":\"USD\",\"confidence\":\"0.99\"},\"invoice_date\":{\"value\":\"2026-08-27\",\"confidence\":\"0.99\"},\"due_date\":{\"value\":\"2026-09-26\",\"confidence\":\"0.99\"},\"subtotal\":{\"value\":\"344.04\",\"confidence\":\"0.99\"},\"tax_amount\":{\"value\":\"68.81\",\"confidence\":\"0.99\"},\"total_amount\":{\"value\":\"412.85\",\"confidence\":\"0.99\"},\"line_items\":[{\"description\":{\"value\":\"Synthetic office supply SYN-CLEAN-0034\",\"confidence\":\"0.99\"},\"quantity\":{\"value\":\"6\",\"confidence\":\"0.99\"},\"unit_price\":{\"value\":\"57.34\",\"confidence\":\"0.99\"},\"tax_rate\":{\"value\":\"0.2\",\"confidence\":\"0.99\"},\"line_total\":{\"value\":\"344.04\",\"confidence\":\"0.99\"}}]}"
+            }
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 200,
+          "completion_tokens": 200,
+          "total_tokens": 400
+        }
+      }
+    }
+  ]
+}

@@ -67,7 +67,9 @@ or interrupted build cannot publish a complete manifest with unverified bytes.
 
 ## Scoring boundaries
 
-The future harness scores extraction on all fields with known labels. Routing,
+The [Compose runner](../eval/runners/README.md) collects API, worker, and ledger
+evidence for the suite; metric definitions and the CI gate follow in later
+Phase 5 steps. Extraction scoring uses all fields with known labels. Routing,
 exception recall, false escalation, and straight-through processing use only
 the 450 ERP-backed samples; the 50 Voxel51 invoices are extraction-only.
 Duplicate samples must run after their parent in each split. Anomalies may

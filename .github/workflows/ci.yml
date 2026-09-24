@@ -204,6 +204,34 @@ jobs:
             --run-id 00000000-0000-4000-8000-000000000001 \
             --invoice-id 00000000-0000-4000-8000-000000000002
 
+      - name: Recorded golden pipeline smoke
+        timeout-minutes: 3
+        env:
+          LITELLM_API_BASE: http://cassette.invalid/v1
+          LITELLM_MASTER_KEY: synthetic-replay-only
+          LITELLM_MODEL: recorded-fixture-model
+        run: |
+          uv run --no-sync python -m eval.runners.build_smoke_cassettes
+          uv run --no-sync python -m eval.runners.run_pipeline --recorded --no-start \
+            --output eval/data/runs/ci-recorded-smoke.json
+          uv run --no-sync python - <<'PY'
+          import json
+
+          report = json.load(open("eval/data/runs/ci-recorded-smoke.json"))
+          sample = report["samples"][0]
+          assert report["mode"] == "recorded" and len(report["samples"]) == 1
+          assert sample["route"] == "REVIEW"
+          assert sample["detail"]["invoice"]["status"] == "NEEDS_REVIEW"
+          assert sample["detail"]["invoice"]["run_status"] == "PAUSED"
+          assert sample["worker_error_type"] is None
+          assert sample["replayed_before_worker"] is False
+          assert [event["event_type"] for event in sample["provenance"]["events"] == [
+              "ingest.accepted", "extraction.completed", "validation.completed",
+              "matching.completed", "similarity.completed", "classification.completed",
+              "policy.completed", "gate.completed", "triage.prepared",
+          ]
+          PY
+
       - name: Compose diagnostics
         if: failure()
         run: docker compose logs --no-color

@@ -27,7 +27,11 @@ from invoiceops_agent.gateway_client.cache import (
     SemanticCacheUnavailable,
     cache_identity,
 )
-from invoiceops_agent.gateway_client.cassettes import CassetteMismatch, CassetteTransport
+from invoiceops_agent.gateway_client.cassettes import (
+    AliasCassetteTransport,
+    CassetteMismatch,
+    CassetteTransport,
+)
 from invoiceops_agent.gateway_client.errors import (
     GatewayCassetteMismatch,
     GatewayConfigurationError,
@@ -95,13 +99,16 @@ def _cost(headers: httpx2.Headers) -> Decimal | None:
     return cost
 
 
-def _headers(context: RequestContext) -> dict[str, str]:
-    return {
+def _headers(context: RequestContext, alias: ModelAlias | None = None) -> dict[str, str]:
+    headers = {
         "X-InvoiceOps-Prompt-Version": context.prompt_version,
         "X-InvoiceOps-Scenario": context.scenario,
         "X-InvoiceOps-Run-ID": str(context.run_id),
         "X-InvoiceOps-Trace-ID": context.trace_id,
     }
+    if alias is not None:
+        headers["X-InvoiceOps-Alias"] = alias
+    return headers
 
 
 class _RequestBodyTooLarge(Exception):
@@ -178,7 +185,10 @@ class GatewayClient:
             policy: AliasPolicy, model_name: str
         ) -> Callable[[float], Awaitable[_Response[T]]]:
             guarded = self._guards.chat(request, policy, response_model)
-            headers = _headers(request)
+            headers = _headers(
+                request,
+                request.alias if isinstance(self._cassettes, AliasCassetteTransport) else None,
+            )
             headers["X-InvoiceOps-Schema-Hash"] = hashlib.sha256(
                 json.dumps(guarded.schema, sort_keys=True, separators=(",", ":")).encode("utf-8")
             ).hexdigest()
@@ -416,7 +426,12 @@ class GatewayClient:
                     input=inputs,
                     model=model_name,
                     encoding_format="float",
-                    extra_headers=_headers(request),
+                    extra_headers=_headers(
+                        request,
+                        request.alias
+                        if isinstance(self._cassettes, AliasCassetteTransport)
+                        else None,
+                    ),
                     timeout=request_timeout,
                 )
                 completion = raw.parse()

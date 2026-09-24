@@ -131,6 +131,9 @@ services:
       OTEL_EXPORTER_OTLP_METRICS_HEADERS: ${OTEL_EXPORTER_OTLP_METRICS_HEADERS:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./eval/golden/v1.0.0:/app/eval/golden/v1.0.0:ro
+      - ./eval/cassettes/smoke:/app/eval/cassettes/smoke:ro
     depends_on:
       storage-init:
         condition: service_completed_successfully
