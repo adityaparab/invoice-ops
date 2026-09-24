@@ -97,6 +97,10 @@ class NearDuplicateAgent:
                 config_sha256=model_digest(self._config),
                 model_version=model_version,
                 gateway_model=embedded.provenance.model,
+                input_tokens=embedded.usage.input_tokens,
+                output_tokens=embedded.usage.output_tokens,
+                gateway_latency_ms=embedded.latency_ms,
+                gateway_cost_usd=embedded.cost_usd,
                 config=self._config,
             )
             await self._audit_writer.append(

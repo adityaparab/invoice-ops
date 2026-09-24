@@ -54,6 +54,12 @@ async def test_dashboard_totals_aging_and_cost_coverage(ledger_runtime_dsn: str)
                 "extraction.completed",
                 {"result": {"calls": [{"cost_usd": "0.02"}]}},
             ),
+            (
+                AUTO_INVOICE,
+                AUTO_RUN,
+                "similarity.completed",
+                {"gateway_cost_usd": "0.01"},
+            ),
             (REVIEW_INVOICE, REVIEW_RUN, "triage.prepared", {"triage": {"cost_usd": "0.04"}}),
         ):
             await writer().append(
@@ -78,8 +84,8 @@ async def test_dashboard_totals_aging_and_cost_coverage(ledger_runtime_dsn: str)
     assert summary.aging.one_to_three_days == 1
     assert summary.aging.sla_overdue == 1
     assert summary.cost_observed_invoices == 2
-    assert summary.total_observed_cost_usd == Decimal("0.06")
-    assert summary.cost_per_observed_invoice_usd == Decimal("0.03")
+    assert summary.total_observed_cost_usd == Decimal("0.07")
+    assert summary.cost_per_observed_invoice_usd == Decimal("0.035")
     assert summary.cost_coverage == "COMPLETE"
     assert [day.invoices for day in summary.volume_by_day] == [0, 2]
     assert [(item.code, item.count) for item in summary.exception_types] == [("PRICE_VARIANCE", 1)]
@@ -98,7 +104,7 @@ async def test_dashboard_totals_aging_and_cost_coverage(ledger_runtime_dsn: str)
     assert partial.invoice_count == 3
     assert partial.cost_observed_invoices == 2
     assert partial.cost_coverage == "PARTIAL"
-    assert partial.cost_per_observed_invoice_usd == Decimal("0.03")
+    assert partial.cost_per_observed_invoice_usd == Decimal("0.035")
     empty = await PostgresDashboardReader(
         ApiSettings(postgres_dsn=SecretStr(ledger_runtime_dsn)),
         clock=lambda: datetime(2030, 1, 17, 12, tzinfo=UTC),

@@ -1,5 +1,6 @@
 """Real pgvector decisions, model isolation, and atomic ledger storage."""
 
+from decimal import Decimal
 from uuid import UUID
 
 import psycopg
@@ -49,6 +50,7 @@ class FakeEmbeddingGateway:
             usage=TokenUsage(input_tokens=10, output_tokens=0, total_tokens=10),
             attempts=1,
             latency_ms=1,
+            cost_usd=Decimal("0.002"),
         )
 
 
@@ -117,6 +119,8 @@ async def test_pgvector_near_duplicate_and_model_isolation(
     assert len(page.events) == 1
     assert page.events[0].event_type == "similarity.completed"
     assert page.events[0].versions.model_version == "synthetic-embed@v1"
+    assert decision.gateway_cost_usd == Decimal("0.002")
+    assert decision.input_tokens == 10
     assert SimilarityResult.model_validate(page.events[0].payload) == decision
 
 

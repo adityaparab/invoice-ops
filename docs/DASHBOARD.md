@@ -19,7 +19,8 @@ the response's `as_of` time. `sla_overdue` counts open exceptions whose SLA
 deadline has passed.
 
 Observed cost sums nonnegative `cost_usd` values from extraction invocation
-records and the triage result in the ledger. `cost_observed_invoices` counts
+records, embedding gateway evidence in `similarity.completed`, and the triage
+result in the ledger. `cost_observed_invoices` counts
 invoices with at least one reported cost. The per-invoice figure divides the
 observed total by that observed count; it is `null` when none have reported
 cost. `cost_coverage` is `COMPLETE` only when every invoice in the period has
