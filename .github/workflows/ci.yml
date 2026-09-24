@@ -66,6 +66,12 @@ jobs:
       - name: Offline unit tests
         run: uv run --no-sync pytest tests/unit -m unit --disable-socket --allow-unix-socket
 
+      - name: Prepare pinned MinIO image
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/prepare_minio_image.sh
+
       - name: Postgres and MinIO integration tests
         timeout-minutes: 5
         run: uv run --no-sync pytest tests/integration -m integration

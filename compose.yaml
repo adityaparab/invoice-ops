@@ -193,7 +193,8 @@ services:
     restart: unless-stopped
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: invoiceops-minio:RELEASE.2025-09-07T16-13-09Z
+    pull_policy: never
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-invoiceops-local}
@@ -204,7 +205,7 @@ services:
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9000/minio/health/ready"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9000/minio/health/ready"]
       interval: 10s
       timeout: 5s
       start_period: 30s
@@ -263,7 +264,8 @@ services:
 
   langfuse-minio:
     profiles: ["observability"]
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: invoiceops-minio:RELEASE.2025-09-07T16-13-09Z
+    pull_policy: never
     entrypoint: ["/bin/sh", "-c"]
     command: ["mkdir -p /data/langfuse && exec minio server /data --console-address :9001"]
     environment:
@@ -274,7 +276,7 @@ services:
     volumes:
       - langfuse_minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9000/minio/health/ready"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9000/minio/health/ready"]
       interval: 5s
       timeout: 5s
       retries: 10

@@ -11,6 +11,7 @@ variables from [`.env.example`](../../.env.example).
 With the direct LiteLLM URL, key, and `LITELLM_MODEL` present in `.env`:
 
 ```bash
+bash scripts/prepare_minio_image.sh
 uv run python -m eval.runners.run_pipeline --recorded
 ```
 
