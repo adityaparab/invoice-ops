@@ -44,9 +44,15 @@ These standard OTLP variables are optional; unset means local spans are not
 exported. The [Langfuse OTLP guide](https://langfuse.com/integrations/native/opentelemetry)
 documents this endpoint, authentication, and v4 ingestion header. The API,
 invoice worker, review worker, and graph demo have independent service names.
-Only stable run, invoice, and trace identifiers plus error types are emitted;
-document content, prompts, and credentials are excluded. LLM-specific spans
-and usage are step 4.3.
+Workflow spans emit stable run, invoice, and trace identifiers plus error
+types. The gateway adds one Langfuse `generation` or `embedding` observation
+per logical model call with model, usage, latency, and a cost only if reported
+by LiteLLM. Prompt and response content, documents, vectors, credentials, and
+provider error messages remain excluded. The gateway boundary is used because
+the operator's LiteLLM deployment is configured only by its direct URL, key,
+and model names; [ADR 0009](../../adr/0009-gateway-boundary-llm-tracing.md)
+records this decision. The [Langfuse attribute mapping](https://langfuse.com/integrations/native/opentelemetry)
+defines the observation fields.
 
 The observability profile does not configure or proxy LiteLLM. The invoice
 worker continues to use only the operator's `LITELLM_API_BASE`,

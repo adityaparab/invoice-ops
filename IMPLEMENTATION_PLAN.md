@@ -131,7 +131,7 @@
 
 - [x] 4.1 Add `langfuse`, `prometheus`, `grafana` to Compose; Grafana dashboards provisioned
 - [x] 4.2 OTel spans per graph node + per tool call; exporters wired
-- [ ] 4.3 Langfuse tracing for all LLM calls (via LiteLLM callbacks)
+- [x] 4.3 Langfuse tracing for all LLM calls (gateway callback to OTLP; proxy callbacks superseded by ADR 0009)
 - [ ] 4.4 Cost/latency dashboards: LiteLLM spend logs + OTel metrics; `GET /v1/metrics` Prometheus endpoint
 - [ ] 4.5 Gateway hardening: model routing by task class + data-sensitivity tier, semantic cache, fallback chain, budget alerts
 
@@ -249,3 +249,4 @@ checkbox here.
 | 2026-09-24 | Step 3.12 adds auditor-only run trace metadata and cross-run invoice provenance, with bounded keyset cursors and repeatable-read snapshots. Run trace omits payloads while invoice provenance includes full immutable ledger evidence and version pins. Offline access/cursor tests and restricted-role Postgres tests cover both. All Phase 3 implementation steps are complete; measured confidence-gate tuning remains dependent on the Phase 5 golden-set evaluation. |
 | 2026-09-24 | Step 4.1 adds an opt-in, image-pinned Langfuse v4 stack with isolated Postgres/ClickHouse/Redis/MinIO, Prometheus, and file-provisioned Grafana. The first dashboard shows live Prometheus health; invoice metrics follow in step 4.4. Per the operator's direction, the unused Compose LiteLLM proxy, route YAML, and alternate gateway environment source are removed; runtime model traffic keeps only the direct `LITELLM_*` URL, key, and model-name variables (ADR 0008). |
 | 2026-09-24 | Step 4.2 adds sanitized OpenTelemetry parent spans for durable graph runs, every invoice/hello graph node, and the tool operations invoked by the live workflow. API and worker entry points can opt into batched OTLP/HTTP export with standard OTel endpoint/header variables; an absent endpoint leaves export disabled. Offline tests assert parent-child correlation, identifiers, error types, and exclusion of payload text. |
+| 2026-09-24 | Step 4.3 traces each gateway chat and embedding call as a Langfuse-compatible OTLP observation, carrying model identity, version pins, token usage, exact reported cost, latency, retry count, and typed errors without content. The existing direct LiteLLM endpoint remains the only model route; ADR 0009 replaces the planned proxy callback because it would require additional LiteLLM configuration. |
