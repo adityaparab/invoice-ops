@@ -60,8 +60,8 @@ backdated clock or a lower UUID at the same timestamp) requires a refresh to dis
 a fixed database snapshot must use an appropriate repeatable-read transaction for the whole read.
 
 Pydantic append/event/page contracts live in `ledger/schemas.py`; their Zod twins are in
-`frontend/src/schemas/ledger.ts`. These contracts prepare later provenance resources without adding
-those endpoints early.
+`frontend/src/schemas/ledger.ts`. The [trace and invoice provenance endpoints](PROVENANCE_API.md)
+use these bounded readers under the restricted runtime role.
 
 ## Observability and tests
 

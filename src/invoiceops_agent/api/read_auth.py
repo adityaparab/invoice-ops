@@ -41,6 +41,11 @@ def authorize_queue(role: ReadRole) -> None:
         raise HTTPException(403, "This role cannot list the operational invoice queue.")
 
 
+def authorize_auditor(role: ReadRole) -> None:
+    if role != "AUDITOR":
+        raise HTTPException(403, "Only the auditor can read full provenance.")
+
+
 def authenticate_run(request: Request, settings: ApiSettings) -> None:
     """Operational personas and the upload service may inspect bounded run progress."""
     try:

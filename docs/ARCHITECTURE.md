@@ -105,7 +105,7 @@ separate owner connection. Repositories mirror this boundary by exposing only ap
 methods. The ledger writer resolves all four version pins from environment-backed configuration,
 while allowing an agent or policy event to override the relevant component version. The reader
 uses bounded keyset pagination for both run-scoped and cross-run invoice histories, so trace and
-provenance endpoints can render a complete history without per-entry queries.
+provenance endpoints render complete history without per-entry queries.
 
 ## 7. LLM gateway boundary
 
