@@ -1,6 +1,6 @@
 # Exception decisions and four-eyes review
 
-`POST /v1/exceptions/{id}/decision` requires a persona bearer token and an
+`POST /v1/exceptions/{id}/decision` requires a login session or legacy persona bearer token and an
 `Idempotency-Key`. The JSON body contains `action` (`APPROVE`, `RETURN`, or
 `ESCALATE`), a nonblank `rationale`, an uppercase `reason_code`, and
 `proposal_id` (`null` for an analyst proposal). The token determines the

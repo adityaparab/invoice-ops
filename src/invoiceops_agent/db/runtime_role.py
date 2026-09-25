@@ -78,6 +78,7 @@ def validate_runtime_role(connection: psycopg.Connection[tuple[object, ...]]) ->
         raise RuntimeRoleError("Runtime schema privileges do not match the restricted contract")
     for table in (*OPERATIONAL_TABLES, *AUDIT_TABLES):
         _validate_table_privileges(connection, table, audit=table in AUDIT_TABLES)
+    _validate_auth_privileges(connection)
     triggers = connection.execute(
         "SELECT count(*) FROM pg_trigger t "
         "JOIN pg_class c ON c.oid = t.tgrelid "
@@ -92,6 +93,38 @@ def validate_runtime_role(connection: psycopg.Connection[tuple[object, ...]]) ->
         raise RuntimeRoleError(
             "Both append-only audit triggers must be enabled before runtime login"
         )
+
+
+def _validate_auth_privileges(connection: psycopg.Connection[tuple[object, ...]]) -> None:
+    for table, allowed in (
+        ("auth_users", ["SELECT"]),
+        ("auth_sessions", ["SELECT", "INSERT", "DELETE"]),
+    ):
+        actual = connection.execute(
+            "SELECT bool_and(has_table_privilege(%s, %s, privilege) = (privilege = ANY(%s))) "
+            "FROM unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES',"
+            "'TRIGGER']) AS privilege",
+            (RUNTIME_ROLE, f"public.{table}", allowed),
+        ).fetchone()
+        if actual != (True,):
+            raise RuntimeRoleError(f"Runtime {table} privileges are unsafe")
+        grants = connection.execute(
+            "SELECT has_table_privilege(%s, %s, "
+            "'SELECT WITH GRANT OPTION,INSERT WITH GRANT OPTION,DELETE WITH GRANT OPTION') "
+            "OR has_any_column_privilege(%s, %s, 'UPDATE WITH GRANT OPTION')",
+            (RUNTIME_ROLE, f"public.{table}", RUNTIME_ROLE, f"public.{table}"),
+        ).fetchone()
+        if grants != (False,):
+            raise RuntimeRoleError(f"Runtime {table} can delegate privileges")
+    updates = connection.execute(
+        "SELECT bool_and(has_column_privilege(%s, 'public.auth_users', a.attname, 'UPDATE') "
+        "= (a.attname = ANY(ARRAY['failed_attempts', 'locked_until']))) "
+        "FROM pg_attribute a WHERE a.attrelid = 'public.auth_users'::regclass "
+        "AND a.attnum > 0 AND NOT a.attisdropped",
+        (RUNTIME_ROLE,),
+    ).fetchone()
+    if updates != (True,):
+        raise RuntimeRoleError("Runtime auth_users column privileges are unsafe")
 
 
 def _validate_table_privileges(

@@ -16,8 +16,21 @@ const invoice = {
 test("analyst proposes and an independent manager signs off", async ({ page }) => {
   let proposed = false;
   const decisions: Array<{ token: string | null; action: string; proposal_id: string | null }> = [];
+  const analystToken = `io_${"a".repeat(64)}`;
+  const managerToken = `io_${"b".repeat(64)}`;
 
   await page.route("**/healthz", (route) => route.fulfill({ json: { status: "ok" } }));
+  await page.route("**/v1/auth/login", async (route) => {
+    const body = route.request().postDataJSON() as { email: string; password: string };
+    expect(route.request().headers()["idempotency-key"]).toMatch(/^login-/);
+    const manager = body.email === "manager@example.test";
+    expect(body.password).toBe(manager ? "synthetic-manager-password" : "synthetic-analyst-password");
+    await route.fulfill({ json: {
+      email: body.email, role: manager ? "MANAGER" : "ANALYST",
+      token: manager ? managerToken : analystToken, expires_at: "2026-09-26T12:00:00Z",
+    } });
+  });
+  await page.route("**/v1/auth/logout", (route) => route.fulfill({ json: { status: "signed_out" } }));
   await page.route("**/v1/invoices?**", (route) => route.fulfill({
     json: { items: [invoice], next_cursor: null },
   }));
@@ -53,16 +66,19 @@ test("analyst proposes and an independent manager signs off", async ({ page }) =
   });
 
   await page.goto("/queue");
-  await page.getByLabel("Persona API token").fill("synthetic-analyst-token");
+  await page.getByRole("textbox", { name: "Email" }).fill("analyst@example.test");
+  await page.getByLabel(/Password/).fill("synthetic-analyst-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByRole("button", { name: "SYN-1" }).click();
   await expect(page.getByRole("heading", { name: "Propose a decision" })).toBeVisible();
   await page.getByLabel("Rationale").fill("Synthetic discrepancy needs escalation");
   await page.getByRole("button", { name: "Submit proposal" }).click();
   await expect(page.getByText("Awaiting procurement manager signoff.")).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Workspace persona" }).click();
-  await page.getByRole("option", { name: "Dan · Procurement Manager" }).click();
-  await page.getByLabel("Persona API token").fill("synthetic-manager-token");
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("textbox", { name: "Email" }).fill("manager@example.test");
+  await page.getByLabel(/Password/).fill("synthetic-manager-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.getByRole("button", { name: "SYN-1" }).click();
   await expect(page.getByRole("heading", { name: "Independent manager signoff" })).toBeVisible();
   await page.getByLabel("Rationale").fill("Independent synthetic review confirms escalation");
@@ -70,7 +86,7 @@ test("analyst proposes and an independent manager signs off", async ({ page }) =
   await expect(page.getByText("The review worker will resume this run.")).toBeVisible();
 
   expect(decisions).toEqual([
-    { token: "Bearer synthetic-analyst-token", action: "ESCALATE", proposal_id: null },
-    { token: "Bearer synthetic-manager-token", action: "ESCALATE", proposal_id: proposalId },
+    { token: `Bearer ${analystToken}`, action: "ESCALATE", proposal_id: null },
+    { token: `Bearer ${managerToken}`, action: "ESCALATE", proposal_id: proposalId },
   ]);
 });

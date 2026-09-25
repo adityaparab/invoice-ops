@@ -14,6 +14,7 @@ from pydantic import AwareDatetime
 from starlette.responses import JSONResponse
 
 from invoiceops_agent.api.audit_reader import AuditReader, PostgresAuditReader
+from invoiceops_agent.api.auth_store import AuthStore, PostgresAuthStore, bearer_token
 from invoiceops_agent.api.context import (
     IDEMPOTENCY_KEY_PATTERN,
     RequestContext,
@@ -43,9 +44,16 @@ from invoiceops_agent.api.read_auth import (
     authenticate_run,
     authorize_auditor,
     authorize_queue,
+    session_user,
 )
 from invoiceops_agent.api.run_progress_reader import PostgresRunProgressReader, RunProgressReader
 from invoiceops_agent.api.schemas.audit import AuditRunPage
+from invoiceops_agent.api.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    LogoutResponse,
+    SessionUser,
+)
 from invoiceops_agent.api.schemas.dashboard import DashboardSummary
 from invoiceops_agent.api.schemas.decision import DecisionRequest, DecisionResponse
 from invoiceops_agent.api.schemas.email import email_request_schema
@@ -93,6 +101,7 @@ def create_app(
     audit_reader: AuditReader | None = None,
     provenance_reader: ProvenanceReader | None = None,
     eval_reader: EvalReader | None = None,
+    auth_store: AuthStore | None = None,
     webhook_clock: Callable[[], datetime] = utc_now,
 ) -> FastAPI:
     """Build a fresh app; external resources are allocated only during ASGI lifespan."""
@@ -119,6 +128,7 @@ def create_app(
         else PostgresProvenanceReader(configuration)
     )
     evals = eval_reader if eval_reader is not None else FileEvalReader(configuration)
+    authentication = auth_store if auth_store is not None else PostgresAuthStore(configuration)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -148,8 +158,42 @@ def create_app(
                 app.state.metrics = None
 
     app = FastAPI(title="InvoiceOps API", version="0.1.0", lifespan=lifespan)
+    app.state.auth_store = authentication
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
+
+    @app.post(
+        "/v1/auth/login",
+        response_model=LoginResponse,
+        tags=["auth"],
+        responses={status: {"model": ProblemDetails} for status in (400, 401, 409, 422, 503)},
+    )
+    async def login(
+        credentials: LoginRequest,
+        context: Annotated[RequestContext, Depends(get_request_context)],
+        response: Response,
+    ) -> LoginResponse:
+        if context.idempotency_key is None:
+            raise HTTPException(400, "An Idempotency-Key is required.")
+        response.headers["Cache-Control"] = "no-store"
+        return await authentication.login(
+            credentials.email, credentials.password, context.idempotency_key
+        )
+
+    @app.get("/v1/auth/me", response_model=SessionUser, tags=["auth"])
+    async def current_user(request: Request) -> SessionUser:
+        user = await session_user(request)
+        if user is None:
+            raise HTTPException(401, "A login session is required.")
+        return user
+
+    @app.post("/v1/auth/logout", response_model=LogoutResponse, tags=["auth"])
+    async def logout(request: Request) -> LogoutResponse:
+        token = bearer_token(request.headers.getlist("Authorization"))
+        if token is None or not token.startswith("io_") or len(token) != 67:
+            raise HTTPException(401, "A login session is required.")
+        await authentication.logout(token)
+        return LogoutResponse()
 
     @app.get("/v1/metrics", include_in_schema=False)
     async def prometheus_metrics() -> Response:
@@ -208,7 +252,7 @@ def create_app(
         response: Response,
         context: Annotated[RequestContext, Depends(get_request_context)],
     ) -> InvoiceUploadResponse:
-        authenticate_upload(request, configuration)
+        await authenticate_upload(request, configuration)
         if uploads.service is None:
             raise HTTPException(503, "Invoice uploads are not configured.")
         document = await parse_upload(request, configuration)
@@ -289,7 +333,7 @@ def create_app(
         request: Request,
         period_days: Annotated[int, Query(ge=1, le=90)] = 30,
     ) -> DashboardSummary:
-        if authenticate_read(request, configuration) != "MANAGER":
+        if await authenticate_read(request, configuration) != "MANAGER":
             raise HTTPException(403, "Only the procurement manager can read the dashboard.")
         return await dashboard.summary(period_days)
 
@@ -310,7 +354,7 @@ def create_app(
         limit: Annotated[int, Query(ge=1, le=100)] = 50,
         cursor: Annotated[str | None, Query(max_length=200)] = None,
     ) -> InvoicePage:
-        authorize_queue(authenticate_read(request, configuration))
+        authorize_queue(await authenticate_read(request, configuration))
         return await reads.list(
             InvoiceListQuery(
                 status=status,
@@ -331,7 +375,7 @@ def create_app(
         responses={status: {"model": ProblemDetails} for status in (401, 404, 422, 503)},
     )
     async def get_invoice(invoice_id: UUID, request: Request) -> InvoiceDetail:
-        authenticate_read(request, configuration)
+        await authenticate_read(request, configuration)
         return await reads.detail(invoice_id)
 
     @app.get(
@@ -342,7 +386,7 @@ def create_app(
         responses={status: {"model": ProblemDetails} for status in (401, 404, 422, 503)},
     )
     async def get_run_progress(run_id: UUID, request: Request) -> RunProgress:
-        authenticate_run(request, configuration)
+        await authenticate_run(request, configuration)
         return await run_progress.read(run_id)
 
     @app.get(
@@ -359,7 +403,7 @@ def create_app(
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         after_sequence: Annotated[int | None, Query(ge=1)] = None,
     ) -> AuditRunPage:
-        authorize_auditor(authenticate_read(request, configuration))
+        authorize_auditor(await authenticate_read(request, configuration))
         return await audit.for_run(
             run_id, trace_id=context.trace_id, limit=limit, after_sequence=after_sequence
         )
@@ -378,7 +422,7 @@ def create_app(
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         after_sequence: Annotated[int | None, Query(ge=1)] = None,
     ) -> RunTracePage:
-        authorize_auditor(authenticate_read(request, configuration))
+        authorize_auditor(await authenticate_read(request, configuration))
         return await provenance.for_run_trace(
             run_id, trace_id=context.trace_id, limit=limit, after_sequence=after_sequence
         )
@@ -398,7 +442,7 @@ def create_app(
         after_created_at: AwareDatetime | None = None,
         after_event_id: UUID | None = None,
     ) -> InvoiceProvenancePage:
-        authorize_auditor(authenticate_read(request, configuration))
+        authorize_auditor(await authenticate_read(request, configuration))
         if (after_created_at is None) != (after_event_id is None):
             raise HTTPException(400, "Both provenance cursor fields are required together.")
         return await provenance.for_invoice(
@@ -417,7 +461,7 @@ def create_app(
         responses={status: {"model": ProblemDetails} for status in (401, 403, 503)},
     )
     async def get_eval_reports(request: Request) -> EvalDashboard:
-        authenticate_evals(request, configuration)
+        await authenticate_evals(request, configuration)
         return await evals.dashboard()
 
     @app.post(
@@ -451,7 +495,7 @@ def create_app(
         decision: DecisionRequest,
         context: Annotated[RequestContext, Depends(get_request_context)],
     ) -> DecisionResponse:
-        role = authenticate_read(request, configuration)
+        role = await authenticate_read(request, configuration)
         if role == "AUDITOR":
             raise HTTPException(403, "Auditors cannot make exception decisions.")
         if context.idempotency_key is None:

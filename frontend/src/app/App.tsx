@@ -1,9 +1,10 @@
-import { Badge, Button, PasswordInput, Select, Text, Title } from "@mantine/core";
+import { Badge, Button, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router";
 import { fetchHealth } from "../api/health";
-import { isPersona, personaIds, personaLabels, usePersona } from "./persona";
+import { personaLabels, usePersona } from "./persona";
+import { Login } from "./Login";
 import { appRoutes, routesFor } from "./routes";
 import type { AppRoute } from "./routes";
 import styles from "./App.module.css";
@@ -40,28 +41,6 @@ function HealthStatus() {
   );
 }
 
-function PersonaSwitcher() {
-  const { persona, token, choosePersona, setToken } = usePersona();
-  return (
-    <form className={styles.personaControls} onSubmit={(event) => event.preventDefault()}>
-      <Select
-        label="Workspace persona"
-        data={personaIds.map((id) => ({ value: id, label: personaLabels[id] }))}
-        value={persona}
-        onChange={(value) => {
-          if (value && isPersona(value)) choosePersona(value);
-        }}
-      />
-      <PasswordInput
-        label={persona === "platform" ? "Service API token" : "Persona API token"}
-        description="Entered token stays in this tab only"
-        value={token}
-        onChange={(event) => setToken(event.currentTarget.value)}
-      />
-    </form>
-  );
-}
-
 function ScreenPlaceholder({ route }: { route: AppRoute }) {
   return (
     <section className={styles.placeholder} aria-labelledby="screen-title">
@@ -94,7 +73,9 @@ function GuardedScreen({ route }: { route: AppRoute }) {
 }
 
 export function App() {
-  const { persona } = usePersona();
+  const { persona, email, authenticated, loading, signOut } = usePersona();
+  if (loading) return <Text className={styles.loading}>Checking session…</Text>;
+  if (!authenticated) return <Login />;
   const available = routesFor(persona);
   const home = available[0];
   return (
@@ -107,7 +88,7 @@ export function App() {
             <Text className={styles.brandSubtitle}>Operations console</Text>
           </div>
         </div>
-        <PersonaSwitcher />
+        <Text className={styles.signedInEmail}>{email}</Text>
         <nav className={styles.nav} aria-label="Workspace">
           {available.map((route) => (
             <NavLink
@@ -121,12 +102,12 @@ export function App() {
             </NavLink>
           ))}
         </nav>
-        <Text className={styles.sidebarFootnote}>Human decisions remain auditable.</Text>
+        <Button variant="subtle" className={styles.signOut} onClick={() => { void signOut(); }}>Sign out</Button>
       </aside>
       <main className={styles.main}>
         <header className={styles.topbar}>
           <div>
-            <Text className={styles.topbarLabel}>Current persona</Text>
+            <Text className={styles.topbarLabel}>Signed in as</Text>
             <Text className={styles.topbarPersona}>{personaLabels[persona]}</Text>
           </div>
           <HealthStatus />

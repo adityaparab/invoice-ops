@@ -20,6 +20,12 @@ export function apiClient(token?: string) {
         request.headers.set("Authorization", `Bearer ${token}`);
         return request;
       },
+      onResponse({ response }) {
+        if (response.status === 401 && token.startsWith("io_")) {
+          window.dispatchEvent(new CustomEvent("invoiceops:unauthorized", { detail: token }));
+        }
+        return response;
+      },
     });
   }
   return client;

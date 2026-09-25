@@ -44,15 +44,11 @@
   font-size: 0.75rem;
 }
 
-.personaControls {
-  display: grid;
-  gap: 0.9rem;
-}
+.signedInEmail { color: #d6dfef; overflow-wrap: anywhere; }
 
-.personaControls :global(.mantine-InputWrapper-label),
-.personaControls :global(.mantine-InputWrapper-description) {
-  color: #d6dfef;
-}
+.signOut { margin-top: auto; color: #d6dfef; }
+
+.loading { padding: 2rem; }
 
 .nav {
   display: grid;

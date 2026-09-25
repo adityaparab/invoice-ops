@@ -308,6 +308,9 @@ def test_bootstrap_cli_runs_migrations_then_login_and_redacts_configuration_fail
     migration_dsn: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("INVOICEOPS_APP_PASSWORD", APP_PASSWORD)
+    for role in ("ANALYST", "MANAGER", "AUDITOR", "PLATFORM"):
+        monkeypatch.setenv(f"INVOICEOPS_{role}_EMAIL", f"{role.lower()}@example.test")
+        monkeypatch.setenv(f"INVOICEOPS_{role}_PASSWORD", f"synthetic-{role.lower()}-password")
     result = subprocess.run(
         [sys.executable, "-m", "invoiceops_agent.db.migrate"],
         cwd=ROOT,

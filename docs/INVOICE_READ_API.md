@@ -1,11 +1,11 @@
 # Invoice queue and detail reads
 
-`GET /v1/invoices` accepts bearer tokens from `INVOICEOPS_ANALYST_TOKEN` or
-`INVOICEOPS_MANAGER_TOKEN`. `GET /v1/invoices/{id}` also accepts
-`INVOICEOPS_AUDITOR_TOKEN`. The upload service token cannot read invoices.
-Role tokens must be distinct, at least 16 printable ASCII characters, and
-configured before reads are enabled. They are supplied to the API through its
-environment, including the Compose `api` service.
+`GET /v1/invoices` accepts Analyst and Manager login sessions.
+`GET /v1/invoices/{id}` also accepts an Auditor session. Legacy persona bearer
+tokens remain available to automated clients during migration; they must be
+distinct, at least 16 printable ASCII characters, and supplied through the API
+environment. Platform sessions and the upload service token cannot read invoices.
+See [local login setup](../deploy/README.md) for first-boot accounts and sessions.
 
 The queue accepts `status`, `run_status`, `source`, `exception_only`,
 `min_priority` (0–3), `limit` (1–100, default 50), and an opaque `cursor`.

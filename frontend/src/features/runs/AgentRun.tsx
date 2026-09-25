@@ -55,7 +55,6 @@ export function AgentRun() {
         </form>
         <Text className={styles.muted}>Open a run from Intake or Exception Review, or paste its ID here.</Text>
       </section>
-      {token.length === 0 && <Alert title="Token required">Enter this persona’s API token in the sidebar.</Alert>}
       {runId && token && progress.isPending && <Text>Loading run progress…</Text>}
       {runId && token && progress.isError && <Alert title="Run unavailable">{progress.error.message}</Alert>}
       {run && (

@@ -10,6 +10,7 @@ from starlette.datastructures import Headers, UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 from starlette.requests import ClientDisconnect, Request
 
+from invoiceops_agent.api.auth_store import bearer_token
 from invoiceops_agent.api.body import bounded_body_stream, validate_content_length
 from invoiceops_agent.api.settings import ApiSettings
 from invoiceops_agent.tools.documents import read_document
@@ -17,7 +18,15 @@ from invoiceops_agent.tools.ingestion_errors import DocumentTooLarge, InvalidDoc
 from invoiceops_agent.tools.ingestion_schemas import RawDocument
 
 
-def authenticate_upload(request: Request, settings: ApiSettings) -> None:
+async def authenticate_upload(request: Request, settings: ApiSettings) -> None:
+    candidate = bearer_token(request.headers.getlist("Authorization"))
+    if candidate is not None and candidate.startswith("io_"):
+        user = await request.app.state.auth_store.resolve(candidate)
+        if user is None:
+            raise HTTPException(401, "Login session is invalid or expired.")
+        if user.role != "ANALYST":
+            raise HTTPException(403, "Only the analyst can upload invoices.")
+        return
     if settings.service_token is None:
         raise HTTPException(503, "Invoice uploads are not configured.")
     supplied = request.headers.getlist("Authorization")

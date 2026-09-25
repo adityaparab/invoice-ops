@@ -19,6 +19,7 @@ Decision · Consequences.
 | [0009](0009-gateway-boundary-llm-tracing.md) | Trace model calls at the application gateway | Accepted |
 | [0010](0010-public-cache-and-gateway-hardening.md) | Explicit public caching and gateway hardening | Accepted |
 | [0011](0011-langgraph-adk-comparison.md) | Implemented LangGraph and ADK workflow comparison | Accepted |
+| [0012](0012-role-login-sessions.md) | Environment-seeded role accounts and revocable login sessions | Accepted |
 
 The cross-cutting decision summaries are linked from `README.md` §5 and
 `docs/ARCHITECTURE.md` §4.
