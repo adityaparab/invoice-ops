@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Building — Phase 5 in progress.** Golden v1.0.0 is built; pipeline evaluation remains planned.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Phase 7 polish in progress.** The live `golden/v1.0.1` baseline, ADK comparison, and demo are published.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
@@ -14,8 +14,9 @@ validation, matching, policy, and human decisions commit to the
 [transactional ledger](docs/LEDGER.md). The console has intake, review, dashboard, run, audit,
 and eval screens. Auditors can read [run traces and cross-run invoice provenance](docs/PROVENANCE_API.md).
 The [pinned Voxel51 development subset](eval/datasets/README.md) contains 32 prepared synthetic
-invoices and a checksummed preparation report. Every selected image is quality tier A under the
-versioned heuristic. The measured tier-A baseline field F1 is 0.7226; tiers B/C remain unmeasured.
+invoices and a checksummed preparation report. Its early tier-A field F1 was 0.7226. The later
+500-case [live golden-set results](#7-evaluation--metrics) use a different labeled corpus and
+versioned extraction pipeline; the two F1 values are not directly comparable.
 
 ---
 
@@ -40,7 +41,7 @@ It is deliberately built the way a bank would require it: **deterministic contro
 | Agentic & multi-step workflows, tool use, state management, orchestration (JD2 §2) | LangGraph state machine with durable execution, checkpointing, tool-calling agents |
 | `FastAPI, ADK, and internal libraries` (JD1) | FastAPI async service; ADK variant of the same agent + comparison ADR |
 | Human-in-the-loop validation, guardrails (JD2 §8) | Confidence gate with abstention → HITL exception queue; deterministic policy engine |
-| Evaluation frameworks, regression validation (JD1, JD2 §1/§4/§8) | Golden dataset with injected anomalies; eval suite runs in CI on every PR |
+| Evaluation frameworks, regression validation (JD1, JD2 §1/§4/§8) | Golden dataset with injected anomalies; committed live reports are regression-gated in CI on every PR |
 | Auditability, data lineage, Risk & Control partnership (JD2 §3/§8, JD3/JD4) | Append-only audit ledger; decision provenance (model + prompt + policy versions) |
 | Robust error handling, observability, test coverage (JD1) | Retries, idempotency, DLQ; OpenTelemetry traces per graph node; unit + integration + eval tests |
 | Financial industry / Source-to-Pay domain (JD2 role title; "financial industry is a major advantage") | The core AP workflow: 3-way match, exception handling, approval routing |
@@ -83,13 +84,11 @@ Classic OCR + RPA automated the happy path but breaks on layout variety and can'
 
 ---
 
-## 4. User Journey (summary — full detail in [docs/USER_JOURNEY.md](docs/USER_JOURNEY.md))
+## 4. User Journey (see the [invoice workflow](docs/INVOICE_WORKFLOW.md))
 
 **Happy path (straight-through):** Invoice arrives by email → agent extracts fields (VLM/OCR tool) → schema + math validation passes → 3-way match succeeds → policy checks pass → confidence ≥ threshold → auto-approve → archived with full trace → queued for payment. No human touched it; a human can reconstruct why.
 
 **Exception path (the interesting one):** Price mismatch found in 3-way match → agent gathers evidence, computes deltas, classifies exception type, drafts a recommendation → lands in Maria's queue → Maria reviews the side-by-side comparison and agent analysis → approves / returns to vendor / escalates → decision written to audit ledger with her identity → metrics update.
-
-**Working mock:** open **[`mocks/index.html`](mocks/index.html)** in any browser (self-contained, no server or internet needed). It walks through all screens — Dashboard → Intake → animated Agent Run → Exception Review with 3-way match → Audit/Trace → Evals — and both paths (auto-approve and exception) are clickable.
 
 **Video:** [watch the 3-minute-47-second live demo](docs/demo/invoiceops-demo.mp4), with [storyboard and narration](docs/DEMO_VIDEO_SCRIPT.md).
 
@@ -126,17 +125,17 @@ API push  ─────► │  dedupe · virus-scan stub · idempotency key �
                  │  AUDIT LEDGER (append-only) · POSTGRES · every decision, │
                  │  model call, tool call, prompt/policy version, human act │
                  └──────────────────────────────────────────────────────────┘
-   Cross-cutting: LLM Gateway (Project 3) for routing/caching/guardrails ·
+   Cross-cutting: gateway client over the configured LiteLLM proxy ·
                   OpenTelemetry + Langfuse tracing · Grafana dashboards
 ```
 
-**Stack:** Python 3.12 · LangGraph (+ Google ADK variant) · FastAPI (async) · PostgreSQL + pgvector (ERP-sim + ledger) · Surya/Marker or Qwen-VL for document extraction · Pydantic v2 for schema contracts · Docker Compose · GitHub Actions (unit → integration → **eval gate**) · OpenTelemetry + Langfuse + Grafana.
+**Stack:** Python 3.12 · LangGraph (+ Google ADK variant) · FastAPI (async) · PostgreSQL + pgvector (ERP-sim + ledger) · LiteLLM-routed vision extraction · Pydantic v2 for schema contracts · Docker Compose · GitHub Actions (unit → integration → **eval gate**) · OpenTelemetry + Langfuse + Grafana.
 
 **Key design decisions (ADRs live in [`adr/`](adr/)):**
 
 1. **Determinism at the edges, intelligence in the middle.** Matching and policy are deterministic code; the LLM handles extraction, classification, and evidence summarization. This is what makes the system auditable. — [ADR 0001](adr/0001-deterministic-matcher-policy.md)
 2. **Confidence gate with abstention.** Below threshold τ the system *must* escalate rather than guess — tuning τ is an eval-driven decision, documented as an experiment. — [ADR 0003](adr/0003-composite-confidence-gate.md)
-3. **ADK and LangGraph variants of the same graph**, with an ADR comparing developer ergonomics, checkpointing, observability, and cloud fit — demonstrating framework judgment, not framework loyalty. — [ADR 0002](adr/0002-langgraph-primary-adk-variant.md)
+3. **ADK and LangGraph variants of the same graph**, with a [measured comparison](adr/0011-langgraph-adk-comparison.md) of recovery, human review, observability, ergonomics, cloud fit, and live quality — [ADR 0002](adr/0002-langgraph-primary-adk-variant.md), [ADR 0011](adr/0011-langgraph-adk-comparison.md)
 4. **Every LLM call goes through the LLM Gateway**: model routing by task class and data-sensitivity tier, public-data semantic caching, PII redaction, token budgets, cost telemetry. — [ADR 0005](adr/0005-gateway-only-model-traffic.md), [ADR 0008](adr/0008-direct-litellm-environment.md), [ADR 0010](adr/0010-public-cache-and-gateway-hardening.md) (one guarded client using the configured LiteLLM endpoint)
 5. **Synthetic data only**, generated with known ground truth — itself a talking point about data governance in banking. — [ADR 0006](adr/0006-synthetic-data-anomalies.md)
 6. **Append-only audit ledger** with point-in-time version pinning — [ADR 0004](adr/0004-append-only-ledger.md) · **deterministic replay in tests** via recorded LLM cassettes — [ADR 0007](adr/0007-vcr-cassettes.md)
@@ -152,18 +151,41 @@ API push  ─────► │  dedupe · virus-scan stub · idempotency key �
 
 ---
 
-## 7. Evaluation & Metrics (summary — details in [docs/EVALUATION.md](docs/EVALUATION.md))
+## 7. Evaluation & Metrics (method in [docs/EVALUATION.md](docs/EVALUATION.md))
 
-| Metric | Target | Definition |
-|---|---|---|
-| Straight-through processing (STP) rate | ≥ 70% | % of invoices auto-approved with zero human touch |
-| Exception detection F1 | ≥ 0.98 recall, ≤ 0.05 false-escalation | Against injected anomalies, per type + macro |
-| Extraction field F1 | ≥ 0.95 | Per-field exact match over golden labels (vendor, IBAN, amounts, dates, line items) |
-| Cost per invoice | ≤ $0.04 | Tokens × unit price, averaged over the golden set |
-| p95 latency | ≤ 45s | Auto-approve path, end-to-end |
-| Audit reconstruction time | ≤ 1 min | From invoice ID → complete decision provenance |
+The `golden/v1.0.1` corpus has 500 labeled synthetic invoices. Each variant completed three
+independent 500-case live Compose runs. The primary scorer uses the first complete run for
+quality and proxy-reported cost, then pools audited auto-approval latencies across all three.
+The [LangGraph/OpenAI production report](eval/reports/golden-v1.0.1-openai-prod.json) is the
+release baseline; the [ADK/Gemini report](eval/reports/golden-v1.0.1-adk-gemini.json) is a
+separate comparison. The thresholds below were not changed for the comparison.
 
-The eval suite is a **CI gate**: pull requests fail if any metric regresses beyond tolerance. Version-over-version results are published as a report (the "experiment log") — the flagship written artifact of this project.
+| Primary measure | Floor | LangGraph / OpenAI routes | ADK / Gemini route |
+| --- | ---: | ---: | ---: |
+| Exception recall | ≥ 98% | 149/150 · 99.33% | 150/150 · 100% |
+| Clean false escalation | ≤ 5% | 10/300 · 3.33% | 1/300 · 0.33% |
+| Field F1 | ≥ 95% | 97.32% | 97.80% |
+| Money-field F1 | ≥ 97% | 99.13% | 99.38% |
+| Routing accuracy | ≥ 95% | 440/450 · 97.78% | 449/450 · 99.78% |
+| Clean straight-through approval | ≥ 70% | 290/300 · 96.67% | 299/300 · 99.67% |
+| LiteLLM-reported cost per invoice | ≤ $0.04 | $0.00122339726 · 500/500 covered | $0.00 reported · 500/500 covered † |
+| Audited auto-approval p95 | ≤ 45 s | 30.872508 s · 875 observations | 7.713483 s · 895 observations |
+
+All eight reported numeric values meet their floors. † LiteLLM returned zero cost for every
+ADK/Gemini invoice in all three runs, so actual provider spend is unverified; the zero is a
+proxy value, not a savings claim. The ADK run also changed extraction and triage model routes.
+Metric differences therefore describe the whole variant and cannot isolate a framework effect.
+These synthetic results do not estimate accuracy on real vendor traffic. The goal of audit
+reconstruction within one minute has no measured timing result yet.
+
+The [LangGraph diagnostics](eval/reports/diagnostics-golden-v1.0.1-openai-prod.json) and
+[ADK diagnostics](eval/reports/diagnostics-golden-v1.0.1-adk-gemini.json) show anomaly confusion,
+field breakdowns, and threshold sweeps. [ADR 0011](adr/0011-langgraph-adk-comparison.md)
+documents the comparison and limits; the [experiment log](eval/reports/experiment-log-v1.json)
+records the decisions. CI compares
+committed complete `openai-prod` reports against the main-branch release baseline and enforces
+the existing floors and regression tolerance. Live model evaluations run separately; CI does
+not call the provider on each PR.
 
 ---
 
@@ -179,52 +201,25 @@ The eval suite is a **CI gate**: pull requests fail if any metric regresses beyo
 
 ---
 
-## 9. Repository Layout (planned)
+## 9. Repository Layout
 
-```
-InvoiceOps/
-├── README.md                  # this document
-├── docs/
-│   ├── USER_JOURNEY.md        # personas + step-by-step journeys
-│   ├── ARCHITECTURE.md        # components, state machine, APIs, data model
-│   ├── EVALUATION.md          # golden dataset, metrics, CI harness
-│   └── DEMO_VIDEO_SCRIPT.md   # 3–4 min video storyboard + narration
-├── mocks/
-│   └── index.html             # interactive working mock (open in browser)
-├── src/invoiceops_agent/      # installable Python package; component boundaries below
-│   ├── api/                   # FastAPI app, routes, dependencies
-│   ├── graph/                 # LangGraph definition + ADK variant
-│   │   ├── nodes/             # extract, validate, match, policy, gate, triage
-│   │   └── state.py           # typed graph state (Pydantic)
-│   ├── agents/                # extraction agent, triage agent (tool-using)
-│   ├── tools/                 # OCR/VLM tool, ERP repo, policy engine, dedupe
-│   ├── ledger/                # append-only audit ledger writer/reader
-│   ├── gateway_client/        # LLM Gateway SDK (Project 3)
-│   └── obs/                   # OTel setup, trace exporters
-├── eval/
-│   ├── golden/                # labeled dataset + anomaly catalog
-│   ├── runners/               # metric implementations
-│   └── reports/               # versioned HTML/MD eval reports
-├── tests/                     # unit + integration (testcontainers)
-├── deploy/                    # Docker Compose, Grafana dashboards, seed data
-├── adr/                       # Architecture Decision Records
-└── .github/workflows/ci.yml   # lint → test → eval gate → build
-```
+| Path | Responsibility |
+| --- | --- |
+| [`src/invoiceops_agent/`](src/invoiceops_agent/) | API, LangGraph/ADK orchestration, agents, deterministic tools, ledger, gateway client, and observability |
+| [`frontend/`](frontend/) | React operations console and browser smoke |
+| [`eval/golden/`](eval/golden/) and [`eval/reports/`](eval/reports/) | Versioned labels, live primary/diagnostic JSON reports, and experiment log |
+| [`tests/`](tests/) | Offline unit and Docker-backed integration tests |
+| [`compose.yaml`](compose.yaml) and [`deploy/`](deploy/) | Local stack, images, database setup, and observability configuration |
+| [`docs/`](docs/) and [`adr/`](adr/) | Contracts, evaluation method, demo, and architecture decisions |
+| [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Lint, strict types, tests, builds, Compose/browser smoke, and report gate |
 
 ---
 
-## 10. Build Plan (from here)
+## 10. Implementation Status
 
-| Phase | Duration | Exit criteria |
-|---|---|---|
-| **P0 — Platform skeleton** | Week 1 | FastAPI + Postgres + LangGraph hello-path in Docker Compose; CI green |
-| **P1 — Extraction & validation** | Weeks 2–3 | Voxel51 subset processed; extraction field F1 measured; ledger records every step |
-| **P2 — 3-way match + policy** | Week 4 | Synthetic ERP; deterministic checks; exception taxonomy implemented |
-| **P3 — HITL + triage agent** | Week 5 | Review queue UI; decisions written to ledger; confidence gate tuned via eval |
-| **P4 — Observability + gateway integration** | Week 6 | OTel traces per node; cost/latency dashboards; routed through LLM Gateway |
-| **P5 — Eval harness + report** | Weeks 7–8 | 500-invoice golden set; CI eval gate; published v0.1→v0.3 experiment report |
-| **P6 — ADK variant + ADR** | Week 9 | Same graph in ADK; comparison ADR written |
-| **P7 — Polish** | Week 10 | Recorded demo video; README with metrics tables; blog-post draft |
+Phases 0–6 are complete. Phase 7 has a [recorded demo](docs/demo/invoiceops-demo.mp4)
+and the measured results above; the experiment-log narrative is the remaining polish step.
+The checked steps, dates, and progress notes live in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
 ---
 
@@ -244,11 +239,12 @@ InvoiceOps/
 | File | Purpose |
 |---|---|
 | [`README.md`](README.md) | This master project description |
-| [`docs/USER_JOURNEY.md`](docs/USER_JOURNEY.md) | Personas and step-by-step user journeys (all paths) |
+| [`docs/INVOICE_WORKFLOW.md`](docs/INVOICE_WORKFLOW.md) | Invoice graph route and review behavior |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Components, LangGraph state machine, API design, data model, observability |
 | [`docs/EVALUATION.md`](docs/EVALUATION.md) | Golden dataset design, anomaly catalog, metrics, CI eval harness |
 | [`docs/DEMO_VIDEO_SCRIPT.md`](docs/DEMO_VIDEO_SCRIPT.md) | Storyboard and narration for the demo video |
-| [`mocks/index.html`](mocks/index.html) | **Interactive working mock** — the user journey, clickable, in one self-contained file |
+| [`docs/demo/invoiceops-demo.mp4`](docs/demo/invoiceops-demo.mp4) | 3-minute-47-second live browser recording |
+| [`eval/reports/golden-v1.0.1-openai-prod.json`](eval/reports/golden-v1.0.1-openai-prod.json) | Complete production-route live baseline |
 
 ---
 
@@ -281,13 +277,15 @@ See [local platform setup](deploy/README.md) for credentials, persistent volumes
 and the optional observability profile. Run `docker compose run --rm graph-demo` for the durable
 LangGraph hello path; [graph demo instructions](docs/GRAPH_HELLO.md) cover replay and resume. See
 [invoice ingestion instructions](docs/INGESTION.md) for multipart uploads, the signed webhook,
-limits, and durable replay. Accepted invoices remain queued until full graph wiring in Phase 2.
+limits, and durable replay. Accepted invoices queue for the invoice worker; the
+[pipeline runner](eval/runners/README.md) exercises API intake, worker processing, and audit
+readback through the real stack.
 GitHub Actions runs linting, formatting, strict type checking, offline unit tests, real pgvector and
-MinIO tests through disposable Testcontainers, a package build, and a Compose startup/health smoke
-on every PR and push to `main`.
+MinIO tests through disposable Testcontainers, a package build, and Compose/browser smoke on
+every PR and push to `main`. Pull requests also run the committed-report golden gate.
 To run the infrastructure tests locally, prepare the MinIO image, start Docker,
 and run `uv run pytest -m integration`.
-The model evaluation gate is planned in Phase 5; these tests make no live model calls.
+The CI report gate uses committed live evaluation evidence and makes no live model calls itself.
 
 Database migrations run with a separate owner connection in `INVOICEOPS_MIGRATION_DSN`:
 `uv run alembic upgrade head`. The Compose `migrate` service additionally provisions the restricted
@@ -303,7 +301,7 @@ require a compatible route and trusted document preprocessing.
 
 Layout, quality bar, and workflow rules for agents and contributors live in [`AGENTS.md`](AGENTS.md); the build tracker is [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
-The [extraction agent](docs/EXTRACTION.md) now provides bounded document preparation, typed
+The [extraction agent](docs/EXTRACTION.md) provides bounded document preparation, typed
 per-field observations, one technical schema-repair pass, and committed audit outcomes through
-the gateway. It is a library seam; queued invoices are not automatically processed, and live
-extraction evaluation remains deferred.
+the gateway. The worker invokes it inside the durable invoice graph; the complete live
+golden-set measurements are linked above.
