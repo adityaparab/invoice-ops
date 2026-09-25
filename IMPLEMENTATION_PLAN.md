@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for building the system described in `README.md`, `docs/ARCHITECTURE.md`, and `docs/EVALUATION.md`. Work through phases top-to-bottom; check off steps as they complete. Update the status tables at the bottom as phases finish.
 >
-> **Last updated:** 2026-09-24 (Phase 5 in progress)
+> **Last updated:** 2026-09-25 (all phases complete)
 
 ---
 
@@ -168,7 +168,7 @@
 
 - [x] 7.1 Record 3–4 min demo video following `docs/DEMO_VIDEO_SCRIPT.md`
 - [x] 7.2 README: replace planned-metrics tables with measured results
-- [ ] 7.3 Blog-post draft (the "experiment log" narrative)
+- [x] 7.3 Blog-post draft (the "experiment log" narrative)
 
 ---
 
@@ -199,7 +199,7 @@ checkbox here.
 | P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
 | P5 — Eval harness + CI gate    | Complete    | 2026-09-24   | Three independent 500-case live runs passed all eight floors; audited p95 30.87s, complete cost evidence, and CI gate activated |
 | P6 — ADK variant + ADR         | Complete    | 2026-09-25   | ADK graph, comparison ADR, and three independent 500-case Gemini-route evals; cost reporting caveat documented |
-| P7 — Polish                    | In progress | —            | Live demo and measured README published; experiment-log narrative remains |
+| P7 — Polish                    | Complete    | 2026-09-25   | Live demo, measured README, and evidence-linked experiment-log blog draft published |
 
 
 
@@ -223,6 +223,7 @@ checkbox here.
 | 2026-09-25 | Step 6.3 completes Phase 6: three fresh 500-case ADK/Gemini runs passed the existing eight numeric floors. ADR 0011 and versioned reports compare the whole variant with the LangGraph/OpenAI baseline; zero LiteLLM-reported Gemini cost leaves actual provider spend unverified. |
 | 2026-09-25 | Step 7.1 records and narrates a 3-minute-47-second live Compose/browser demo with a synthetic price-mismatch invoice, durable run, two-person escalation, append-only audit view, and committed ADK evaluation report. The storyboard and MP4 are versioned together. |
 | 2026-09-25 | Step 7.2 replaces planned README metrics with the measured eight-floor LangGraph/OpenAI and ADK/Gemini reports, explains the three-run scoring method and Gemini cost caveat, and removes stale build claims and broken links. |
+| 2026-09-25 | Step 7.3 completes Phase 7 and the plan: the blog draft traces measured failures, corrective experiments, the three-run release baseline, ADK comparison, and unresolved evidence limits with links to versioned reports and the live demo. |
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
 | 2026-09-23 | Step 1.4 adds transactional append-only ledger writes, explicit version pins, and bounded run/invoice history reads. Real restricted-role tests verify atomic rollback, concurrent sequencing, immutable corrections, and pagination; all 157 offline units and 40 integrations pass. |
 | 2026-09-23 | Step 1.8 pins and prepares 32 annotated synthetic Voxel51 invoices with checksummed inputs, deterministic selection, metadata-free PNGs, and versioned quality proxies. All selected images are tier A; B/C coverage and extraction quality remain unmeasured. Immutable artifacts reproduce byte-for-byte with the recorded toolchain. |
