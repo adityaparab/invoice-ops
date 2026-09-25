@@ -1,5 +1,6 @@
 """Database-backed login sessions; only token digests are persisted."""
 
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -68,7 +69,9 @@ class PostgresAuthStore:
                         (normalized,),
                     )
                 ).fetchone()
-                valid = verify_password(password, row["password_hash"] if row else None)
+                valid = await asyncio.to_thread(
+                    verify_password, password, row["password_hash"] if row else None
+                )
                 now = self._clock()
                 if row is None or (row["locked_until"] is not None and row["locked_until"] > now):
                     raise HTTPException(401, "Invalid email or password.")
