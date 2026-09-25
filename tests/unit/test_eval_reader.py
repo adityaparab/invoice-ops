@@ -32,6 +32,9 @@ async def test_committed_reports_distinguish_measured_development_evidence() -> 
     assert next(row for row in improved.metrics if row.key == "exception_recall").value == 1
     assert next(row for row in improved.metrics if row.key == "cost_per_invoice_usd").value > 0
     assert any("partial" in caveat.lower() for caveat in improved.caveats)
+    adk = reports["golden-adk-gemini-comparison-v1"]
+    assert next(row for row in adk.metrics if row.key == "exception_recall").value == 1
+    assert any("provider spend" in caveat for caveat in adk.caveats)
     report = reports["extraction-baseline-v1"]
     assert report.report_version == "extraction-baseline@v1"
     assert report.metrics[0].key == "micro-f1"

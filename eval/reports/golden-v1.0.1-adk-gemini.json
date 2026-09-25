@@ -1,0 +1,100 @@
+{
+  "version": "primary-metrics@v2",
+  "dataset_version": "golden/v1.0.1",
+  "manifest_sha256": "329946ee4d1784a5ae605e114ce13c536ac4e952dcda16b62c63169dee5393f6",
+  "mode": "live",
+  "model_class": "adk-gemini",
+  "model_versions": [
+    "gemini-embedding",
+    "gemini25flash"
+  ],
+  "report_count": 3,
+  "sample_count": 500,
+  "complete_suite": true,
+  "scored_at": "2026-09-25T01:42:11.171398Z",
+  "metrics": [
+    {
+      "key": "exception_recall",
+      "target": "0.98",
+      "direction": "min",
+      "value": "1",
+      "numerator": 150,
+      "denominator": 150,
+      "sample_count": 150,
+      "evidence_count": 150
+    },
+    {
+      "key": "false_escalation_rate",
+      "target": "0.05",
+      "direction": "max",
+      "value": "0.003333333333333333333333333333",
+      "numerator": 1,
+      "denominator": 300,
+      "sample_count": 300,
+      "evidence_count": 300
+    },
+    {
+      "key": "field_f1",
+      "target": "0.95",
+      "direction": "min",
+      "value": "0.9780219780219780219780219780",
+      "numerator": 14240,
+      "denominator": 14560,
+      "sample_count": 480,
+      "evidence_count": 453
+    },
+    {
+      "key": "money_field_f1",
+      "target": "0.97",
+      "direction": "min",
+      "value": "0.9938257489137891607592042076",
+      "numerator": 4346,
+      "denominator": 4373,
+      "sample_count": 480,
+      "evidence_count": 453
+    },
+    {
+      "key": "routing_accuracy",
+      "target": "0.95",
+      "direction": "min",
+      "value": "0.9977777777777777777777777778",
+      "numerator": 449,
+      "denominator": 450,
+      "sample_count": 450,
+      "evidence_count": 450
+    },
+    {
+      "key": "stp_rate",
+      "target": "0.70",
+      "direction": "min",
+      "value": "0.9966666666666666666666666667",
+      "numerator": 299,
+      "denominator": 300,
+      "sample_count": 300,
+      "evidence_count": 300
+    },
+    {
+      "key": "cost_per_invoice_usd",
+      "target": "0.04",
+      "direction": "max",
+      "value": "0.0",
+      "numerator": null,
+      "denominator": null,
+      "sample_count": 500,
+      "evidence_count": 500
+    },
+    {
+      "key": "p95_latency_seconds",
+      "target": "45",
+      "direction": "max",
+      "value": "7.713483",
+      "numerator": null,
+      "denominator": null,
+      "sample_count": 900,
+      "evidence_count": 895
+    }
+  ],
+  "caveats": [
+    "LiteLLM reported zero cost for the Gemini route; actual provider spend is not established."
+  ]
+}

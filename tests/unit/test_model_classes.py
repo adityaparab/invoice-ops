@@ -59,3 +59,23 @@ def test_comparison_rejects_wrong_class_and_changed_targets() -> None:
     modified = production.model_copy(update={"metrics": (first, *production.metrics[1:])})
     with pytest.raises(ModelClassComparisonError, match="target"):
         compare_model_classes(local, modified, local_sha256="a" * 64, prod_sha256="b" * 64)
+
+
+def test_adk_gemini_zero_reported_cost_is_qualified() -> None:
+    sample = _sample()
+    record = _record(sample, route="AUTO_APPROVE", embedding_cost="0")
+    evidence = dict(record.detail.evidence)
+    extraction = dict(evidence["extraction.completed"])
+    result = extraction["result"]
+    assert isinstance(result, dict)
+    extraction["result"] = {**result, "calls": [{"cost_usd": "0"}]}
+    evidence["extraction.completed"] = extraction
+    zero_cost = record.model_copy(
+        update={"detail": record.detail.model_copy(update={"evidence": evidence})}
+    )
+    pipeline = _report((zero_cost,), offset_minutes=0).model_copy(
+        update={"model_class": "adk-gemini"}
+    )
+    scored = score_primary_metrics(MANIFEST, MANIFEST_SHA, (pipeline,))
+    assert scored.model_class == "adk-gemini"
+    assert any("actual provider spend is not established" in note for note in scored.caveats)
