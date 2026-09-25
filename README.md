@@ -91,7 +91,7 @@ Classic OCR + RPA automated the happy path but breaks on layout variety and can'
 
 **Working mock:** open **[`mocks/index.html`](mocks/index.html)** in any browser (self-contained, no server or internet needed). It walks through all screens — Dashboard → Intake → animated Agent Run → Exception Review with 3-way match → Audit/Trace → Evals — and both paths (auto-approve and exception) are clickable.
 
-**Video:** a 3–4 minute recorded demo following [docs/DEMO_VIDEO_SCRIPT.md](docs/DEMO_VIDEO_SCRIPT.md) (script written; recording happens when the real system is live).
+**Video:** [watch the 3-minute-47-second live demo](docs/demo/invoiceops-demo.mp4), with [storyboard and narration](docs/DEMO_VIDEO_SCRIPT.md).
 
 ---
 
