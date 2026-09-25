@@ -29,3 +29,6 @@ running the same golden-set eval against both.
   port measures framework differences, not duplicated-code drift.
 - Cost: a second implementation to maintain through Phase 6; after the ADR, the variant
   is frozen (evaluation artifact, not a parallel product).
+
+The implementation comparison and reaffirmed decision are recorded in
+[ADR 0011](0011-langgraph-adk-comparison.md).
