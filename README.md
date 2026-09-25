@@ -2,7 +2,7 @@
 
 **An agentic, human-in-the-loop invoice processing system for Source-to-Pay — built as a production-honest, scaled-down version of what an enterprise GenAI platform team ships at a bank.**
 
-> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Phase 7 polish in progress.** The live `golden/v1.0.1` baseline, ADK comparison, and demo are published.
+> Portfolio Project 1 of 3 · Target roles: Citi Lead Python AI Principal Engineer / Gen AI Transformation Lead (Source-to-Pay) · Status: **Implementation plan complete.** The live `golden/v1.0.1` baseline, ADK comparison, demo, and experiment narrative are published.
 
 The working foundation includes a health-checked FastAPI shell, Postgres/pgvector and MinIO in
 Docker Compose, reversible schema migrations, append-only audit tables with a restricted API
@@ -91,6 +91,8 @@ Classic OCR + RPA automated the happy path but breaks on layout variety and can'
 **Exception path (the interesting one):** Price mismatch found in 3-way match → agent gathers evidence, computes deltas, classifies exception type, drafts a recommendation → lands in Maria's queue → Maria reviews the side-by-side comparison and agent analysis → approves / returns to vendor / escalates → decision written to audit ledger with her identity → metrics update.
 
 **Video:** [watch the 3-minute-47-second live demo](docs/demo/invoiceops-demo.mp4), with [storyboard and narration](docs/DEMO_VIDEO_SCRIPT.md).
+
+**Experiment narrative:** [read the blog-post draft](docs/EXPERIMENT_LOG_BLOG_DRAFT.md).
 
 ---
 
@@ -217,9 +219,10 @@ not call the provider on each PR.
 
 ## 10. Implementation Status
 
-Phases 0–6 are complete. Phase 7 has a [recorded demo](docs/demo/invoiceops-demo.mp4)
-and the measured results above; the experiment-log narrative is the remaining polish step.
-The checked steps, dates, and progress notes live in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+All seven phases are complete. The deliverables include the
+[recorded demo](docs/demo/invoiceops-demo.mp4), measured results above, and an
+[experiment-log blog draft](docs/EXPERIMENT_LOG_BLOG_DRAFT.md). The checked steps, dates,
+and progress notes live in [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
 ---
 
@@ -244,6 +247,7 @@ The checked steps, dates, and progress notes live in [`IMPLEMENTATION_PLAN.md`](
 | [`docs/EVALUATION.md`](docs/EVALUATION.md) | Golden dataset design, anomaly catalog, metrics, CI eval harness |
 | [`docs/DEMO_VIDEO_SCRIPT.md`](docs/DEMO_VIDEO_SCRIPT.md) | Storyboard and narration for the demo video |
 | [`docs/demo/invoiceops-demo.mp4`](docs/demo/invoiceops-demo.mp4) | 3-minute-47-second live browser recording |
+| [`docs/EXPERIMENT_LOG_BLOG_DRAFT.md`](docs/EXPERIMENT_LOG_BLOG_DRAFT.md) | Evidence-linked account of the development and release experiments |
 | [`eval/reports/golden-v1.0.1-openai-prod.json`](eval/reports/golden-v1.0.1-openai-prod.json) | Complete production-route live baseline |
 
 ---
