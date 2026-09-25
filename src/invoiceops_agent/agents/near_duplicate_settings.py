@@ -58,6 +58,25 @@ class LiteLLMWorkflowSettings(LiteLLMEmbeddingSettings):
     triage_public_model: Version | None = None
     triage_fallback_model: Version | None = None
     triage_public_fallback_model: Version | None = None
+    adk_model: Version | None = None
+
+    def adk_gateway_settings(self) -> GatewaySettings:
+        """Route ADK variant intelligence to a named Gemini alias on the same proxy."""
+        if self.adk_model is None:
+            raise ValueError("LITELLM_ADK_MODEL is required for the ADK workflow")
+        settings = self.gateway_settings()
+        aliases = dict(settings.aliases)
+        for alias in ("extract-vision", "triage-reasoner"):
+            aliases[alias] = aliases[alias].model_copy(
+                update={
+                    "model_name": self.adk_model,
+                    "model_version": self.adk_model,
+                    "public_model_name": None,
+                    "fallback_model_name": None,
+                    "public_fallback_model_name": None,
+                }
+            )
+        return settings.model_copy(update={"aliases": aliases})
 
     def gateway_settings(self) -> GatewaySettings:
         vision_model = self.extract_model or self.model

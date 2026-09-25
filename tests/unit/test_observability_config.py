@@ -45,6 +45,7 @@ def test_optional_observability_services_are_pinned_and_isolated() -> None:
         "LITELLM_API_BASE",
         "LITELLM_MASTER_KEY",
         "LITELLM_MODEL",
+        "LITELLM_ADK_MODEL",
         "LITELLM_EXTRACT_MODEL",
         "LITELLM_TRIAGE_MODEL",
         "LITELLM_EMBED_MODEL",

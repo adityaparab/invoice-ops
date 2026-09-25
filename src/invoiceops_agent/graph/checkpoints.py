@@ -8,10 +8,13 @@ from contextlib import asynccontextmanager
 from uuid import UUID
 
 import psycopg
+from google.adk.sessions import DatabaseSessionService
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from psycopg.rows import DictRow, dict_row
 
+from invoiceops_agent.graph.adk_invoice import build_adk_invoice_workflow
+from invoiceops_agent.graph.adk_runner import APP_NAME, USER_ID, AdkInvoiceRunner
 from invoiceops_agent.graph.errors import CheckpointUnavailable, RunInProgress
 from invoiceops_agent.graph.hello import build_hello_graph
 from invoiceops_agent.graph.invoice import build_invoice_graph
@@ -145,3 +148,42 @@ async def postgres_invoice_graph(
             PostgresRunLock(connection),
             timeout_seconds=settings.invoice_graph_timeout_seconds,
         )
+
+
+@asynccontextmanager
+async def postgres_adk_invoice_graph(
+    settings: GraphSettings, nodes: InvoiceNodes
+) -> AsyncIterator[AdkInvoiceRunner]:
+    """Keep ADK sessions in an isolated Postgres schema with the shared run lock."""
+    dsn = settings.checkpoint_dsn.get_secret_value()
+    if dsn.startswith("postgres://"):
+        dsn = "postgresql://" + dsn.removeprefix("postgres://")
+    try:
+        connection = await psycopg.AsyncConnection.connect(
+            dsn, autocommit=True, row_factory=dict_row, connect_timeout=5
+        )
+    except psycopg.Error as error:
+        raise CheckpointUnavailable("ADK checkpoint connection failed") from error
+    async with connection:
+        sessions = DatabaseSessionService(
+            dsn.replace("postgresql://", "postgresql+psycopg://", 1),
+            connect_args={"options": "-c search_path=adk"},
+        )
+        setup_key = _lock_key("invoiceops:adk:setup")
+        try:
+            await connection.execute("SELECT pg_advisory_lock(%s)", (setup_key,))
+            try:
+                await connection.execute("CREATE SCHEMA IF NOT EXISTS adk")
+                await sessions.get_session(
+                    app_name=APP_NAME, user_id=USER_ID, session_id="schema-setup"
+                )
+            finally:
+                await connection.execute("SELECT pg_advisory_unlock(%s)", (setup_key,))
+            yield AdkInvoiceRunner(
+                build_adk_invoice_workflow(nodes),
+                sessions,
+                PostgresRunLock(connection),
+                timeout_seconds=settings.invoice_graph_timeout_seconds,
+            )
+        finally:
+            await sessions.db_engine.dispose()

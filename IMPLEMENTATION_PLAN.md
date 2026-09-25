@@ -156,7 +156,7 @@
 
 **Exit criteria:** same graph in ADK; comparison ADR written.
 
-- [ ] 6.1 Port the state machine to Google ADK (Gemini as the ADK-side model)
+- [x] 6.1 Port the state machine to Google ADK (Gemini as the ADK-side model)
 - [ ] 6.2 Comparison ADR: checkpointing, durable execution, HITL support, observability, developer ergonomics, cloud fit
 - [ ] 6.3 Run the eval suite against the ADK variant; include results in the ADR
 
