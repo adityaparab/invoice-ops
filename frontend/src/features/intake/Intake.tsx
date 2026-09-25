@@ -1,4 +1,4 @@
-import { Alert, Button, FileInput, PasswordInput, Progress, Text, Title } from "@mantine/core";
+import { Alert, Button, FileInput, Progress, Text, Title } from "@mantine/core";
 import { useState } from "react";
 import { Link } from "react-router";
 import { ApiError } from "../../api/client";
@@ -15,7 +15,6 @@ function errorMessage(error: unknown): string {
 
 export function Intake() {
   const { token: analystToken } = usePersona();
-  const [serviceToken, setServiceToken] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const { mutation, progress, cancel } = useUploadInvoice();
   const result = mutation.data;
@@ -31,21 +30,12 @@ export function Intake() {
       <section className={styles.card} aria-labelledby="upload-title">
         <Title order={3} id="upload-title">Upload invoice</Title>
         <Text className={styles.muted}>
-          Uploads use the separate service token. Enter Maria’s persona token in the sidebar to
-          read the invoice’s current status after submission.
+          Your analyst login authorizes the upload and lets you follow its status.
         </Text>
         <form className={styles.form} onSubmit={(event) => {
           event.preventDefault();
-          if (file && serviceToken) mutation.mutate({ file, token: serviceToken });
+          if (file) mutation.mutate({ file, token: analystToken });
         }}>
-          <PasswordInput
-            label="Upload service token"
-            description="Kept in this tab’s memory only"
-            value={serviceToken}
-            onChange={(event) => setServiceToken(event.currentTarget.value)}
-            disabled={mutation.isPending}
-            required
-          />
           <FileInput
             label="Invoice document"
             description="PDF, PNG, or JPEG"
@@ -67,7 +57,7 @@ export function Intake() {
             </div>
           )}
           {mutation.isError && <Alert title="Upload rejected">{errorMessage(mutation.error)}</Alert>}
-          <Button type="submit" disabled={!file || !serviceToken || mutation.isPending}>
+          <Button type="submit" disabled={!file || mutation.isPending}>
             {mutation.isPending ? "Uploading…" : "Upload invoice"}
           </Button>
         </form>
@@ -85,9 +75,6 @@ export function Intake() {
             <div><dt>Run ID</dt><dd>{result.run_id}</dd></div>
             <div><dt>Ingest response</dt><dd>{result.status}</dd></div>
           </dl>
-          {analystToken.length === 0 && (
-            <Text>Enter Maria’s persona token in the sidebar to load the current status.</Text>
-          )}
           {status.isPending && analystToken.length > 0 && <Text>Loading current status…</Text>}
           {status.isError && <Alert title="Status unavailable">{errorMessage(status.error)}</Alert>}
           {status.data && (

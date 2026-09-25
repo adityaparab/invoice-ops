@@ -283,7 +283,6 @@ export function ExceptionReview() {
         <Title order={2}>Exception Review</Title>
         <Text className={styles.muted}>Inspect audited evidence and record a two-person decision.</Text>
       </div>
-      {token.length === 0 && <Alert title="Persona token required">Enter this persona’s API token in the sidebar.</Alert>}
       {token.length > 0 && <Queue token={token} onSelect={setSelectedId} selectedId={selectedId} />}
       {selectedId && token.length > 0 && (
         <section aria-label="Invoice detail">

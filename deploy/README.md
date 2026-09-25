@@ -5,16 +5,34 @@ release binary after verifying its published SHA-256 against a checked-in digest
 the small base image is digest-pinned. Python runs as a non-root user;
 the application image includes production dependencies, the installed package, and migration assets.
 
-From the repository root:
+From the repository root, create `.env` from `.env.example` only if it does not
+already exist. Set the four `INVOICEOPS_*_EMAIL` and `INVOICEOPS_*_PASSWORD`
+values and `INVOICEOPS_AUTH_SESSION_SECRET` in `.env` before starting. Do not
+overwrite an existing `.env` containing LiteLLM settings.
 
 ```bash
-cp .env.example .env
 bash scripts/prepare_minio_image.sh
-docker compose up -d --build --wait
+docker compose --profile ui up -d --build --wait
 curl --fail http://localhost:8000/healthz
 curl --fail http://localhost:8000/readyz
 docker compose run --rm seed
 ```
+
+Open `http://127.0.0.1:5173` and sign in with an account from `.env`. The server
+chooses the workspace role from the account, and the browser restores an unexpired
+session on refresh. Signing out revokes the session. `INVOICEOPS_AUTH_SESSION_SECRET`
+must have at least 32 characters. The one-shot `migrate` service creates the four
+role accounts after schema migration and runtime-role provisioning. Rerunning it
+preserves unchanged password hashes and sessions; changing a role email or password
+updates that account and revokes its sessions. The login response supplies an opaque,
+eight-hour bearer token; the database stores only its SHA-256 digest. Rotating the
+session secret invalidates existing sessions. Five failed
+logins lock the account for 15 minutes. Login and logout mutations require an
+`Idempotency-Key` header. The existing service token remains for automated uploads;
+the signed-in Analyst can upload in the UI without entering it.
+
+After changing a role email or password in `.env`, apply it with
+`docker compose run --rm migrate` and restart the API if its own settings changed.
 
 The default stack starts Postgres and MinIO, then runs the one-shot `migrate` service once Postgres
 is healthy. It applies Alembic migrations and provisions the `invoiceops_app` login using

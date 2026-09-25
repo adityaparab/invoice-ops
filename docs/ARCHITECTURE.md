@@ -46,6 +46,7 @@ decision require a superseding ADR or an explicit status change.
 | [0009](../adr/0009-gateway-boundary-llm-tracing.md) | Trace model calls at the application gateway boundary. |
 | [0010](../adr/0010-public-cache-and-gateway-hardening.md) | Require explicit public sensitivity for semantic caching and bounded fallback. |
 | [0011](../adr/0011-langgraph-adk-comparison.md) | Compare the implemented runtimes and retain LangGraph as the primary orchestrator. |
+| [0012](../adr/0012-role-login-sessions.md) | Seed role accounts from the environment and use revocable login sessions in the UI. |
 
 ## 5. HTTP API
 
@@ -53,7 +54,15 @@ The API is versioned under `/v1`. Health endpoints remain unversioned. Mutating 
 validated `Idempotency-Key`; API failures use RFC 7807 problem details. Authentication and persona
 RBAC are dependency-injected at the transport boundary.
 
-`POST /v1/invoices` accepts service-token-authenticated PDF, PNG, and JPEG multipart uploads. It
+`POST /v1/auth/login` accepts email/password and an idempotency key; successful
+authentication returns an opaque session token and server-assigned role.
+`GET /v1/auth/me` validates a session, and `POST /v1/auth/logout` revokes it.
+Compose's migration service seeds the four role accounts from `.env` on first
+boot and reconciles credential changes on rerun. Account password hashes and
+session token digests are stored in PostgreSQL. The Analyst session can upload;
+Manager, Auditor, and Platform permissions are checked at each API resource.
+
+`POST /v1/invoices` accepts service-token or Analyst-session-authenticated PDF, PNG, and JPEG multipart uploads. It
 validates the declared type against the document signature, enforces a configurable byte limit,
 stores the raw document at `sha256/{prefix}/{content_hash}` in MinIO, and atomically creates the
 invoice, queued run, initial ledger event, and replay response. Reusing an idempotency key with the
@@ -76,8 +85,8 @@ before parsing, signatures use constant-time comparison, timestamps have a confi
 window, and successfully consumed nonces are unique in PostgreSQL. The decoded attachment reuses
 the same content-addressed ingestion transaction with source `EMAIL`.
 
-The [queue and detail reads](INVOICE_READ_API.md) use separate analyst, manager, and auditor
-persona tokens. The [exception decision endpoint](EXCEPTION_DECISIONS.md) requires an analyst
+The [queue and detail reads](INVOICE_READ_API.md) use role-bound sessions or legacy persona
+tokens. The [exception decision endpoint](EXCEPTION_DECISIONS.md) requires an analyst
 proposal and independent manager signoff. It commits each decision and its HUMAN ledger event in
 one transaction; the one-shot review worker resumes the paused graph and settles the run after
 committed review evidence is present.
@@ -95,6 +104,8 @@ content hash.
 | `invoices` | Invoice read model and extraction | unique `content_hash`; status/created index; 384-dimension HNSW cosine embedding index |
 | `ingestion_requests` | Durable cross-source idempotency claims and original responses | primary-key idempotency key; request hash |
 | `webhook_nonces` | Consumed authenticated email webhook nonces | primary-key nonce; signed timestamp |
+| `auth_users` | Environment-owned role accounts | unique role/email; salted password hash; failed-login lockout |
+| `auth_sessions` | Revocable login sessions | primary-key token digest; user and expiry indexes |
 | `invoice_lines` | Normalized extracted lines | unique invoice/line number; Decimal-safe numeric columns |
 | `runs` | Workflow execution | invoice/started index; graph and trace version pins |
 | `checkpoints` | Serializable node snapshots | unique run/sequence |

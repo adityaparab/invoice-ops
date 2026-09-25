@@ -154,7 +154,6 @@ export function Evals() {
           />
         )}
       </div>
-      {token.length === 0 && <Alert title="Token required">Enter Priya’s auditor or Platform Engineer service token.</Alert>}
       {token.length > 0 && dashboard.isPending && <Text>Loading evaluation reports…</Text>}
       {dashboard.isError && <Alert title="Evals unavailable">{dashboard.error.message}</Alert>}
       {dashboard.data && reports.length === 0 && <Text>No evaluation reports are available.</Text>}

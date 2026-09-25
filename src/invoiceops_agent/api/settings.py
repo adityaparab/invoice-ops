@@ -17,6 +17,8 @@ class ApiSettings(StorageSettings):
     analyst_token: SecretStr | None = None
     manager_token: SecretStr | None = None
     auditor_token: SecretStr | None = None
+    auth_session_secret: SecretStr | None = None
+    auth_session_hours: int = Field(default=8, ge=1, le=168)
     document_max_bytes: int = Field(default=10 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
     upload_max_bytes: int = Field(default=11 * 1024 * 1024, gt=0, le=101 * 1024 * 1024)
     upload_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
@@ -68,6 +70,13 @@ class ApiSettings(StorageSettings):
         if self.upload_max_bytes <= self.document_max_bytes:
             raise ValueError("Whole upload limit must exceed the document limit")
         return self
+
+    @field_validator("auth_session_secret")
+    @classmethod
+    def validate_auth_session_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and len(value.get_secret_value()) < 32:
+            raise ValueError("Session secret must contain at least 32 characters")
+        return value
 
     @field_validator("webhook_secret")
     @classmethod

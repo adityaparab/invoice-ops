@@ -34,6 +34,9 @@ export function uploadInvoice(
       }
     });
     request.onload = () => {
+      if (request.status === 401 && serviceToken.startsWith("io_")) {
+        window.dispatchEvent(new CustomEvent("invoiceops:unauthorized", { detail: serviceToken }));
+      }
       try {
         const body = parseJson(request.responseText);
         if (request.status === 200 || request.status === 201) {

@@ -125,7 +125,6 @@ export function Dashboard() {
           onChange={(value) => setPeriodDays(Number(value ?? 30))}
         />
       </div>
-      {token.length === 0 && <Alert title="Manager token required">Enter Dan’s API token in the sidebar.</Alert>}
       {dashboard.isPending && token.length > 0 && <Text>Loading dashboard…</Text>}
       {dashboard.isError && <Alert title="Dashboard unavailable">{dashboard.error.message}</Alert>}
       {dashboard.data && <DashboardContent data={dashboard.data} />}

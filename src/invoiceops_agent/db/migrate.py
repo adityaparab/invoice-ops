@@ -10,6 +10,7 @@ from alembic.util import CommandError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
+from invoiceops_agent.db.auth_seed import AuthSeedSettings, seed_auth_users
 from invoiceops_agent.db.runtime_role import RuntimeRoleError, provision_runtime_login
 from invoiceops_agent.db.settings import ProvisioningSettings
 from invoiceops_agent.obs.logging import configure_logging
@@ -27,6 +28,7 @@ def main() -> int:
         config.attributes["configure_logger"] = False
         command.upgrade(config, "head")
         provision_runtime_login(settings)
+        seed_auth_users(settings.migration_dsn.get_secret_value(), AuthSeedSettings())
     except (
         ValidationError,
         RuntimeRoleError,

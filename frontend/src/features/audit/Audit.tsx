@@ -68,7 +68,6 @@ export function Audit() {
           <Button type="submit" disabled={!runIdSchema.safeParse(draftId.trim()).success}>Open history</Button>
         </form>
       </section>
-      {token.length === 0 && <Alert title="Auditor token required">Enter Priya’s auditor token in the sidebar.</Alert>}
       {runId && token && audit.isPending && <Text>Loading audit history…</Text>}
       {runId && token && audit.isError && <Alert title="Audit history unavailable">{audit.error.message}</Alert>}
       {first && (
