@@ -15,6 +15,10 @@ Decision · Consequences.
 | [0005](0005-gateway-only-model-traffic.md) | Gateway-only model traffic (implemented via LiteLLM proxy) | Accepted |
 | [0006](0006-synthetic-data-anomalies.md) | Synthetic data with injected anomalies; published prevalences | Accepted |
 | [0007](0007-vcr-cassettes.md) | VCR-style recorded LLM responses in tests | Accepted |
+| [0008](0008-direct-litellm-environment.md) | Operator-provided LiteLLM URL, key, and model names | Accepted |
+| [0009](0009-gateway-boundary-llm-tracing.md) | Trace model calls at the application gateway | Accepted |
+| [0010](0010-public-cache-and-gateway-hardening.md) | Explicit public caching and gateway hardening | Accepted |
+| [0011](0011-langgraph-adk-comparison.md) | Implemented LangGraph and ADK workflow comparison | Accepted |
 
 The cross-cutting decision summaries are linked from `README.md` §5 and
 `docs/ARCHITECTURE.md` §4.
@@ -22,5 +26,4 @@ The cross-cutting decision summaries are linked from `README.md` §5 and
 Verified for implementation step 0.10 on 2026-09-23: all seven accepted records were already present
 in the repository's initial commit. Their original decision dates and statuses are preserved. Package
 paths now refer to the installed `invoiceops_agent` namespace, and tracker references use plan steps
-until GitHub issues exist. The framework comparison in ADR 0002 remains Phase 6 work; accepting a
-decision does not mean every later-phase feature is implemented.
+until GitHub issues exist. ADR 0011 now records the Phase 6 implementation comparison.

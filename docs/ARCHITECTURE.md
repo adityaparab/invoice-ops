@@ -43,6 +43,9 @@ decision require a superseding ADR or an explicit status change.
 | [0006](../adr/0006-synthetic-data-anomalies.md) | Use reproducible synthetic data with seeded anomalies and published prevalence assumptions. |
 | [0007](../adr/0007-vcr-cassettes.md) | Replay committed model-response cassettes in tests; reserve live calls for explicit evaluation runs. |
 | [0008](../adr/0008-direct-litellm-environment.md) | Use the operator's LiteLLM URL, key, and model-name environment variables without another proxy configuration. |
+| [0009](../adr/0009-gateway-boundary-llm-tracing.md) | Trace model calls at the application gateway boundary. |
+| [0010](../adr/0010-public-cache-and-gateway-hardening.md) | Require explicit public sensitivity for semantic caching and bounded fallback. |
+| [0011](../adr/0011-langgraph-adk-comparison.md) | Compare the implemented runtimes and retain LangGraph as the primary orchestrator. |
 
 ## 5. HTTP API
 
