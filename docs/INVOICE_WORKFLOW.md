@@ -25,6 +25,13 @@ The worker reads `LITELLM_API_BASE`, `LITELLM_MASTER_KEY`, `LITELLM_MODEL`,
 read a LiteLLM proxy configuration file. `LITELLM_EMBED_MODEL` must name a route that returns one
 384-dimensional vector. If either optional model name is empty, that task uses `LITELLM_MODEL`.
 
+For the ADK variant, set `INVOICEOPS_WORKFLOW_ENGINE=adk` and
+`LITELLM_ADK_MODEL` to a Gemini model alias served by the same LiteLLM URL and key. ADK routes
+the same typed state through its graph engine and stores pause/resume events in the isolated
+PostgreSQL `adk` schema. Extraction and triage use `LITELLM_ADK_MODEL` through the existing gateway
+client; embeddings retain `LITELLM_EMBED_MODEL`. The default engine remains LangGraph. Use the same
+one-shot worker and review commands; run IDs and review decisions keep their API contract.
+
 The [composite gate](CONFIDENCE_GATE.md) now combines observed field confidence, normalized
 three-way match delta, and policy severity at a versioned threshold. A policy finding that requires
 review still overrides the score. Set `INVOICEOPS_AUTO_APPROVAL_ENABLED=false` to disable automatic

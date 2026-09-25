@@ -138,6 +138,11 @@ class InvoiceNodes:
             }
         )
         decision = ReviewDecision.model_validate(value)
+        return await self.apply_review(state, decision)
+
+    async def apply_review(
+        self, state: InvoiceGraphState, decision: ReviewDecision
+    ) -> dict[str, object]:
         await traced_call("tool", "review", state, lambda: self.services.review(state, decision))
         return {
             "review": decision.model_dump(mode="json"),

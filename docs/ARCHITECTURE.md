@@ -23,6 +23,11 @@ collide with the application-facing `public.checkpoints` projection. The saver u
 MessagePack serializer, and a completed thread is returned without re-executing nodes when the same
 `run_id` is submitted again.
 
+The ADK variant uses the same business nodes, audit ledger, and `invoice-v1` state. Its graph
+sessions live in the separate PostgreSQL `adk` schema; ADK route events select duplicate, extraction
+failure, and gate branches, and a structured `RequestInput` event pauses human review. Selecting
+`INVOICEOPS_WORKFLOW_ENGINE=adk` changes only orchestration and the Gemini LiteLLM model alias.
+
 ## 4. Architecture decisions
 
 The decision records are the authority for why these cross-cutting constraints exist. Changes to a

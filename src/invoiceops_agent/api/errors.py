@@ -6,6 +6,7 @@ from http import HTTPStatus
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from python_multipart.exceptions import MultipartParseError
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -98,6 +99,10 @@ async def _validation_error(request: Request, error: Exception) -> JSONResponse:
     )
 
 
+async def _multipart_error(request: Request, error: Exception) -> JSONResponse:
+    return problem_response(request, status=400, detail="Malformed multipart request.")
+
+
 async def _unexpected_error(request: Request, error: Exception) -> JSONResponse:
     logger.error(
         "request_failed trace_id=%s error_type=%s",
@@ -110,6 +115,7 @@ async def _unexpected_error(request: Request, error: Exception) -> JSONResponse:
 def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(HTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
+    app.add_exception_handler(MultipartParseError, _multipart_error)
     app.add_exception_handler(Exception, _unexpected_error)
     app.add_exception_handler(IngestionError, _ingestion_error)
     app.add_exception_handler(InvoiceReadError, _invoice_read_error)

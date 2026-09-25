@@ -3,6 +3,7 @@
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from datetime import UTC, date, datetime
+from typing import Literal, Protocol
 from uuid import UUID
 
 import httpx2
@@ -17,10 +18,9 @@ from invoiceops_agent.agents.near_duplicate_settings import LiteLLMWorkflowSetti
 from invoiceops_agent.agents.triage import TriageAgent
 from invoiceops_agent.gateway_client import GatewayClient
 from invoiceops_agent.gateway_client.telemetry import GatewayTelemetry
-from invoiceops_agent.graph.checkpoints import postgres_invoice_graph
+from invoiceops_agent.graph.checkpoints import postgres_adk_invoice_graph, postgres_invoice_graph
 from invoiceops_agent.graph.errors import RunNotFound
 from invoiceops_agent.graph.invoice_nodes import InvoiceNodes
-from invoiceops_agent.graph.invoice_runner import InvoiceGraphRunner
 from invoiceops_agent.graph.live_services import ConnectionFactory, LiveInvoiceServices
 from invoiceops_agent.graph.nodes.exception_taxonomy import ExceptionTaxonomyNode
 from invoiceops_agent.graph.nodes.match3way import Match3WayNode
@@ -48,6 +48,7 @@ class InvoiceRuntimeSettings(BaseSettings):
 
     postgres_dsn: SecretStr
     auto_approval_enabled: bool = True
+    workflow_engine: Literal["langgraph", "adk"] = "langgraph"
 
 
 def utc_now() -> datetime:
@@ -66,10 +67,18 @@ async def runtime_connection(dsn: str) -> AsyncIterator[psycopg.AsyncConnection[
         yield connection
 
 
+class InvoiceRunner(Protocol):
+    async def run(self, initial: InvoiceGraphState) -> InvoiceGraphState: ...
+
+    async def resume(
+        self, *, run_id: UUID, invoice_id: UUID, trace_id: str, decision: ReviewDecision
+    ) -> InvoiceGraphState: ...
+
+
 class InvoiceWorkflowRuntime:
     def __init__(
         self,
-        runner: InvoiceGraphRunner,
+        runner: InvoiceRunner,
         initial: InvoiceGraphState,
     ) -> None:
         self.runner = runner
@@ -165,7 +174,9 @@ async def invoice_runtime(
             timeout_seconds=storage.storage_timeout_seconds,
         ) as raw_storage,
         GatewayClient(
-            litellm.gateway_settings(),
+            litellm.adk_gateway_settings()
+            if runtime.workflow_engine == "adk"
+            else litellm.gateway_settings(),
             transport=gateway_transport,
             telemetry=gateway_telemetry,
             semantic_cache=PostgresSemanticCache(connection),
@@ -191,5 +202,10 @@ async def invoice_runtime(
             triage_agent=TriageAgent(gateway),
             clock=clock,
         )
-        async with postgres_invoice_graph(graph, InvoiceNodes(services)) as runner:
+        graph_context = (
+            postgres_adk_invoice_graph(graph, InvoiceNodes(services))
+            if runtime.workflow_engine == "adk"
+            else postgres_invoice_graph(graph, InvoiceNodes(services))
+        )
+        async with graph_context as runner:
             yield InvoiceWorkflowRuntime(runner, initial)

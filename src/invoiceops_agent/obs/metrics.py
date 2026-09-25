@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Any
 
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
@@ -11,7 +12,7 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import MetricReader, PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from prometheus_client import CollectorRegistry, generate_latest
+from prometheus_client import REGISTRY, CollectorRegistry, generate_latest
 from pydantic import AnyHttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -29,6 +30,19 @@ class MetricSettings(BaseSettings):
 
     exporter_otlp_metrics_endpoint: AnyHttpUrl | None = None
     exporter_otlp_metrics_headers: SecretStr | None = None
+
+
+class IsolatedPrometheusMetricReader(PrometheusMetricReader):
+    """Adapt OTel 1.41's global collector registration to an owned registry."""
+
+    def __init__(self, registry: CollectorRegistry) -> None:
+        super().__init__()
+        REGISTRY.unregister(self._collector)
+        registry.register(self._collector)
+        self._owned_registry = registry
+
+    def shutdown(self, timeout_millis: float = 30_000, **kwargs: Any) -> None:
+        self._owned_registry.unregister(self._collector)
 
 
 def usd_to_nano_usd(amount: Decimal) -> int:
@@ -107,9 +121,9 @@ class Metrics:
 async def metrics_session(service_name: str, *, prometheus: bool = False) -> AsyncIterator[Metrics]:
     settings = MetricSettings()
     registry = CollectorRegistry(auto_describe=True) if prometheus else None
-    readers: list[MetricReader] = (
-        [PrometheusMetricReader(registry=registry)] if registry is not None else []
-    )
+    readers: list[MetricReader] = []
+    if registry is not None:
+        readers.append(IsolatedPrometheusMetricReader(registry))
     if settings.exporter_otlp_metrics_endpoint is not None:
         readers.append(
             PeriodicExportingMetricReader(
