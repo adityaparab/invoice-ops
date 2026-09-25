@@ -71,6 +71,25 @@ Every live run requires an explicit `--model-class local-dev` or
 LiteLLM model names; the immutable ledger still records actual model versions.
 Recorded cassette smoke has no model class and cannot claim live quality.
 
+## ADK comparison run
+
+Set `LITELLM_ADK_MODEL` to a Gemini model name and `LITELLM_EMBED_MODEL` to the existing
+384-dimensional embedding route, using the same `LITELLM_API_BASE` and `LITELLM_MASTER_KEY`.
+The ADK route is selected explicitly for each worker, and its reports carry the
+`adk-gemini` model-class tag:
+
+```bash
+uv run python -m eval.runners.run_pipeline --split all --model-class adk-gemini \
+  --workflow-engine adk --workers 8 --project-name invoiceops-adk-run-1
+```
+
+Use a fresh Compose project and ports for each independent repetition. Compare the ADK report
+with the committed LangGraph baseline as a whole variant: the model route also changes to
+Gemini, so quality differences cannot be attributed to orchestration alone. The existing
+release gate continues to compare the `openai-prod` route with its main-branch baseline;
+the ADK report and its limitations are documented in
+[ADR 0011](../../adr/0011-langgraph-adk-comparison.md).
+
 The runner starts Compose by default and seeds its 399 golden purchase orders
 and receipts beside the existing base ERP fixture. `--no-start` uses an already
 running Compose API. For an isolated run, set separate `API_PORT`,

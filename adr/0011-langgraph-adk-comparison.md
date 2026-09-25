@@ -17,13 +17,14 @@ policy, LiteLLM gateway, and append-only audit ledger. The worker selects the ru
 nodes to preserve the existing agent/gateway boundary; it does not use an ADK `LlmAgent`
 or a direct Google model endpoint.
 
-Evidence available for this decision: [route and replay tests](../tests/unit/test_invoice_graph.py),
+Implementation evidence: [route and replay tests](../tests/unit/test_invoice_graph.py),
 [ADK route and replay tests](../tests/unit/test_adk_invoice.py),
 [LangGraph Postgres restart test](../tests/integration/test_invoice_graph.py), and
 [ADK Postgres restart test](../tests/integration/test_adk_invoice.py). PR #53 passed the
-Python CI job and the golden report gate. The full ADK golden-set measurement belongs to
-plan step 6.3 and will be added here after it runs. Until then, this record makes no
-comparative quality, latency, or cost claim.
+Python CI job and the golden report gate. The measured comparison below uses the
+[LangGraph release report](../eval/reports/golden-v1.0.1-openai-prod.json),
+[ADK primary report](../eval/reports/golden-v1.0.1-adk-gemini.json), and
+[ADK diagnostics](../eval/reports/diagnostics-golden-v1.0.1-adk-gemini.json).
 
 ## Comparison
 
@@ -42,10 +43,38 @@ Retain LangGraph as the production default. Keep the ADK variant as an executabl
 comparison and evaluation artifact. The deterministic controls, human signoff, gateway,
 and audit contract are the product boundaries, independent of orchestration framework.
 
-The planned step 6.3 live evaluation changes both orchestration and the extraction/triage
+The step 6.3 live evaluation changes both orchestration and the extraction/triage
 model route to Gemini. Any metric difference therefore describes the **whole variant**;
 it cannot isolate a framework effect from a model effect. Route-parity and restart tests
-are the framework-specific evidence available before that measurement.
+are the framework-specific evidence.
+
+## Step 6.3 live golden-set result
+
+Three independent ADK runs each processed all 500 `golden/v1.0.1` invoices through fresh
+Compose stacks at eight workers, with `gemini25flash` for extraction and triage and
+`gemini-embedding` for similarity. No run had a worker error or replayed an existing run.
+The primary scorer takes quality and cost from the first complete run and pools audited
+auto-approval latency across all three, matching the release baseline method. The second
+and third ADK runs also had 150/150 exception recall; their clean false escalations were
+1/300 and 3/300, respectively.
+
+| Primary metric | LangGraph / OpenAI routes | ADK / Gemini route | Floor |
+| --- | ---: | ---: | ---: |
+| Exception recall | 149/150 (0.9933) | 150/150 (1.0000) | ≥ 0.98 |
+| False escalation rate | 10/300 (0.0333) | 1/300 (0.0033) | ≤ 0.05 |
+| Field F1 | 0.9732 | 0.9780 | ≥ 0.95 |
+| Money-field F1 | 0.9913 | 0.9938 | ≥ 0.97 |
+| Routing accuracy | 440/450 (0.9778) | 449/450 (0.9978) | ≥ 0.95 |
+| Clean straight-through rate | 290/300 (0.9667) | 299/300 (0.9967) | ≥ 0.70 |
+| LiteLLM-reported cost per invoice | $0.00122339726 | $0.00 reported | ≤ $0.04 |
+| Audited auto-approval p95 | 30.872508 s / 875 observations | 7.713483 s / 895 observations | ≤ 45 s |
+
+All eight numeric ADK scores satisfy the existing floors. The proxy returned a `0.0`
+cost for every Gemini-route invoice in each run; the report records full **proxy value**
+coverage (500/500 per run), but actual provider spend is unverified. We therefore do not
+interpret the cost difference as a savings claim. The triage judge was not run for either
+published full-suite diagnostic report. The model-route difference also prevents a causal
+claim that ADK itself improved quality or latency.
 
 ## Operational consequences and limits
 
@@ -56,7 +85,9 @@ are the framework-specific evidence available before that measurement.
   originally processed it; switching engines for a paused run is not a migration path.
 - The ADK 2.0 OpenTelemetry pin affects the shared package. Compatibility is covered by
   Python, integration, and Compose CI, and future dependency upgrades must retest it.
-- No comparative live result is asserted until the versioned step 6.3 report is produced.
+- The versioned ADK primary and diagnostic reports are comparison artifacts. The existing
+  `openai-prod` release gate continues to compare the production route against its own
+  main-branch baseline.
 
 ## Sources
 

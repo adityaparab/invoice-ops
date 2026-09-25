@@ -10,7 +10,7 @@ from invoiceops_agent.api.schemas.invoice_read import InvoiceDetail
 from invoiceops_agent.api.schemas.provenance import InvoiceProvenancePage
 from invoiceops_agent.tools.ingestion_schemas import IngestionResult
 
-ModelClass = Literal["local-dev", "openai-prod"]
+ModelClass = Literal["local-dev", "openai-prod", "adk-gemini"]
 
 
 class RunRecord(BaseModel):

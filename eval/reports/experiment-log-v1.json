@@ -45,6 +45,15 @@
       "change": "Ran the golden/v1.0.1 corpus three times in fresh Compose stacks at eight workers with the same GPT-5 nano extraction, GPT-4o mini triage, and Gemini embedding model routes. Preserved billed cost before parsing invalid gateway envelopes. Published a complete three-run primary report and a first-run diagnostic report for the CI gate and Evals screen.",
       "observation": "All three runs completed 500/500 cases without worker errors and with billed cost evidence for 500/500 cases each. The first run had 149/150 exception recall, 10/300 clean false escalations, 440/450 correct routes, 290/300 clean auto-approvals, field F1 0.9732, money F1 0.9913, and $0.00122339726 per invoice. The second and third runs had 149/150 and 150/150 exception recall respectively. Pooled audited auto-approval p95 was 30.872508 seconds over 875 of 900 eligible clean arrivals. All eight release floors passed.",
       "decision": "Accept this as the first full OpenAI-production-route live baseline and activate the CI quality gate. Keep the raw run evidence locally and the compact primary, diagnostic, and Evals-screen reports versioned in the repository."
+    },
+    {
+      "id": "golden-adk-gemini-comparison-v1-2026-09-25",
+      "report_id": "golden-adk-gemini-comparison-v1",
+      "date": "2026-09-25",
+      "hypothesis": "The shared invoice controls can run through Google ADK with a Gemini LiteLLM route and preserve complete golden-set quality, audit, and latency evidence.",
+      "change": "Selected the ADK state machine and gemini25flash extraction/triage alias, retained gemini-embedding, and ran three independent 500-case golden/v1.0.1 Compose stacks at eight workers. Versioned the pooled primary and first-run diagnostic reports.",
+      "observation": "All three runs completed 500/500 cases without worker errors or replay. The first run had 150/150 exception recall, 1/300 clean false escalations, 449/450 correct routes, 299/300 clean auto-approvals, field F1 0.9780, and money F1 0.9938. Pooled audited auto-approval p95 was 7.713483 seconds over 895 observations. LiteLLM reported cost 0.0 for 500/500 invoices in each run, so actual provider spend remains unverified. All eight numeric floors passed.",
+      "decision": "Retain LangGraph as the production default and publish ADK as a comparison artifact. The ADK variant also changed the model route, so differences from the OpenAI-route baseline cannot be attributed to orchestration alone. Keep the release gate on the openai-prod baseline without changing any threshold."
     }
   ]
 }

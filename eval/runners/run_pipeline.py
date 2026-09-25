@@ -83,7 +83,12 @@ class Worker(Protocol):
 
 class Compose:
     def __init__(
-        self, *, project_name: str | None = None, timeout_seconds: int = 18000, workers: int = 1
+        self,
+        *,
+        project_name: str | None = None,
+        timeout_seconds: int = 18000,
+        workers: int = 1,
+        workflow_engine: Literal["langgraph", "adk"] = "langgraph",
     ) -> None:
         if not 1 <= workers <= 16:
             raise ValueError("Compose worker count must be between one and 16")
@@ -92,6 +97,7 @@ class Compose:
             self._prefix.extend(("--project-name", project_name))
         self._timeout_seconds = timeout_seconds
         self._workers = workers
+        self._workflow_engine = workflow_engine
 
     def _run(
         self,
@@ -135,6 +141,8 @@ class Compose:
         self, run_ids: tuple[UUID, ...], *, recorded: bool
     ) -> dict[UUID, dict[str, str]]:
         args = ["--profile", "workflow", "run", "--rm", "-T"]
+        if self._workflow_engine == "adk":
+            args.extend(("-e", "INVOICEOPS_WORKFLOW_ENGINE=adk"))
         if recorded:
             args.extend(("-e", "LITELLM_EMBED_MODEL=recorded-embed-model"))
         args.extend(("invoice-worker", "invoiceops-invoice-batch"))
@@ -400,7 +408,8 @@ def main() -> int:
     parser.add_argument("--split", choices=("all", "development", "held_out"), default="all")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--recorded", action="store_true")
-    parser.add_argument("--model-class", choices=("local-dev", "openai-prod"))
+    parser.add_argument("--model-class", choices=("local-dev", "openai-prod", "adk-gemini"))
+    parser.add_argument("--workflow-engine", choices=("langgraph", "adk"), default="langgraph")
     parser.add_argument("--no-start", action="store_true")
     parser.add_argument("--project-name")
     parser.add_argument("--worker-timeout", type=int, default=18000)
@@ -414,12 +423,20 @@ def main() -> int:
             raise PipelineRunError("Recorded smoke cannot claim a model class")
         if not args.recorded and args.model_class is None:
             raise PipelineRunError("Live evaluation requires --model-class")
+        if (args.model_class == "adk-gemini") != (args.workflow_engine == "adk"):
+            raise PipelineRunError("The adk-gemini model class requires the ADK workflow engine")
+        if args.recorded and args.workflow_engine == "adk":
+            raise PipelineRunError("ADK evaluation requires a live Gemini route")
         settings = EvalSettings()
         try:
             if args.recorded:
-                LiteLLMWorkflowSettings(embed_model="recorded-embed-model")
+                litellm = LiteLLMWorkflowSettings(embed_model="recorded-embed-model")
             else:
-                LiteLLMWorkflowSettings()
+                litellm = LiteLLMWorkflowSettings()
+            if args.workflow_engine == "adk":
+                if litellm.adk_model is None:
+                    raise PipelineRunError("ADK evaluation requires LITELLM_ADK_MODEL")
+                litellm.adk_gateway_settings()
         except ValidationError:
             raise PipelineRunError(
                 "Workflow requires direct LITELLM_API_BASE, LITELLM_MASTER_KEY, "
@@ -434,6 +451,7 @@ def main() -> int:
             project_name=args.project_name,
             timeout_seconds=args.worker_timeout,
             workers=args.workers,
+            workflow_engine=args.workflow_engine,
         )
         if not args.no_start:
             compose.start()

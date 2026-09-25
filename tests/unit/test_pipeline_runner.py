@@ -215,6 +215,28 @@ def test_parallel_compose_worker_merges_exactly_one_result_per_run(
     }
 
 
+def test_adk_eval_worker_selects_adk_without_proxy_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    compose = Compose(workflow_engine="adk")
+    seen: list[str] = []
+
+    def fake_run(
+        args: tuple[str, ...] | list[str],
+        *,
+        input_text: str | None = None,
+        allow_worker_failure: bool = False,
+    ) -> str:
+        seen.extend(args)
+        assert input_text is not None and allow_worker_failure
+        return json.dumps({"run_id": str(UUID(int=1)), "route": "REVIEW"})
+
+    monkeypatch.setattr(compose, "_run", fake_run)
+    assert compose.process((UUID(int=1),), recorded=False)[UUID(int=1)]["route"] == "REVIEW"
+    assert seen.count("INVOICEOPS_WORKFLOW_ENGINE=adk") == 1
+    assert not any("LITELLM_" in arg for arg in seen)
+
+
 def test_batch_rejects_invalid_or_repeated_ids() -> None:
     value = str(UUID(int=1))
     assert parse_run_ids(value + "\n") == (UUID(int=1),)

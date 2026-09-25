@@ -158,7 +158,7 @@
 
 - [x] 6.1 Port the state machine to Google ADK (Gemini as the ADK-side model)
 - [x] 6.2 Comparison ADR: checkpointing, durable execution, HITL support, observability, developer ergonomics, cloud fit
-- [ ] 6.3 Run the eval suite against the ADK variant; include results in the ADR
+- [x] 6.3 Run the eval suite against the ADK variant; include results in the ADR
 
 
 
@@ -198,7 +198,7 @@ checkbox here.
 | P3 — HITL + triage + front end | Complete    | 2026-09-24   | All Phase 3 implementation steps merged; measured tuning follows the Phase 5 golden set |
 | P4 — Observability + gateway   | Complete    | 2026-09-24   | Workflow and LLM traces, cost/latency dashboards, sensitivity routing, public cache, fallback, and budget alerts |
 | P5 — Eval harness + CI gate    | Complete    | 2026-09-24   | Three independent 500-case live runs passed all eight floors; audited p95 30.87s, complete cost evidence, and CI gate activated |
-| P6 — ADK variant + ADR         | In progress | —            | ADK graph and comparison ADR merged; live variant eval remains |
+| P6 — ADK variant + ADR         | Complete    | 2026-09-25   | ADK graph, comparison ADR, and three independent 500-case Gemini-route evals; cost reporting caveat documented |
 | P7 — Polish                    | Not started | —            |                                                           |
 
 
@@ -220,6 +220,7 @@ checkbox here.
 | 2026-09-23 | Step 0.10 verifies the seven existing accepted ADRs, preserves their original decision dates, and aligns package paths and tracker references with the implementation. The ADK comparison remains Phase 6 work. |
 | 2026-09-25 | Step 6.1 ports the invoice state machine to ADK 2.0 with isolated PostgreSQL sessions, structured review input, Gemini model routing through the existing LiteLLM gateway, and shared business/audit nodes. PR #53 passes both CI checks and is merged. |
 | 2026-09-25 | Step 6.2 compares implemented LangGraph and ADK checkpointing, recovery, human review, observability, ergonomics, and cloud fit in ADR 0011. It retains LangGraph as the default and reserves live metric conclusions for step 6.3. |
+| 2026-09-25 | Step 6.3 completes Phase 6: three fresh 500-case ADK/Gemini runs passed the existing eight numeric floors. ADR 0011 and versioned reports compare the whole variant with the LangGraph/OpenAI baseline; zero LiteLLM-reported Gemini cost leaves actual provider spend unverified. |
 | 2026-09-23 | Phase 0 complete: all ten foundation steps are implemented. Final local validation passes Ruff, strict mypy, 133 offline unit tests, 34 real integration tests, package/container builds, and isolated Compose startup with restricted API credentials and durable graph replay. CI includes the same runtime-role assertion; invoice ingestion and extraction remain Phase 1 work. |
 | 2026-09-23 | Step 1.4 adds transactional append-only ledger writes, explicit version pins, and bounded run/invoice history reads. Real restricted-role tests verify atomic rollback, concurrent sequencing, immutable corrections, and pagination; all 157 offline units and 40 integrations pass. |
 | 2026-09-23 | Step 1.8 pins and prepares 32 annotated synthetic Voxel51 invoices with checksummed inputs, deterministic selection, metadata-free PNGs, and versioned quality proxies. All selected images are tier A; B/C coverage and extraction quality remain unmeasured. Immutable artifacts reproduce byte-for-byte with the recorded toolchain. |

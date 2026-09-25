@@ -493,6 +493,11 @@ def score_primary_metrics(
         caveats.append("Selected samples do not cover the full 500-invoice golden suite.")
     if len(observed_costs) != len(first.samples):
         caveats.append("Gateway cost is unavailable for at least one invoice.")
+    if first.model_class == "adk-gemini" and cost_value == 0:
+        caveats.append(
+            "LiteLLM reported zero cost for the Gemini route; "
+            "actual provider spend is not established."
+        )
     if latency is None:
         caveats.append(
             "P95 requires three independent live runs with auditable auto-approve timestamps."
